@@ -1,0 +1,11 @@
+@import "primeicons/primeicons.css";
+
+/* Importante para PrimeNG 21 */
+@layer primeng;
+@layer tailwind-base, primeng, tailwind-utilities;
+
+body {
+    margin: 0;
+    font-family: var(--font-family, sans-serif);
+    background-color: #f4f7f9;
+}

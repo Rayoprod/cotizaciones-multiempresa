@@ -1,0 +1,23 @@
+<div class="flex align-items-center justify-content-center h-screen bg-gray-100">
+    <p-card header="Iniciar Sesión" subheader="Sistema de Cotizaciones Multiempresa" [style]="{ width: '360px' }" class="shadow-4">
+        
+        <div class="flex flex-column gap-4">
+            <div class="flex flex-column gap-2">
+                <label for="email" class="font-bold">Correo Electrónico</label>
+                <input pInputText id="email" [(ngModel)]="correo" placeholder="usuario@empresa.com" class="w-full" />
+            </div>
+
+            <div class="flex flex-column gap-2">
+                <label for="password" class="font-bold">Contraseña</label>
+                <p-password id="password" [(ngModel)]="contrasena" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="w-full" placeholder="********"></p-password>
+            </div>
+
+            <small *ngIf="mensajeError" class="text-red-500 font-semibold text-center">
+                {{ mensajeError }}
+            </small>
+
+            <p-button label="Ingresar al Sistema" icon="pi pi-sign-in" class="w-full" styleClass="w-full" (onClick)="iniciarSesion()"></p-button>
+        </div>
+
+    </p-card>
+</div>

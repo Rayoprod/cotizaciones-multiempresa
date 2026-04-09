@@ -1,0 +1,215 @@
+<div class="p-4" style="background-color: #f4f7f9; min-height: 100vh;">
+    <div class="flex justify-content-between align-items-center mb-4 p-4 shadow-2 bg-white border-round-xl">
+        <div class="flex align-items-center">
+            <i [class]="empresaActiva?.logo" [style.color]="empresaActiva?.color" class="text-5xl mr-3"></i>
+            <div>
+                <span class="text-500 font-medium block">Emisor:</span>
+                <h2 [style.color]="empresaActiva?.color" class="m-0 text-3xl font-bold">{{ empresaActiva?.nombre }}</h2>
+            </div>
+        </div>
+        <button pButton label="Cambiar Sede" icon="pi pi-sync" routerLink="/selector" class="p-button-outlined p-button-secondary"></button>
+    </div>
+
+    <p-card class="mb-4 shadow-2 block">
+        <ng-template pTemplate="title">
+            <div class="text-xl font-bold border-bottom-1 border-300 pb-2 mb-3">1. Datos del Cliente</div>
+        </ng-template>
+        
+        <div class="formgrid p-fluid align-items-end">
+            <div class="grid mb-3">
+                <div class="col-12 md:col-8">
+                    <label class="font-bold block mb-2 text-primary">Razón Social / Nombres <span class="text-red-500">*</span></label>
+                    <p-select 
+                        [options]="clientesBD" 
+                        [(ngModel)]="clienteSeleccionado" 
+                        [editable]="true"
+                        optionLabel="nombre_razon_social"
+                        [filter]="true" 
+                        filterBy="nombre_razon_social,documento_identidad" 
+                        [showClear]="true" 
+                        placeholder="Escribe el nombre o selecciona de la agenda..."
+                        (onChange)="alSeleccionarCliente($event)"
+                        styleClass="w-full" class="w-full">
+                        <ng-template let-cliente pTemplate="item">
+                            <div class="flex flex-column">
+                                <span class="font-semibold">{{cliente.nombre_razon_social}}</span>
+                                <small class="text-500">Doc: {{cliente.documento_identidad}}</small>
+                            </div>
+                        </ng-template>
+                    </p-select>
+                </div>
+                <div class="col-12 md:col-4">
+                    <label class="font-bold block mb-2">RUC / DNI <span class="text-red-500">*</span></label>
+                    <input pInputText [(ngModel)]="clienteDocumento" placeholder="Ej: 20123456789" class="w-full">
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="col-12 md:col-4">
+                    <label class="font-bold block mb-2">Teléfono</label>
+                    <input pInputText [(ngModel)]="clienteTelefono" placeholder="Celular o Fijo" class="w-full">
+                </div>
+                <div class="col-12 md:col-4">
+                    <label class="font-bold block mb-2">Correo Electrónico</label>
+                    <input pInputText [(ngModel)]="clienteCorreo" placeholder="correo@empresa.com" class="w-full">
+                </div>
+                <div class="col-12 md:col-4">
+                    <label class="font-bold block mb-2">Dirección de Entrega</label>
+                    <input pInputText [(ngModel)]="clienteDireccion" placeholder="Dirección completa" class="w-full">
+                </div>
+            </div>
+        </div>
+    </p-card>
+
+    <p-card class="mb-4 shadow-2 block">
+        <ng-template pTemplate="title">
+            <div class="text-xl font-bold border-bottom-1 border-300 pb-2 mb-3 flex justify-content-between align-items-center">
+                <span>2. Agregar Productos</span>
+                <small class="text-sm font-normal text-500"><i class="pi pi-info-circle mr-1"></i>Los productos nuevos se guardarán en BD automáticamente.</small>
+            </div>
+        </ng-template>
+        
+        <div class="formgrid grid p-fluid align-items-end">
+            <div class="col-12 md:col-4 mb-3">
+                <label class="font-bold block mb-2 text-primary">Descripción del Producto/Servicio</label>
+                <p-select 
+                    [options]="productosBD" 
+                    [(ngModel)]="productoSeleccionado" 
+                    [editable]="true"
+                    optionLabel="descripcion"
+                    [filter]="true" 
+                    filterBy="descripcion" 
+                    [showClear]="true" 
+                    placeholder="Escribe un producto nuevo o busca en catálogo..."
+                    (onChange)="alSeleccionarProducto($event)"
+                    styleClass="w-full" class="w-full">
+                </p-select>
+            </div>
+            <div class="col-4 md:col-2 mb-3">
+                <label class="font-bold block mb-2">Unidad</label>
+                <input pInputText [(ngModel)]="inputUnidad" placeholder="m3" class="w-full">
+            </div>
+            <div class="col-4 md:col-2 mb-3">
+                <label class="font-bold block mb-2">Cantidad</label>
+                <p-inputNumber [(ngModel)]="inputCantidad" [min]="1" styleClass="w-full" class="w-full"></p-inputNumber>
+            </div>
+            <div class="col-4 md:col-2 mb-3">
+                <label class="font-bold block mb-2">Precio Unit.</label>
+                <p-inputNumber [(ngModel)]="inputPrecio" mode="currency" currency="PEN" locale="es-PE" styleClass="w-full" class="w-full"></p-inputNumber>
+            </div>
+            <div class="col-12 md:col-2 mb-3">
+                <button pButton label="Agregar Ítem" icon="pi pi-plus" (click)="agregarItem()" [disabled]="!productoSeleccionado || !inputPrecio || !inputCantidad" class="p-button-success w-full"></button>
+            </div>
+        </div>
+    </p-card>
+
+    <p-card class="mb-4 shadow-2 block">
+        <ng-template pTemplate="title">
+            <div class="text-xl font-bold border-bottom-1 border-300 pb-2 mb-3">3. Detalle de Cotización</div>
+        </ng-template>
+        
+        <p-table [value]="carrito" styleClass="p-datatable-gridlines p-datatable-sm" class="mb-4">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>SKU</th>
+                    <th>Descripción</th>
+                    <th>Unid.</th>
+                    <th style="width: 12rem">Cantidad</th> 
+                    <th>P. Unitario</th>
+                    <th>Subtotal</th>
+                    <th style="width: 3rem"></th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-item let-i="rowIndex">
+                <tr>
+                    <td><small class="text-500 font-bold">{{item.sku}}</small></td>
+                    <td class="font-semibold">{{item.descripcion}}</td>
+                    <td>{{item.unidad}}</td>
+                    <td>
+                        <p-inputNumber [(ngModel)]="item.cantidad" [showButtons]="true" 
+                                       buttonLayout="horizontal" spinnerMode="horizontal"
+                                       [min]="1" [inputStyle]="{width: '5rem', textAlign: 'center'}"
+                                       (ngModelChange)="recalcularItem(item)">
+                        </p-inputNumber>
+                    </td>
+                    <td>S/ {{ item.precio_unitario | number:'1.2-2' }}</td>
+                    <td class="font-bold text-primary">S/ {{ item.subtotal | number:'1.2-2' }}</td>
+                    <td>
+                        <button pButton icon="pi pi-trash" (click)="eliminarItem(i)" class="p-button-rounded p-button-danger p-button-text"></button>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="7" class="text-center p-5 text-500">
+                        <i class="pi pi-shopping-cart text-4xl mb-3"></i><br>
+                        Cotización vacía.
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </p-card>
+
+    <p-card class="mb-4 shadow-2 block">
+        <ng-template pTemplate="title">
+            <div class="text-xl font-bold border-bottom-1 border-300 pb-2 mb-3">Observaciones y Especificaciones</div>
+        </ng-template>
+        <div class="p-fluid">
+            <textarea rows="4" pTextarea [(ngModel)]="clienteObservaciones" placeholder="Escribe aquí especificaciones o comentarios adicionales para que salgan en el PDF..."></textarea>
+        </div>
+    </p-card>
+
+    <div class="grid">
+        <div class="col-12 md:col-6">
+            <div class="flex flex-column gap-3 mb-3 p-4 bg-gray-50 border-round shadow-1 h-full">
+                <div class="flex align-items-center gap-3">
+                    <p-toggleswitch [(ngModel)]="incluyeIgv" (onChange)="recalcularTodo()"></p-toggleswitch>
+                    <span class="font-bold text-lg">Incluye IGV (18%)</span>
+                </div>
+                <p-selectButton [options]="opcionesEntrega" [(ngModel)]="lugarEntrega" optionLabel="label" optionValue="value" styleClass="w-full mt-3"></p-selectButton>
+            </div>
+        </div>
+        
+        <div class="col-12 md:col-6">
+            <div class="p-4 border-round shadow-1 bg-gray-50 border-1 border-300 h-full flex flex-column justify-content-between">
+                <div>
+                    <div class="flex justify-content-between mb-3">
+                        <span class="text-600 text-lg">Base Imponible:</span>
+                        <span class="font-bold text-lg">S/ {{ subtotalGeneral | number:'1.2-2' }}</span>
+                    </div>
+                    <div class="flex justify-content-between mb-3" *ngIf="incluyeIgv">
+                        <span class="text-red-500 text-lg">IGV (18%):</span>
+                        <span class="font-bold text-red-500 text-lg">S/ {{ igvTotal | number:'1.2-2' }}</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-content-between border-top-2 border-300 pt-4">
+                        <span class="text-3xl font-bold">TOTAL FINAL:</span>
+                        <span class="text-4xl font-bold" [style.color]="empresaActiva?.color">S/ {{ totalFinal | number:'1.2-2' }}</span>
+                    </div>
+                    <button pButton label="Generar PDF" icon="pi pi-file-pdf" class="w-full p-button-lg mt-5 shadow-2" [disabled]="carrito.length === 0 || !clienteSeleccionado || !clienteDocumento" (click)="generarPDF()" [style.background]="empresaActiva?.color" [style.border]="'none'"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p-card class="mt-4 shadow-1 block p-0" styleClass="cotizacion-conditions-card">
+        <div class="p-4 bg-white text-700 text-sm border-round">
+            <div class="mb-3">
+                <div class="font-bold mb-1 text-lg text-primary">CONDICIONES DE VENTA:</div>
+                <div class="text-base mb-1">
+                    * EL MATERIAL SERÁ <strong>{{ lugarEntrega === 'CANTERA' ? 'RECOGIDO EN CANTERA' : 'ENTREGADO EN OBRA' }}</strong>.
+                </div>
+                <div class="text-base">
+                    * LOS PRECIOS <strong>{{ incluyeIgv ? 'SÍ INCLUYEN' : 'NO INCLUYEN' }}</strong> IGV (18%).
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="font-bold mb-2 text-lg text-primary">Cuentas para Abono:</div>
+                <div>* Cta. Detracción Banco de la Nación: 00615009040</div>
+                <div>* Cta. Banco de Crédito (BCP): 194-20587879-0-35</div>
+                <div>* CCI BCP: 00219412058787903595</div>
+            </div>
+        </div>
+    </p-card>
+</div>
