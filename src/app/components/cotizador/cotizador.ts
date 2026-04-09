@@ -37,7 +37,7 @@ const DATOS_CORPORATIVOS: any = {
     direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
     telefonos: '959098427 - 914828235',
     correo: 'wymvdc1509@gmail.com',
-    rutaLogo: 'https://tu-proyecto.supabase.co/storage/v1/object/public/recursos/logowym.png', 
+    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logowym.png', 
     rutaFirma: '' 
   },
   'VDC': {
@@ -48,7 +48,7 @@ const DATOS_CORPORATIVOS: any = {
     telefonos: '959098427 - 914828235',
     correo: 'wymvdc1509@gmail.com',
     rutaLogo: '',
-    rutaFirma: 'https://tu-proyecto.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png'
+    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png'
   }
 };
 
