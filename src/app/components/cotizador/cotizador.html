@@ -1,7 +1,13 @@
 <div class="p-4" style="background-color: #f4f7f9; min-height: 100vh;">
     <div class="flex justify-content-between align-items-center mb-4 p-4 shadow-2 bg-white border-round-xl">
         <div class="flex align-items-center">
-            <i [class]="empresaActiva?.logo" [style.color]="empresaActiva?.color" class="text-5xl mr-3"></i>
+            <ng-container *ngIf="datosActuales?.rutaLogo; else iconFallback">
+                <img [src]="datosActuales.rutaLogo" (error)="datosActuales.rutaLogo = null" alt="Logo Empresa" style="height: 50px; margin-right: 1.5rem; object-fit: contain;">
+            </ng-container>
+            <ng-template #iconFallback>
+                <i [class]="empresaActiva?.logo" [style.color]="empresaActiva?.color" class="text-5xl mr-3"></i>
+            </ng-template>
+
             <div>
                 <span class="text-500 font-medium block">Emisor:</span>
                 <h2 [style.color]="empresaActiva?.color" class="m-0 text-3xl font-bold">{{ empresaActiva?.nombre }}</h2>
@@ -38,18 +44,18 @@
                         </ng-template>
                     </p-select>
                 </div>
-                <div class="col-12 md:col-4">
+                <div class="col-12 md:col-4 mt-3 md:mt-0">
                     <label class="font-bold block mb-2">RUC / DNI <span class="text-red-500">*</span></label>
                     <input pInputText [(ngModel)]="clienteDocumento" placeholder="Ej: 20123456789" class="w-full">
                 </div>
             </div>
 
             <div class="grid">
-                <div class="col-12 md:col-4">
+                <div class="col-12 md:col-4 mb-3 md:mb-0">
                     <label class="font-bold block mb-2">Teléfono</label>
                     <input pInputText [(ngModel)]="clienteTelefono" placeholder="Celular o Fijo" class="w-full">
                 </div>
-                <div class="col-12 md:col-4">
+                <div class="col-12 md:col-4 mb-3 md:mb-0">
                     <label class="font-bold block mb-2">Correo Electrónico</label>
                     <input pInputText [(ngModel)]="clienteCorreo" placeholder="correo@empresa.com" class="w-full">
                 </div>
@@ -65,7 +71,7 @@
         <ng-template pTemplate="title">
             <div class="text-xl font-bold border-bottom-1 border-300 pb-2 mb-3 flex justify-content-between align-items-center">
                 <span>2. Agregar Productos</span>
-                <small class="text-sm font-normal text-500"><i class="pi pi-info-circle mr-1"></i>Los productos nuevos se guardarán en BD automáticamente.</small>
+                <small class="text-sm font-normal text-500 hidden sm:block"><i class="pi pi-info-circle mr-1"></i>Nuevos se guardan en BD</small>
             </div>
         </ng-template>
         
@@ -80,20 +86,20 @@
                     [filter]="true" 
                     filterBy="descripcion" 
                     [showClear]="true" 
-                    placeholder="Escribe un producto nuevo o busca en catálogo..."
+                    placeholder="Escribe o busca en catálogo..."
                     (onChange)="alSeleccionarProducto($event)"
                     styleClass="w-full" class="w-full">
                 </p-select>
             </div>
-            <div class="col-4 md:col-2 mb-3">
+            <div class="col-6 md:col-2 mb-3">
                 <label class="font-bold block mb-2">Unidad</label>
                 <input pInputText [(ngModel)]="inputUnidad" placeholder="m3" class="w-full">
             </div>
-            <div class="col-4 md:col-2 mb-3">
+            <div class="col-6 md:col-2 mb-3">
                 <label class="font-bold block mb-2">Cantidad</label>
                 <p-inputNumber [(ngModel)]="inputCantidad" [min]="1" styleClass="w-full" class="w-full"></p-inputNumber>
             </div>
-            <div class="col-4 md:col-2 mb-3">
+            <div class="col-12 md:col-2 mb-3">
                 <label class="font-bold block mb-2">Precio Unit.</label>
                 <p-inputNumber [(ngModel)]="inputPrecio" mode="currency" currency="PEN" locale="es-PE" styleClass="w-full" class="w-full"></p-inputNumber>
             </div>
@@ -108,10 +114,10 @@
             <div class="text-xl font-bold border-bottom-1 border-300 pb-2 mb-3">3. Detalle de Cotización</div>
         </ng-template>
         
-        <p-table [value]="carrito" styleClass="p-datatable-gridlines p-datatable-sm" class="mb-4">
+        <p-table [value]="carrito" [scrollable]="true" [tableStyle]="{'min-width': '45rem'}" styleClass="p-datatable-gridlines p-datatable-sm" class="mb-4 block">
             <ng-template pTemplate="header">
                 <tr>
-                    <th>SKU</th>
+                    <th style="width: 5%">Ítem</th>
                     <th>Descripción</th>
                     <th>Unid.</th>
                     <th style="width: 12rem">Cantidad</th> 
@@ -122,7 +128,7 @@
             </ng-template>
             <ng-template pTemplate="body" let-item let-i="rowIndex">
                 <tr>
-                    <td><small class="text-500 font-bold">{{item.sku}}</small></td>
+                    <td class="text-center font-bold text-500">{{ i + 1 }}</td>
                     <td class="font-semibold">{{item.descripcion}}</td>
                     <td>{{item.unidad}}</td>
                     <td>
@@ -192,24 +198,4 @@
             </div>
         </div>
     </div>
-
-    <p-card class="mt-4 shadow-1 block p-0" styleClass="cotizacion-conditions-card">
-        <div class="p-4 bg-white text-700 text-sm border-round">
-            <div class="mb-3">
-                <div class="font-bold mb-1 text-lg text-primary">CONDICIONES DE VENTA:</div>
-                <div class="text-base mb-1">
-                    * EL MATERIAL SERÁ <strong>{{ lugarEntrega === 'CANTERA' ? 'RECOGIDO EN CANTERA' : 'ENTREGADO EN OBRA' }}</strong>.
-                </div>
-                <div class="text-base">
-                    * LOS PRECIOS <strong>{{ incluyeIgv ? 'SÍ INCLUYEN' : 'NO INCLUYEN' }}</strong> IGV (18%).
-                </div>
-            </div>
-            <div class="mt-4">
-                <div class="font-bold mb-2 text-lg text-primary">Cuentas para Abono:</div>
-                <div>* Cta. Detracción Banco de la Nación: 00615009040</div>
-                <div>* Cta. Banco de Crédito (BCP): 194-20587879-0-35</div>
-                <div>* CCI BCP: 00219412058787903595</div>
-            </div>
-        </div>
-    </p-card>
 </div>

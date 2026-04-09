@@ -1,18 +1,17 @@
-<div class="flex flex-column align-items-center justify-content-center h-screen bg-gray-50">
+<div class="flex flex-column align-items-center justify-content-center min-h-screen bg-gray-50 p-4">
     <div class="text-center mb-6">
         <h1 class="text-4xl font-bold text-900 mb-2">Panel de Control</h1>
         <p class="text-xl text-600">Selecciona la empresa para gestionar la cotización</p>
     </div>
 
-    <div class="flex flex-row gap-5">
-        <div *ngFor="let empresa of empresas">
-            <p-card [style]="{ width: '300px', textAlign: 'center' }" 
-                    class="cursor-pointer shadow-3 hover:shadow-6 transition-all transition-duration-300"
+    <div class="flex flex-column md:flex-row gap-5 w-full max-w-50rem justify-content-center">
+        
+        <div *ngFor="let empresa of empresas" class="w-full md:w-6">
+            <p-card styleClass="text-center w-full cursor-pointer shadow-3 hover:shadow-6 transition-all transition-duration-300"
                     (click)="seleccionar(empresa)">
                 
-                <div class="py-5">
+                <div class="py-4">
                     <i [class]="empresa.logo" [style]="{ fontSize: '4rem', color: empresa.color }"></i>
-                    
                     <h2 class="text-2xl font-semibold mt-4 text-800">{{ empresa.nombre }}</h2>
                 </div>
 
@@ -21,10 +20,12 @@
                               icon="pi pi-arrow-right" 
                               iconPos="right"
                               class="w-full" 
+                              styleClass="w-full"
                               [style]="{ background: empresa.color, border: 'none' }">
                     </p-button>
                 </ng-template>
             </p-card>
         </div>
+
     </div>
 </div>
