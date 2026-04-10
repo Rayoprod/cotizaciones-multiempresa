@@ -38,7 +38,7 @@ const DATOS_CORPORATIVOS: any = {
     telefonos: '959098427 - 914828235',
     correo: 'wymvdc1509@gmail.com',
     rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logowym.png', 
-    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/WhatsApp%20Image%202026-04-09%20at%2020.27.17.jpeg' 
+    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg' 
   },
   'VDC': {
     nombreComercial: 'ELECTROFERR. VIRGEN DEL CARMEN',
@@ -101,7 +101,11 @@ export class CotizadorComponent implements OnInit {
   async ngOnInit() {
     const datos = localStorage.getItem('empresa_activa');
     this.empresaActiva = datos ? JSON.parse(datos) : { nombre: 'VDC', color: '#1e40af' };
-    const clave = this.empresaActiva.nombre.toUpperCase().includes('W&M') ? 'WM' : 'VDC';
+    
+    // CORRECCIÓN 1: Validación más robusta del nombre
+    const nombreEmp = this.empresaActiva.nombre.toUpperCase();
+    const clave = (nombreEmp.includes('W&M') || nombreEmp.includes('WYM') || nombreEmp.includes('WM')) ? 'WM' : 'VDC';
+    
     this.datosActuales = DATOS_CORPORATIVOS[clave];
 
     await this.cargarDatosDesdeBD();
@@ -218,11 +222,15 @@ export class CotizadorComponent implements OnInit {
     return texto.split(' ').map(palabra => palabra.length > 25 ? palabra.match(/.{1,25}/g)?.join('\u200B') : palabra).join(' ');
   }
 
+  // CORRECCIÓN 2: Avisos en consola para enlaces rotos o con bloqueos
   async cargarImagenRemota(url: string): Promise<string | null> {
     if (!url || url.trim() === '') return null;
     try {
       const response = await fetch(url);
-      if (!response.ok) return null;
+      if (!response.ok) {
+        console.error(`Error al cargar la imagen de Supabase: ${response.status} - Verifica este enlace:`, url);
+        return null;
+      }
       const blob = await response.blob();
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -231,6 +239,7 @@ export class CotizadorComponent implements OnInit {
         reader.readAsDataURL(blob);
       });
     } catch (e) {
+      console.error('Error de red al intentar descargar la imagen:', e);
       return null;
     }
   }
@@ -343,7 +352,6 @@ export class CotizadorComponent implements OnInit {
           }, margin: [0, 0, 0, 15]
         },
 
-        // --- SOLUCIÓN: ÍTEMS Y TOTALES AGRUPADOS PARA FLUJO NATURAL ---
         {
           stack: [
             { 
@@ -351,7 +359,7 @@ export class CotizadorComponent implements OnInit {
                 headerRows: 1, 
                 widths: anchosTabla, 
                 body: filasItems,
-                dontBreakRows: true // Mantiene los ítems enteros si hay salto de página
+                dontBreakRows: true 
               }, 
               layout: { 
                 hLineWidth: (i: number, node: any) => (i === 0 || i === 1 || i === node.table.body.length) ? 1 : 0.5, 
@@ -364,15 +372,14 @@ export class CotizadorComponent implements OnInit {
             { 
               table: { widths: anchosTabla, body: filasTotales }, 
               layout: 'noBorders', 
-              margin: [0, 5, 0, 0] // Espacio natural entre tabla y totales
+              margin: [0, 5, 0, 0] 
             }
           ],
-          unbreakable: false // <-- CLAVE: Permite que el bloque fluya o salte naturalmente
+          unbreakable: false 
         },
 
-        // --- BLOQUE: OBSERVACIONES Y FIRMAS (Con margen estático) ---
         {
-          unbreakable: true, // Protege que la firma no se despegue de sus condiciones
+          unbreakable: true, 
           stack: [
             {
               table: {
@@ -409,7 +416,7 @@ export class CotizadorComponent implements OnInit {
                 paddingTop: function() { return 8; },
                 paddingBottom: function() { return 8; }
               },
-              margin: [0, 25, 0, 20] // Margen estático (Adiós al espacio dinámico)
+              margin: [0, 25, 0, 20]
             },
             
             {
