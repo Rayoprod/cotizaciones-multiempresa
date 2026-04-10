@@ -27,7 +27,7 @@ export class SelectorEmpresaComponent {
       color: '#1e40af', 
       logo: 'pi pi-shopping-cart',
       // PON LA URL DE SUPABASE AQUÍ (Si aún no hay logo de VDC, déjalo vacío '')
-      rutaLogo: '' 
+      rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logovdc.jpeg' 
     }
   ];
 
