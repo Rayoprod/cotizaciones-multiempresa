@@ -37,7 +37,7 @@ const DATOS_CORPORATIVOS: any = {
     direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
     telefonos: '959098427 - 914828235',
     correo: 'wymvdc1509@gmail.com',
-    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logowym.png', 
+    rutaLogo: 'https://tu-proyecto.supabase.co/storage/v1/object/public/recursos/logowym.png', 
     rutaFirma: '' 
   },
   'VDC': {
@@ -48,7 +48,7 @@ const DATOS_CORPORATIVOS: any = {
     telefonos: '959098427 - 914828235',
     correo: 'wymvdc1509@gmail.com',
     rutaLogo: '',
-    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png'
+    rutaFirma: 'https://tu-proyecto.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png'
   }
 };
 
@@ -96,7 +96,6 @@ export class CotizadorComponent implements OnInit {
   igvTotal: number = 0;
   totalFinal: number = 0;
 
-  // Inyectamos ChangeDetectorRef para solucionar el problema del doble clic
   constructor(private cdr: ChangeDetectorRef) {}
 
   async ngOnInit() {
@@ -193,7 +192,7 @@ export class CotizadorComponent implements OnInit {
     this.inputCantidad = 1;
     this.inputUnidad = 'm3';
     this.recalcularTodo();
-    this.cdr.detectChanges(); // Forzamos actualización visual rápida
+    this.cdr.detectChanges();
   }
 
   recalcularItem(item: any) {
@@ -236,32 +235,42 @@ export class CotizadorComponent implements OnInit {
     }
   }
 
+  generarFolioCotizacion(): string {
+    const d = new Date();
+    const año = d.getFullYear();
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    const hora = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `COT-${año}${mes}${dia}-${hora}${min}`;
+  }
+
   async generarPDF() {
     await this.procesarClienteSilencioso();
     const nombreFinal = typeof this.clienteSeleccionado === 'object' && this.clienteSeleccionado !== null ? this.clienteSeleccionado.nombre_razon_social : this.clienteSeleccionado;
     const datosEmpresa = this.datosActuales;
+    const folioVenta = this.generarFolioCotizacion();
 
     const logoConvertido = await this.cargarImagenRemota(datosEmpresa.rutaLogo);
     const firmaConvertida = await this.cargarImagenRemota(datosEmpresa.rutaFirma);
 
     const logoIzquierda = logoConvertido 
-      ? { image: logoConvertido, width: 70 } 
-      : { text: `[ Logo ${datosEmpresa.nombreComercial} ]`, color: this.empresaActiva.color, fontSize: 14, bold: true, width: 70 };
+      ? { image: logoConvertido, width: 80 } 
+      : { text: `LOGO\n${datosEmpresa.nombreComercial}`, color: this.empresaActiva.color, fontSize: 10, bold: true, width: 130 };
 
     const firmaDerecha = firmaConvertida
       ? { image: firmaConvertida, width: 120, alignment: 'center' }
       : { text: `________________________________\nGerencia General\n${datosEmpresa.nombreComercial}`, alignment: 'center', fontSize: 9, color: '#4b5563' };
 
     const anchosTabla = [25, '*', 35, 40, 60, 70];
-    const itemsNormales = this.carrito.slice(0, -1);
-    const ultimoItem = this.carrito[this.carrito.length - 1];
-
-    const filasPrincipales: any[] = [
+    
+    // 1. Tabla de Ítems
+    const filasItems: any[] = [
       [{ text: 'Ítem', style: 'tableHeader' }, { text: 'Descripción', style: 'tableHeader' }, { text: 'Unid.', style: 'tableHeader' }, { text: 'Cant.', style: 'tableHeader' }, { text: 'P. Unit.', style: 'tableHeader' }, { text: 'Subtotal', style: 'tableHeader' }]
     ];
 
-    itemsNormales.forEach((item, index) => {
-      filasPrincipales.push([
+    this.carrito.forEach((item, index) => {
+      filasItems.push([
         { text: (index + 1).toString(), style: 'tableBody', alignment: 'center', bold: true, color: '#4b5563' },
         { text: this.formatearTextoLargo(item.descripcion), style: 'tableBody' },
         { text: item.unidad, style: 'tableBody', alignment: 'center' },
@@ -271,43 +280,32 @@ export class CotizadorComponent implements OnInit {
       ]);
     });
 
-    const filasFinales: any[] = [];
-    if (itemsNormales.length === 0) {
-        filasFinales.push([{ text: 'Ítem', style: 'tableHeader' }, { text: 'Descripción', style: 'tableHeader' }, { text: 'Unid.', style: 'tableHeader' }, { text: 'Cant.', style: 'tableHeader' }, { text: 'P. Unit.', style: 'tableHeader' }, { text: 'Subtotal', style: 'tableHeader' }]);
+    if (this.carrito.length === 0) {
+        filasItems.push([{ text: '1', style: 'tableBody', alignment: 'center' }, { text: 'Sin ítems', style: 'tableBody' }, '', '', '', '']);
     }
 
-    if (ultimoItem) {
-      filasFinales.push([
-        { text: (itemsNormales.length + 1).toString(), style: 'tableBody', alignment: 'center', bold: true, color: '#4b5563' },
-        { text: this.formatearTextoLargo(ultimoItem.descripcion), style: 'tableBody' },
-        { text: ultimoItem.unidad, style: 'tableBody', alignment: 'center' },
-        { text: ultimoItem.cantidad.toString(), style: 'tableBody', alignment: 'center' },
-        { text: `S/ ${ultimoItem.precio_unitario.toFixed(2)}`, style: 'tableBody', alignment: 'right' },
-        { text: `S/ ${ultimoItem.subtotal.toFixed(2)}`, style: 'tableBody', alignment: 'right', bold: true }
-      ]);
-    }
+    // 2. Tabla de Totales
+    const filasTotales: any[] = [
+      [{ text: 'Base Imponible:', colSpan: 5, alignment: 'right', bold: true, fontSize: 10, margin: [0, 5, 0, 0] }, '', '', '', '', { text: `S/ ${this.subtotalGeneral.toFixed(2)}`, alignment: 'right', fontSize: 10, margin: [0, 5, 0, 0] }]
+    ];
 
-    // Totales
-    filasFinales.push([{ text: '', colSpan: 6, border: [false, true, false, false], margin: [0, 5, 0, 0] }, '', '', '', '', '']);
-    filasFinales.push([{ text: 'Base Imponible:', colSpan: 5, alignment: 'right', bold: true, fontSize: 10, border: [false, false, false, false] }, '', '', '', '', { text: `S/ ${this.subtotalGeneral.toFixed(2)}`, alignment: 'right', fontSize: 10, border: [false, false, false, false] }]);
     if (this.incluyeIgv) {
-      filasFinales.push([{ text: 'IGV (18%):', colSpan: 5, alignment: 'right', bold: true, fontSize: 10, border: [false, false, false, false] }, '', '', '', '', { text: `S/ ${this.igvTotal.toFixed(2)}`, alignment: 'right', fontSize: 10, border: [false, false, false, false] }]);
+      filasTotales.push([{ text: 'IGV (18%):', colSpan: 5, alignment: 'right', bold: true, fontSize: 10 }, '', '', '', '', { text: `S/ ${this.igvTotal.toFixed(2)}`, alignment: 'right', fontSize: 10 }]);
     }
-    filasFinales.push([{ text: 'TOTAL FINAL:', colSpan: 5, alignment: 'right', bold: true, fontSize: 12, border: [false, false, false, false] }, '', '', '', '', { text: `S/ ${this.totalFinal.toFixed(2)}`, alignment: 'right', bold: true, fontSize: 12, color: this.empresaActiva.color, border: [false, false, false, false] }]);
+    filasTotales.push([{ text: 'TOTAL FINAL:', colSpan: 5, alignment: 'right', bold: true, fontSize: 12 }, '', '', '', '', { text: `S/ ${this.totalFinal.toFixed(2)}`, alignment: 'right', bold: true, fontSize: 12, color: this.empresaActiva.color }]);
 
-    // CÁLCULO INTELIGENTE DEL ESPACIADO INFERIOR
-    // Si hay pocos ítems, metemos un margen alto para empujar la firma hacia abajo.
+    // LA FÓRMULA MÁGICA RECUPERADA: Empuja fuertemente hacia abajo si hay pocos ítems
     const cantidadItems = this.carrito.length;
-    const espacioDinamico = cantidadItems < 8 ? (8 - cantidadItems) * 30 : 15; 
+    const espacioDinamico = cantidadItems < 8 ? (8 - cantidadItems) * 35 : 15; 
 
-    // 3. GENERAR EL DOCUMENTO
     const docDefinition: any = {
       pageSize: 'A4',
-      pageMargins: [40, 120, 40, 50], 
+      // MARGEN ARREGLADO para quitar el espacio blanco feo arriba
+      pageMargins: [40, 130, 40, 50], 
       
       header: () => {
         return {
-          margin: [40, 30, 40, 0],
+          margin: [40, 20, 40, 0],
           stack: [
             {
               columns: [
@@ -315,11 +313,11 @@ export class CotizadorComponent implements OnInit {
                 {
                   width: '*',
                   text: [
-                    { text: 'COTIZACIÓN COMERCIAL\n', fontSize: 14, bold: true, color: this.empresaActiva.color, alignment: 'right' },
+                    { text: `COTIZACIÓN N° ${folioVenta}\n`, fontSize: 14, bold: true, color: this.empresaActiva.color, alignment: 'right' },
                     { text: `${datosEmpresa.nombreComercial}\n`, bold: true, fontSize: 10, alignment: 'right' },
                     ...(datosEmpresa.razonSocial ? [{ text: `${datosEmpresa.razonSocial}\n`, fontSize: 9, alignment: 'right' }] : []),
                     { text: `RUC: ${datosEmpresa.ruc}\n`, alignment: 'right', fontSize: 9, color: '#4b5563' },
-                    { text: `${datosEmpresa.direccion}\n`, alignment: 'right', fontSize: 8, color: '#4b5563' },
+                    { text: `${datosEmpresa.direccion}\n`, alignment: 'right', fontSize: 8, color: '#4b5563', leadingIndent: 0 },
                     { text: `Cel: ${datosEmpresa.telefonos}\n`, alignment: 'right', fontSize: 8, color: '#4b5563' },
                     { text: `${datosEmpresa.correo}\n`, alignment: 'right', fontSize: 8, color: '#4b5563' },
                     { text: `Fecha: ${new Date().toLocaleDateString()}`, alignment: 'right', fontSize: 9, bold: true, margin: [0, 3, 0, 0] }
@@ -350,14 +348,30 @@ export class CotizadorComponent implements OnInit {
           }, margin: [0, 0, 0, 15]
         },
 
-        ...(itemsNormales.length > 0 ? [{ table: { headerRows: 1, widths: anchosTabla, body: filasPrincipales }, layout: { hLineWidth: (i: number) => (i === 0 || i === 1) ? 1 : 0.5, vLineWidth: () => 0, hLineColor: (i: number) => (i === 0 || i === 1) ? this.empresaActiva.color : '#d1d5db', paddingTop: () => 5, paddingBottom: () => 5 }, margin: [0, 0, 0, 0] }] : []),
+        // 1. Tabla de Ítems (Fluida)
+        { 
+          table: { headerRows: 1, widths: anchosTabla, body: filasItems }, 
+          layout: { 
+            hLineWidth: (i: number, node: any) => (i === 0 || i === 1 || i === node.table.body.length) ? 1 : 0.5, 
+            vLineWidth: () => 0, 
+            hLineColor: (i: number, node: any) => (i === 0 || i === 1 || i === node.table.body.length) ? this.empresaActiva.color : '#d1d5db', 
+            paddingTop: () => 5, 
+            paddingBottom: () => 5 
+          }, 
+          margin: [0, 0, 0, 0] 
+        },
 
+        // 2. Tabla de Totales (Pegada justo debajo de los ítems)
+        { 
+          table: { widths: anchosTabla, body: filasTotales }, 
+          layout: 'noBorders', 
+          margin: [0, 0, 0, espacioDinamico] // <-- AQUÍ SE APLICA EL EMPUJE
+        },
+
+        // 3. BLOQUE INROMPIBLE SÓLO PARA OBS Y FIRMA (Abrazando el fondo de la hoja)
         {
           unbreakable: true,
           stack: [
-            { table: { widths: anchosTabla, body: filasFinales }, layout: { hLineWidth: (i: number) => (i === 0 && itemsNormales.length > 0) ? 0 : (i === 0 || i === 1 ? 1 : 0.5), vLineWidth: () => 0, hLineColor: (i: number) => (i === 0 || i === 1) ? this.empresaActiva.color : '#d1d5db', paddingTop: () => 5, paddingBottom: () => 5 }, margin: [0, 0, 0, 15] },
-            
-            // --- CUADRO PROFESIONAL MINIMALISTA CON ESPACIADO DINÁMICO ---
             {
               table: {
                 widths: ['50%', '50%'],
@@ -393,11 +407,9 @@ export class CotizadorComponent implements OnInit {
                 paddingTop: function() { return 8; },
                 paddingBottom: function() { return 8; }
               },
-              // AQUI SE APLICA LA MAGIA: EL MARGEN TOP CRECE SI HAY POCOS ÍTEMS
-              margin: [0, espacioDinamico, 0, 20]
+              margin: [0, 0, 0, 20]
             },
             
-            // --- FIRMA ---
             {
               columns: [
                 { width: '*', text: '' }, 
@@ -417,7 +429,7 @@ export class CotizadorComponent implements OnInit {
       }
     };
 
-    const nombreArchivo = `Cotizacion_${this.empresaActiva.nombre.replace(/\s+/g, '_')}_${nombreFinal.replace(/\s+/g, '_')}.pdf`;
+    const nombreArchivo = `${folioVenta}_${this.empresaActiva.nombre.replace(/\s+/g, '_')}_${nombreFinal.replace(/\s+/g, '_')}.pdf`;
     const generadorPdf = (pdfMake as any).default || pdfMake;
     generadorPdf.createPdf(docDefinition).download(nombreArchivo);
   }
