@@ -295,7 +295,7 @@ export class CotizadorComponent implements OnInit {
 
     // 2. Tabla de Totales
     const filasTotales: any[] = [
-      [{ text: 'Base Imponible:', colSpan: 5, alignment: 'right', bold: true, fontSize: 10, margin: [0, 5, 0, 0] }, '', '', '', '', { text: `S/ ${this.subtotalGeneral.toFixed(2)}`, alignment: 'right', fontSize: 10, margin: [0, 5, 0, 0] }]
+      [{ text: 'Subtotal:', colSpan: 5, alignment: 'right', bold: true, fontSize: 10, margin: [0, 5, 0, 0] }, '', '', '', '', { text: `S/ ${this.subtotalGeneral.toFixed(2)}`, alignment: 'right', fontSize: 10, margin: [0, 5, 0, 0] }]
     ];
 
     if (this.incluyeIgv) {

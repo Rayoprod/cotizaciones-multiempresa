@@ -13,7 +13,7 @@
                 <h2 [style.color]="empresaActiva?.color" class="m-0 text-xl md:text-3xl font-bold">{{ empresaActiva?.nombre }}</h2>
             </div>
         </div>
-        <button pButton label="Sedes" icon="pi pi-sync" routerLink="/selector" class="p-button-outlined p-button-secondary p-button-sm md:p-button-md"></button>
+        <button pButton label="Cambiar de Empresa" icon="pi pi-sync" routerLink="/selector" class="p-button-outlined p-button-secondary p-button-sm md:p-button-md"></button>
     </div>
 
     <p-card class="mb-4 shadow-2 block">
@@ -183,7 +183,7 @@
             <div class="p-4 border-round-xl shadow-2 bg-white h-full flex flex-column justify-content-between">
                 <div>
                     <div class="flex justify-content-between mb-3">
-                        <span class="text-600 text-lg">Base Imponible:</span>
+                        <span class="text-600 text-lg">Subtotal</span>
                         <span class="font-bold text-lg">S/ {{ subtotalGeneral | number:'1.2-2' }}</span>
                     </div>
                     <div class="flex justify-content-between mb-3" *ngIf="incluyeIgv">
