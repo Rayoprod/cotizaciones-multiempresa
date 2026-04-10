@@ -38,7 +38,7 @@ const DATOS_CORPORATIVOS: any = {
     telefonos: '959098427 - 914828235',
     correo: 'wymvdc1509@gmail.com',
     rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logowym.png', 
-    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg' 
+    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/WhatsApp%20Image%202026-04-09%20at%2020.27.17.jpeg' 
   },
   'VDC': {
     nombreComercial: 'ELECTROFERR. VIRGEN DEL CARMEN',
@@ -294,13 +294,8 @@ export class CotizadorComponent implements OnInit {
     }
     filasTotales.push([{ text: 'TOTAL FINAL:', colSpan: 5, alignment: 'right', bold: true, fontSize: 12 }, '', '', '', '', { text: `S/ ${this.totalFinal.toFixed(2)}`, alignment: 'right', bold: true, fontSize: 12, color: this.empresaActiva.color }]);
 
-    // LA FÓRMULA MÁGICA RECUPERADA: Empuja fuertemente hacia abajo si hay pocos ítems
-    const cantidadItems = this.carrito.length;
-    const espacioDinamico = cantidadItems < 8 ? (8 - cantidadItems) * 35 : 15; 
-
     const docDefinition: any = {
       pageSize: 'A4',
-      // MARGEN ARREGLADO para quitar el espacio blanco feo arriba
       pageMargins: [40, 130, 40, 50], 
       
       header: () => {
@@ -348,29 +343,36 @@ export class CotizadorComponent implements OnInit {
           }, margin: [0, 0, 0, 15]
         },
 
-        // 1. Tabla de Ítems (Fluida)
-        { 
-          table: { headerRows: 1, widths: anchosTabla, body: filasItems }, 
-          layout: { 
-            hLineWidth: (i: number, node: any) => (i === 0 || i === 1 || i === node.table.body.length) ? 1 : 0.5, 
-            vLineWidth: () => 0, 
-            hLineColor: (i: number, node: any) => (i === 0 || i === 1 || i === node.table.body.length) ? this.empresaActiva.color : '#d1d5db', 
-            paddingTop: () => 5, 
-            paddingBottom: () => 5 
-          }, 
-          margin: [0, 0, 0, 0] 
-        },
-
-        // 2. Tabla de Totales (Pegada justo debajo de los ítems)
-        { 
-          table: { widths: anchosTabla, body: filasTotales }, 
-          layout: 'noBorders', 
-          margin: [0, 0, 0, espacioDinamico] // <-- AQUÍ SE APLICA EL EMPUJE
-        },
-
-        // 3. BLOQUE INROMPIBLE SÓLO PARA OBS Y FIRMA (Abrazando el fondo de la hoja)
+        // --- SOLUCIÓN: ÍTEMS Y TOTALES AGRUPADOS PARA FLUJO NATURAL ---
         {
-          unbreakable: true,
+          stack: [
+            { 
+              table: { 
+                headerRows: 1, 
+                widths: anchosTabla, 
+                body: filasItems,
+                dontBreakRows: true // Mantiene los ítems enteros si hay salto de página
+              }, 
+              layout: { 
+                hLineWidth: (i: number, node: any) => (i === 0 || i === 1 || i === node.table.body.length) ? 1 : 0.5, 
+                vLineWidth: () => 0, 
+                hLineColor: (i: number, node: any) => (i === 0 || i === 1 || i === node.table.body.length) ? this.empresaActiva.color : '#d1d5db', 
+                paddingTop: () => 5, 
+                paddingBottom: () => 5 
+              }
+            },
+            { 
+              table: { widths: anchosTabla, body: filasTotales }, 
+              layout: 'noBorders', 
+              margin: [0, 5, 0, 0] // Espacio natural entre tabla y totales
+            }
+          ],
+          unbreakable: false // <-- CLAVE: Permite que el bloque fluya o salte naturalmente
+        },
+
+        // --- BLOQUE: OBSERVACIONES Y FIRMAS (Con margen estático) ---
+        {
+          unbreakable: true, // Protege que la firma no se despegue de sus condiciones
           stack: [
             {
               table: {
@@ -407,7 +409,7 @@ export class CotizadorComponent implements OnInit {
                 paddingTop: function() { return 8; },
                 paddingBottom: function() { return 8; }
               },
-              margin: [0, 0, 0, 20]
+              margin: [0, 25, 0, 20] // Margen estático (Adiós al espacio dinámico)
             },
             
             {
