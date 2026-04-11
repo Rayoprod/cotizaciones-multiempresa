@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api-peru/:path*",
+      "destination": "https://api.decolecta.com/:path*"
+    }
+  ]
+}

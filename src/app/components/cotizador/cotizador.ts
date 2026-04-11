@@ -12,13 +12,13 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
-import { SelectModule } from 'primeng/select';
+import { AutoCompleteModule } from 'primeng/autocomplete';
 
 // Supabase
 import { createClient } from '@supabase/supabase-js';
 import { environment } from '../../../environments/environment';
 
-// Importaciones y Configuración para PDF
+// PDF
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 
@@ -26,9 +26,6 @@ const fuentes: any = pdfFonts;
 const vfsReal = fuentes.vfs || fuentes.pdfMake?.vfs || fuentes.default?.pdfMake?.vfs;
 Object.assign(pdfMake, { vfs: vfsReal });
 
-// ==========================================
-// EL DICCIONARIO MAESTRO (CON URLS DE SUPABASE)
-// ==========================================
 const DATOS_CORPORATIVOS: any = {
   'WM': {
     nombreComercial: 'W&M E.I.R.L.',
@@ -58,7 +55,7 @@ const DATOS_CORPORATIVOS: any = {
   imports: [
     CommonModule, FormsModule, RouterModule, TableModule, 
     ButtonModule, CardModule, InputNumberModule, InputTextModule, 
-    TextareaModule, SelectButtonModule, ToggleSwitchModule, SelectModule
+    TextareaModule, SelectButtonModule, ToggleSwitchModule, AutoCompleteModule
   ],
   templateUrl: './cotizador.html',
   styleUrl: './cotizador.scss'
@@ -69,10 +66,18 @@ export class CotizadorComponent implements OnInit {
   
   empresaActiva: any;
   datosActuales: any;
+  
   productosBD: any[] = [];
   clientesBD: any[] = [];
+  
+  // ARRAYS PARA EL BUSCADOR (SÓLO TEXTO)
+  nombresClientesFiltrados: string[] = [];
+  nombresProductosFiltrados: string[] = [];
+
   carrito: any[] = [];
   
+  // VARIABLES CLIENTE
+  clienteNombre: string = ''; 
   clienteSeleccionado: any = null;
   clienteDocumento: string = '';
   clienteTelefono: string = '';
@@ -80,6 +85,8 @@ export class CotizadorComponent implements OnInit {
   clienteCorreo: string = '';
   clienteObservaciones: string = '';
 
+  // VARIABLES PRODUCTO
+  productoNombre: string = '';
   productoSeleccionado: any = null;
   inputUnidad: string = 'm3';
   inputCantidad: number = 1;
@@ -102,7 +109,6 @@ export class CotizadorComponent implements OnInit {
     const datos = localStorage.getItem('empresa_activa');
     this.empresaActiva = datos ? JSON.parse(datos) : { nombre: 'VDC', color: '#1e40af' };
     
-    // CORRECCIÓN 1: Validación más robusta del nombre
     const nombreEmp = this.empresaActiva.nombre.toUpperCase();
     const clave = (nombreEmp.includes('W&M') || nombreEmp.includes('WYM') || nombreEmp.includes('WM')) ? 'WM' : 'VDC';
     
@@ -120,31 +126,142 @@ export class CotizadorComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
-  alSeleccionarCliente(event: any) {
-    if (typeof event.value === 'object' && event.value !== null) {
-      this.clienteDocumento = event.value.documento_identidad || '';
-      this.clienteTelefono = event.value.telefono || '';
-      this.clienteDireccion = event.value.direccion || '';
-      this.clienteCorreo = event.value.correo || '';
-      this.cdr.detectChanges();
-    } 
+  // ==========================================
+  // BUSCADORES DE BASE DE DATOS (RESTAURADOS)
+  // ==========================================
+  filtrarNombresClientes(event: any) {
+    const query = event.query.toLowerCase();
+    this.nombresClientesFiltrados = this.clientesBD
+      .filter(c => c.nombre_razon_social.toLowerCase().includes(query) || 
+                  (c.documento_identidad && c.documento_identidad.includes(query)))
+      .map(c => c.nombre_razon_social); // Pasamos solo textos al AutoComplete
   }
 
-  alSeleccionarProducto(event: any) {
-    if (typeof event.value === 'object' && event.value !== null) {
-      this.inputPrecio = event.value.precio_unitario_base;
-      this.inputUnidad = event.value.unidad;
+  alElegirNombreSugerido(event: any) {
+    const nombreElegido = event.value || event;
+    const cliente = this.clientesBD.find(c => c.nombre_razon_social === nombreElegido);
+    
+    if (cliente) {
+      this.clienteSeleccionado = cliente;
+      this.clienteNombre = cliente.nombre_razon_social;
+      this.clienteDocumento = cliente.documento_identidad || '';
+      this.clienteTelefono = cliente.telefono || '';
+      this.clienteDireccion = cliente.direccion || '';
+      this.clienteCorreo = cliente.correo || '';
       this.cdr.detectChanges();
     }
   }
 
-  async procesarClienteSilencioso() {
-    const esNuevoCliente = typeof this.clienteSeleccionado === 'string' || !this.clienteSeleccionado?.id;
-    const nombreFinal = typeof this.clienteSeleccionado === 'object' && this.clienteSeleccionado !== null ? this.clienteSeleccionado.nombre_razon_social : this.clienteSeleccionado;
+  filtrarNombresProductos(event: any) {
+    const query = event.query.toLowerCase();
+    this.nombresProductosFiltrados = this.productosBD
+      .filter(p => p.descripcion.toLowerCase().includes(query))
+      .map(p => p.descripcion);
+  }
 
-    if (esNuevoCliente && nombreFinal && this.clienteDocumento) {
+  alElegirProductoSugerido(event: any) {
+    const nombreElegido = event.value || event;
+    const producto = this.productosBD.find(p => p.descripcion === nombreElegido);
+    
+    if (producto) {
+      this.productoSeleccionado = producto;
+      this.productoNombre = producto.descripcion;
+      this.inputPrecio = producto.precio_unitario_base;
+      this.inputUnidad = producto.unidad;
+      this.cdr.detectChanges();
+    }
+  }
+
+  // ==========================================
+  // LUPA SUNAT/RENIEC (REPARADA)
+  // ==========================================
+  async buscarDocumento() {
+    console.log('🟢 PASO 1: Botón presionado. Iniciando búsqueda...');
+    
+    // Validamos que exista el input
+    const doc = this.clienteDocumento ? this.clienteDocumento.trim() : '';
+    console.log(`🟢 PASO 2: Documento capturado: "${doc}" (Longitud: ${doc.length} dígitos)`);
+
+    if (doc.length !== 8 && doc.length !== 11) {
+      alert(`⚠️ ERROR: Escribiste ${doc.length} dígitos. El DNI debe tener 8 y el RUC 11.`);
+      return;
+    }
+
+    const token = 'sk_14593.YFyX7enin7im5akcMSHwBZRbotkfcxPo';
+    const tipo = doc.length === 8 ? 'reniec/dni' : 'sunat/ruc';
+    const url = `/api-peru/v1/${tipo}?numero=${doc}`;
+
+    console.log(`🟢 PASO 3: Intentando conectar a la ruta: ${url}`);
+
+    try {
+      const respuesta = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      
+      console.log(`🟢 PASO 4: La API respondió con código de estado HTTP: ${respuesta.status}`);
+
+      if (!respuesta.ok) {
+        console.error('🔴 ERROR CRÍTICO: La API rechazó la consulta.');
+        if (respuesta.status === 401 || respuesta.status === 403) {
+            alert(`⛔ TU TOKEN NO TIENE PERMISOS PARA DNI (Error ${respuesta.status}). \n\nMuchas APIs gratuitas bloquean Reniec. Confírmalo en la consola.`);
+        } else {
+            alert(`⚠️ La API falló con código ${respuesta.status}. No se encontraron datos.`);
+        }
+        return;
+      }
+      
+      const datos = await respuesta.json();
+      console.log('🟢 PASO 5: ¡DATOS RECIBIDOS CON ÉXITO! Aquí están 👇:', datos);
+
+      let nombreExtraido = '';
+      if (doc.length === 8) {
+        // 🔥 BLINDAJE PARA DNI: Agregamos las variables en inglés que descubrimos en la consola
+        const nom = datos.nombres || datos.nombre || datos.first_name || '';
+        const pat = datos.apellidoPaterno || datos.apellido_paterno || datos.first_last_name || '';
+        const mat = datos.apellidoMaterno || datos.apellido_materno || datos.second_last_name || '';
+        
+        nombreExtraido = `${nom} ${pat} ${mat}`.trim();
+        
+        // Fallbacks por si manda todo en una sola línea
+        if (!nombreExtraido && datos.nombre_completo) nombreExtraido = datos.nombre_completo;
+        if (!nombreExtraido && datos.full_name) nombreExtraido = datos.full_name;
+        
+      } else {
+        // RUC (Sunat)
+        nombreExtraido = datos.razon_social || datos.razonSocial || datos.nombre || datos.nombre_comercial || '';
+      }
+
+      console.log(`🟢 PASO 6: Nombre limpio para inyectar en pantalla: "${nombreExtraido}"`);
+
+      this.clienteNombre = nombreExtraido; 
+      this.clienteDireccion = datos.direccion || '';
+
+      const clienteBD = this.clientesBD.find(c => c.documento_identidad === doc);
+      if (clienteBD) {
+        this.clienteTelefono = clienteBD.telefono || '';
+        this.clienteCorreo = clienteBD.correo || '';
+      } else {
+        this.clienteTelefono = '';
+        this.clienteCorreo = '';
+      }
+
+      this.cdr.detectChanges();
+      console.log('🟢 PASO 7: PANTALLA ACTUALIZADA. Fin del proceso.');
+
+    } catch (error) {
+      console.error('🔴 PASO X: ERROR DE RED O DEL PROXY', error);
+      alert('Fallo de red: Revisa que tu servidor Proxy (localhost) esté encendido y funcionando.');
+    }
+  }
+
+  // ==========================================
+  // RESTO DE FUNCIONES (CARRITO Y PDF)
+  // ==========================================
+  async procesarClienteSilencioso() {
+    if (!this.clienteNombre || !this.clienteDocumento) return;
+    const existe = this.clientesBD.find(c => c.documento_identidad === this.clienteDocumento);
+
+    if (!existe) {
       const nuevo = {
-        nombre_razon_social: nombreFinal,
+        nombre_razon_social: this.clienteNombre,
         documento_identidad: this.clienteDocumento,
         telefono: this.clienteTelefono || null,
         direccion: this.clienteDireccion || null,
@@ -152,51 +269,30 @@ export class CotizadorComponent implements OnInit {
       };
       const { data } = await this.supabase.from('clientes').insert([nuevo]).select();
       if (data) {
-        this.clientesBD = [...this.clientesBD, data[0]]; 
-        this.clienteSeleccionado = data[0]; 
+        this.clientesBD.push(data[0]);
       }
     }
   }
 
-  generarSKUUnico(): string {
-    let nuevoSKU = '';
-    let existe = true;
-    while (existe) {
-      nuevoSKU = Math.floor(100000 + Math.random() * 900000).toString();
-      existe = this.productosBD.some(p => p.codigo_sku === nuevoSKU);
-    }
-    return nuevoSKU;
-  }
-
   async agregarItem() {
-    const nombreFinal = typeof this.productoSeleccionado === 'object' && this.productoSeleccionado !== null ? this.productoSeleccionado.descripcion : this.productoSeleccionado;
-    if (!nombreFinal || !this.inputPrecio || this.inputPrecio <= 0 || this.inputCantidad <= 0) return;
-
-    let skuFinal = '';
-    if (typeof this.productoSeleccionado === 'string' || !this.productoSeleccionado?.id) {
-      skuFinal = this.generarSKUUnico();
-      const nuevoProd = { codigo_sku: skuFinal, descripcion: nombreFinal, unidad: this.inputUnidad, precio_unitario_base: this.inputPrecio };
-      const { data } = await this.supabase.from('productos').insert([nuevoProd]).select();
-      if (data) this.productosBD = [...this.productosBD, data[0]]; 
-    } else {
-      skuFinal = this.productoSeleccionado.codigo_sku;
-    }
+    if (!this.productoNombre || !this.inputPrecio || this.inputPrecio <= 0) return;
+    let skuFinal = this.productoSeleccionado ? this.productoSeleccionado.codigo_sku : 'VAR-' + Math.floor(1000 + Math.random() * 9000).toString();
 
     this.carrito.push({
       sku: skuFinal,
-      descripcion: nombreFinal,
+      descripcion: this.productoNombre,
       unidad: this.inputUnidad,
       cantidad: this.inputCantidad,
       precio_unitario: this.inputPrecio,
       subtotal: this.inputPrecio * this.inputCantidad
     });
 
+    this.productoNombre = '';
     this.productoSeleccionado = null;
     this.inputPrecio = null;
     this.inputCantidad = 1;
     this.inputUnidad = 'm3';
     this.recalcularTodo();
-    this.cdr.detectChanges();
   }
 
   recalcularItem(item: any) {
@@ -222,41 +318,27 @@ export class CotizadorComponent implements OnInit {
     return texto.split(' ').map(palabra => palabra.length > 25 ? palabra.match(/.{1,25}/g)?.join('\u200B') : palabra).join(' ');
   }
 
-  // CORRECCIÓN 2: Avisos en consola para enlaces rotos o con bloqueos
   async cargarImagenRemota(url: string): Promise<string | null> {
-    if (!url || url.trim() === '') return null;
+    if (!url) return null;
     try {
       const response = await fetch(url);
-      if (!response.ok) {
-        console.error(`Error al cargar la imagen de Supabase: ${response.status} - Verifica este enlace:`, url);
-        return null;
-      }
       const blob = await response.blob();
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => resolve(null);
         reader.readAsDataURL(blob);
       });
-    } catch (e) {
-      console.error('Error de red al intentar descargar la imagen:', e);
-      return null;
-    }
+    } catch (e) { return null; }
   }
 
   generarFolioCotizacion(): string {
     const d = new Date();
-    const año = d.getFullYear();
-    const mes = String(d.getMonth() + 1).padStart(2, '0');
-    const dia = String(d.getDate()).padStart(2, '0');
-    const hora = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    return `COT-${año}${mes}${dia}-${hora}${min}`;
+    return `COT-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
   }
 
   async generarPDF() {
     await this.procesarClienteSilencioso();
-    const nombreFinal = typeof this.clienteSeleccionado === 'object' && this.clienteSeleccionado !== null ? this.clienteSeleccionado.nombre_razon_social : this.clienteSeleccionado;
+    const nombreFinal = this.clienteNombre; // <-- Aquí usamos la variable ya reparada
     const datosEmpresa = this.datosActuales;
     const folioVenta = this.generarFolioCotizacion();
 
@@ -273,7 +355,6 @@ export class CotizadorComponent implements OnInit {
 
     const anchosTabla = [25, '*', 35, 40, 60, 70];
     
-    // 1. Tabla de Ítems
     const filasItems: any[] = [
       [{ text: 'Ítem', style: 'tableHeader' }, { text: 'Descripción', style: 'tableHeader' }, { text: 'Unid.', style: 'tableHeader' }, { text: 'Cant.', style: 'tableHeader' }, { text: 'P. Unit.', style: 'tableHeader' }, { text: 'Subtotal', style: 'tableHeader' }]
     ];
@@ -293,7 +374,6 @@ export class CotizadorComponent implements OnInit {
         filasItems.push([{ text: '1', style: 'tableBody', alignment: 'center' }, { text: 'Sin ítems', style: 'tableBody' }, '', '', '', '']);
     }
 
-    // 2. Tabla de Totales
     const filasTotales: any[] = [
       [{ text: 'Subtotal:', colSpan: 5, alignment: 'right', bold: true, fontSize: 10, margin: [0, 5, 0, 0] }, '', '', '', '', { text: `S/ ${this.subtotalGeneral.toFixed(2)}`, alignment: 'right', fontSize: 10, margin: [0, 5, 0, 0] }]
     ];
@@ -438,7 +518,7 @@ export class CotizadorComponent implements OnInit {
       }
     };
 
-    const nombreArchivo = `${folioVenta}_${this.empresaActiva.nombre.replace(/\s+/g, '_')}_${nombreFinal.replace(/\s+/g, '_')}.pdf`;
+    const nombreArchivo = `${folioVenta}_${this.empresaActiva.nombre.replace(/\s+/g, '_')}_${(nombreFinal || 'Cliente').replace(/\s+/g, '_')}.pdf`;
     const generadorPdf = (pdfMake as any).default || pdfMake;
     generadorPdf.createPdf(docDefinition).download(nombreArchivo);
   }
