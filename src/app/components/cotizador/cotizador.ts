@@ -187,7 +187,7 @@ export class CotizadorComponent implements OnInit {
       return;
     }
 
-    const token = 'sk_14593.ErLrgRdL2HmHsqjZzMnxzTQxhI09hEDN';
+    const token = 'sk_14670.Rl3QC2eRGOShBSsUP3HL63QbRl8PmOYd';
     const tipo = doc.length === 8 ? 'reniec/dni' : 'sunat/ruc';
     const url = `/api-peru/v1/${tipo}?numero=${doc}`;
 
