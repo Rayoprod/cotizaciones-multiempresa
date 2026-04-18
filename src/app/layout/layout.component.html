@@ -1,0 +1,37 @@
+<div class="flex h-screen overflow-hidden surface-ground">
+    
+    <div class="surface-0 border-right-1 surface-border shadow-2 h-full flex-column transition-all"
+         [ngClass]="menuAbierto ? 'flex absolute z-5 top-0 left-0' : 'hidden md:flex relative'"
+         style="width: 18rem;">
+         
+        <div class="flex align-items-center justify-content-between px-4 pt-4 pb-3 border-bottom-1 surface-border">
+            <div class="flex flex-column">
+                <span class="text-xl font-bold text-900">ADMIN PANEL</span>
+                <span class="text-sm text-500">W&M / VDC</span>
+            </div>
+            <button pButton icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary md:hidden" (click)="toggleMenu()"></button>
+        </div>
+
+        <div class="flex-grow-1 overflow-y-auto p-3">
+            <p-panelMenu [model]="itemsMenu" [multiple]="false"></p-panelMenu>
+        </div>
+
+        <div class="p-3 border-top-1 surface-border">
+            <button pButton icon="pi pi-sign-out" label="Cerrar Sesión" class="p-button-danger p-button-text w-full font-bold" (click)="cerrarSesion()"></button>
+        </div>
+    </div>
+
+    <div class="flex-grow-1 flex flex-column h-full w-full relative">
+        
+        <div class="md:hidden flex align-items-center p-3 surface-0 border-bottom-1 surface-border shadow-1 z-4">
+            <button pButton icon="pi pi-bars" class="p-button-text p-button-secondary text-2xl" (click)="toggleMenu()"></button>
+            <span class="ml-3 font-bold text-900 text-xl">Centro de cotizaciones</span>
+        </div>
+
+        <div *ngIf="menuAbierto" class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-40 z-4" (click)="toggleMenu()"></div>
+
+        <div class="flex-grow-1 overflow-auto p-2 md:p-4">
+            <router-outlet></router-outlet>
+        </div>
+    </div>
+</div>

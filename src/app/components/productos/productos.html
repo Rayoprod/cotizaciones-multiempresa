@@ -1,0 +1,87 @@
+<div class="surface-card p-4 shadow-2 border-round">
+    
+    <p-toolbar styleClass="mb-4 gap-2">
+        <ng-template pTemplate="left">
+            <h2 class="m-0 text-900 font-bold mr-4">Catálogo de Productos</h2>
+            <button pButton pRipple label="Nuevo Producto" icon="pi pi-plus" class="p-button-success" (click)="abrirNuevo()"></button>
+        </ng-template>
+    </p-toolbar>
+
+    <p-table #dt [value]="productos" [rows]="10" [paginator]="true" [globalFilterFields]="['codigo_sku', 'descripcion']" responsiveLayout="scroll" styleClass="p-datatable-sm p-datatable-striped p-datatable-gridlines">
+        <ng-template pTemplate="caption">
+            <div class="flex align-items-center justify-content-between">
+                <span class="p-input-icon-left w-full md:w-auto">
+                   
+                    <input pInputText type="text" (input)="dt.filterGlobal($any($event.target).value, 'contains')" placeholder="Buscar código o descripción..." class="w-full" />
+                </span>
+            </div>
+        </ng-template>
+        <ng-template pTemplate="header">
+            <tr>
+                <th pSortableColumn="codigo_sku">Código SKU <p-sortIcon field="codigo_sku"></p-sortIcon></th>
+                <th pSortableColumn="descripcion">Descripción <p-sortIcon field="descripcion"></p-sortIcon></th>
+                <th>Unidad</th>
+                <th pSortableColumn="precio_unitario_base">Precio Base <p-sortIcon field="precio_unitario_base"></p-sortIcon></th>
+                <th class="text-center" style="width: 150px">Acciones</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-producto>
+            <tr>
+                <td class="font-bold text-500">{{ producto.codigo_sku || 'S/C' }}</td>
+                <td>{{ producto.descripcion }}</td>
+                <td>{{ producto.unidad }}</td>
+                <td class="font-bold text-green-600">S/ {{ producto.precio_unitario_base | number:'1.2-2' }}</td>
+                <td class="text-center">
+                    <button pButton pRipple icon="pi pi-pencil" class="p-button-rounded p-button-info p-button-text mr-2" (click)="editarProducto(producto)"></button>
+                    <button pButton pRipple icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-text" (click)="borrarProducto(producto)"></button>
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="5" class="text-center p-4">No se encontraron productos en el catálogo.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>
+
+<p-dialog [(visible)]="productoDialog" [style]="{width: '450px', maxWidth: '90vw'}" header="Detalles del Producto" [modal]="true" styleClass="p-fluid">
+    
+    <ng-template pTemplate="content">
+        <div class="flex flex-column gap-4 mt-2">
+
+            <div class="flex flex-column gap-2">
+                <label for="sku" class="font-bold text-700">Código SKU (Opcional)</label>
+                <span class="p-input-icon-left">
+                    <input pInputText id="sku" [(ngModel)]="productoActual.codigo_sku" placeholder="Ej. PIEDRA-001" autofocus />
+                </span>
+            </div>
+
+            <div class="flex flex-column gap-2">
+                <label for="descripcion" class="font-bold text-700">Descripción del Producto <span class="text-red-500">*</span></label>
+                <textarea pInputTextarea id="descripcion" [(ngModel)]="productoActual.descripcion" required rows="3" placeholder="Ej. Piedra Chancada de 1/2 pulgada"></textarea>
+            </div>
+
+            <div class="grid m-0">
+                <div class="col-12 md:col-6 p-0 md:pr-2 mb-3 md:mb-0 flex flex-column gap-2">
+                    <label for="unidad" class="font-bold text-700">Unidad de Medida</label>
+                    <input pInputText id="unidad" [(ngModel)]="productoActual.unidad" placeholder="Ej. m3, gln, und" />
+                </div>
+                
+                <div class="col-12 md:col-6 p-0 md:pl-2 flex flex-column gap-2">
+                    <label for="precio" class="font-bold text-700">Precio Base <span class="text-red-500">*</span></label>
+                    <p-inputNumber id="precio" [(ngModel)]="productoActual.precio_unitario_base" mode="currency" currency="PEN" locale="es-PE" class="w-full"></p-inputNumber>
+                </div>
+            </div>
+
+        </div>
+    </ng-template>
+
+    <ng-template pTemplate="footer">
+        <div class="flex justify-content-end gap-2 pt-3">
+            <button pButton pRipple label="Cancelar" icon="pi pi-times" class="p-button-text p-button-secondary" (click)="ocultarDialog()"></button>
+            <button pButton pRipple label="Guardar" icon="pi pi-check" class="p-button-primary px-4" (click)="guardarProducto()" [disabled]="enviando"></button>
+        </div>
+    </ng-template>
+    
+</p-dialog>

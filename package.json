@@ -20,6 +20,8 @@
     "@angular/router": "^21.2.0",
     "@primeng/themes": "^21.0.4",
     "@supabase/supabase-js": "^2.102.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "pdfmake": "^0.3.7",
     "primeicons": "^7.0.0",
     "primeng": "^21.1.5",
