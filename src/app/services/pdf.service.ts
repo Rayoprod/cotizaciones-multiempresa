@@ -102,8 +102,8 @@ export class PdfService {
     filasTotales.push([{ text: 'TOTAL FINAL:', colSpan: 5, alignment: 'right', bold: true, fontSize: 12 }, '', '', '', '', { text: `S/ ${Number(data.total).toFixed(2)}`, alignment: 'right', bold: true, fontSize: 12, color: datosEmpresa.color }]);
 
     // Validamos la fecha
-    const fechaFormat = data.fecha instanceof Date ? data.fecha.toLocaleDateString() : new Date(data.fecha).toLocaleDateString();
-
+// ✅ Pon esta línea
+const fechaFormat = new Date(data.fecha).toLocaleDateString('es-PE');
     const docDefinition: any = {
       pageSize: 'A4',
       pageMargins: [40, 130, 40, 50], 

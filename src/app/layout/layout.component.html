@@ -1,36 +1,80 @@
-<div class="flex h-screen overflow-hidden surface-ground">
+<div class="flex h-screen bg-gray-50 overflow-hidden">
     
-    <div class="surface-0 border-right-1 surface-border shadow-2 h-full flex-column transition-all"
-         [ngClass]="menuAbierto ? 'flex absolute z-5 top-0 left-0' : 'hidden md:flex relative'"
-         style="width: 18rem;">
+    <div class="bg-gray-900 shadow-4 flex-column transition-transform transition-duration-300 z-5"
+         [ngClass]="menuAbierto ? 'flex absolute top-0 left-0 h-full' : 'hidden md:flex relative h-full'"
+         style="width: 17rem;">
          
-        <div class="flex align-items-center justify-content-between px-4 pt-4 pb-3 border-bottom-1 surface-border">
-            <div class="flex flex-column">
-                <span class="text-xl font-bold text-900">ADMIN PANEL</span>
-                <span class="text-sm text-500">W&M / VDC</span>
+        <div class="flex align-items-center justify-content-between p-4 border-bottom-1 border-gray-800">
+            <div class="flex align-items-center gap-3">
+                <div class="bg-primary flex align-items-center justify-content-center border-round-lg shadow-2" style="width: 40px; height: 40px;">
+                    <i class="pi pi-briefcase text-white text-xl"></i>
+                </div>
+                <div class="flex flex-column">
+                    <span class="text-xl font-bold text-white tracking-wide">ADMIN</span>
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">W&M / VDC</span>
+                </div>
             </div>
-            <button pButton icon="pi pi-times" class="p-button-rounded p-button-text p-button-secondary md:hidden" (click)="toggleMenu()"></button>
+            <button pButton icon="pi pi-times" class="p-button-rounded p-button-text text-gray-300 hover:text-white md:hidden p-0" (click)="toggleMenu()"></button>
         </div>
 
-        <div class="flex-grow-1 overflow-y-auto p-3">
-            <p-panelMenu [model]="itemsMenu" [multiple]="false"></p-panelMenu>
+        <div class="flex-grow-1 overflow-y-auto px-3 py-4 flex flex-column gap-2">
+            
+            <span class="text-xs font-bold text-gray-500 uppercase tracking-widest pl-2 mb-2">Ventas & Cotizaciones</span>
+            
+            <a routerLink="/cotizador" routerLinkActive="bg-primary text-white shadow-2" 
+               (click)="cerrarMenu()"
+               class="p-ripple flex align-items-center gap-3 p-3 border-round-lg text-gray-300 hover:bg-gray-800 transition-colors cursor-pointer text-decoration-none">
+                <i class="pi pi-plus-circle text-lg"></i>
+                <span class="font-bold">Nueva Cotización</span>
+            </a>
+
+            <a routerLink="/historial" routerLinkActive="bg-primary text-white shadow-2" 
+               (click)="cerrarMenu()"
+               class="p-ripple flex align-items-center gap-3 p-3 border-round-lg text-gray-300 hover:bg-gray-800 transition-colors cursor-pointer text-decoration-none">
+                <i class="pi pi-book text-lg"></i>
+                <span class="font-bold">Historial de Ventas</span>
+            </a>
+
+            <span class="text-xs font-bold text-gray-500 uppercase tracking-widest pl-2 mt-4 mb-2">Base de Datos</span>
+
+            <a routerLink="/productos" routerLinkActive="bg-primary text-white shadow-2" 
+               (click)="cerrarMenu()"
+               class="p-ripple flex align-items-center gap-3 p-3 border-round-lg text-gray-300 hover:bg-gray-800 transition-colors cursor-pointer text-decoration-none">
+                <i class="pi pi-box text-lg"></i>
+                <span class="font-medium">Catálogo / Productos</span>
+            </a>
+
+            <a routerLink="/clientes" routerLinkActive="bg-primary text-white shadow-2" 
+               (click)="cerrarMenu()"
+               class="p-ripple flex align-items-center gap-3 p-3 border-round-lg text-gray-300 hover:bg-gray-800 transition-colors cursor-pointer text-decoration-none">
+                <i class="pi pi-users text-lg"></i>
+                <span class="font-medium">Directorio Clientes</span>
+            </a>
         </div>
 
-        <div class="p-3 border-top-1 surface-border">
-            <button pButton icon="pi pi-sign-out" label="Cerrar Sesión" class="p-button-danger p-button-text w-full font-bold" (click)="cerrarSesion()"></button>
+        <div class="border-top-1 border-gray-800 p-3 bg-gray-900">
+            <div class="flex align-items-center gap-3 mb-3 p-2 bg-gray-800 border-round-lg">
+                <p-avatar icon="pi pi-user" styleClass="bg-primary text-white font-bold" shape="circle"></p-avatar>
+                <div class="flex flex-column overflow-hidden">
+                    <span class="font-bold text-gray-200 text-sm">Vendedor Activo</span>
+                    <span class="text-gray-400 text-xs white-space-nowrap text-overflow-ellipsis overflow-hidden" [title]="usuarioActivo">{{ usuarioActivo }}</span>
+                </div>
+            </div>
+            
+            <button pButton icon="pi pi-sign-out" label="Cerrar Sesión" class="p-button-outlined p-button-danger w-full font-bold" (click)="cerrarSesion()"></button>
         </div>
     </div>
 
-    <div class="flex-grow-1 flex flex-column h-full w-full relative">
+    <div class="flex-1 flex flex-column h-full relative overflow-hidden">
         
-        <div class="md:hidden flex align-items-center p-3 surface-0 border-bottom-1 surface-border shadow-1 z-4">
-            <button pButton icon="pi pi-bars" class="p-button-text p-button-secondary text-2xl" (click)="toggleMenu()"></button>
-            <span class="ml-3 font-bold text-900 text-xl">Centro de cotizaciones</span>
+        <div class="md:hidden h-4rem bg-white border-bottom-1 surface-border shadow-1 flex align-items-center px-3 z-4">
+            <button pButton icon="pi pi-bars" class="p-button-text p-button-secondary text-2xl p-0" (click)="toggleMenu()"></button>
+            <span class="ml-3 font-bold text-900 text-xl">W&M / VDC</span>
         </div>
 
-        <div *ngIf="menuAbierto" class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-40 z-4" (click)="toggleMenu()"></div>
+        <div *ngIf="menuAbierto" class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-60 z-4" (click)="toggleMenu()"></div>
 
-        <div class="flex-grow-1 overflow-auto p-2 md:p-4">
+        <div class="flex-1 overflow-auto p-2 md:p-4">
             <router-outlet></router-outlet>
         </div>
     </div>

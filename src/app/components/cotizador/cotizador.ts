@@ -214,13 +214,22 @@ export class CotizadorComponent implements OnInit {
     const folioVenta = `COT-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
     const empStr = this.empresaActiva.nombre.toUpperCase();
     
-    const nuevaCotizacion: ICotizacion = {
-      folio: folioVenta, fecha: new Date().toISOString(),
-      empresa: (empStr.includes('W&M')) ? 'W&M' : 'VDC',
-      cliente_nombre: this.clienteNombre, cliente_documento: this.clienteDocumento,
-      subtotal: this.subtotalGeneral, igv: this.igvTotal, total: this.totalFinal,
-      estado: 'PENDIENTE', items: itemsValidos
-    };
+    // ... dentro de generarPDF()
+const nuevaCotizacion: ICotizacion = {
+  folio: folioVenta,
+  fecha: new Date().toISOString(),
+  empresa: (empStr.includes('W&M')) ? 'W&M' : 'VDC',
+  cliente_nombre: this.clienteNombre,
+  cliente_documento: this.clienteDocumento,
+  subtotal: this.subtotalGeneral,
+  igv: this.igvTotal,
+  total: this.totalFinal,
+  estado: 'PENDIENTE',
+  items: itemsValidos,
+  
+  // ✅ AQUÍ SE SOLUCIONA EL "SISTEMA": Capturamos el correo real
+  vendedor: localStorage.getItem('usuario_conectado') || 'Usuario Desconocido'
+};
 
     try {
       await this.supabaseSvc.guardarCotizacion(nuevaCotizacion);

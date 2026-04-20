@@ -52,6 +52,11 @@ export class LoginComponent {
         console.error('Error de Supabase:', error.message);
       } else {
         console.log('¡Login exitoso!', data);
+        // GUARDA EL CORREO DEL USUARIO PARA LA HUELLA
+        localStorage.setItem('usuario_conectado', this.correo); 
+        
+        // Viaje directo al selector
+        this.router.navigate(['/selector']);
         // Viaje directo al selector de empresas que ya tenías configurado
         this.router.navigate(['/selector']);
       }

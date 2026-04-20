@@ -1,42 +1,53 @@
-<div class="flex flex-column align-items-center justify-content-center min-h-screen bg-gray-50 p-4">
-    <div class="text-center mb-6">
-        <h1 class="text-4xl font-bold text-900 mb-2">Panel de Control</h1>
-        <p class="text-xl text-600">Selecciona la empresa para gestionar la cotización</p>
-    </div>
+<div class="h-screen w-screen flex flex-column align-items-center justify-content-center bg-gray-50 p-4 overflow-hidden">
+    
+    <div class="w-full" style="max-width: 900px;">
 
-    <div class="flex flex-column md:flex-row gap-5 w-full max-w-50rem justify-content-center">
-        
-        <div *ngFor="let empresa of empresas" class="w-full md:w-6">
-            <p-card styleClass="text-center w-full cursor-pointer shadow-3 hover:shadow-6 transition-all transition-duration-300"
-                    (click)="seleccionar(empresa)">
+        <div class="text-center mb-6 fadeindown animation-duration-500">
+            <div class="inline-flex align-items-center justify-content-center bg-white p-3 border-circle shadow-2 mb-3">
+                <i class="pi pi-user text-4xl text-primary"></i>
+            </div>
+            <h1 class="text-900 font-bold text-4xl md:text-5xl mb-2 capitalize">¡Hola, {{ nombreUsuario }}!</h1>
+            <p class="text-600 text-lg md:text-xl m-0 font-medium">¿Con qué empresa vas a emitir cotizaciones hoy?</p>
+        </div>
+
+        <div class="grid formgrid gap-4 md:gap-0 justify-content-center">
+
+            <div class="col-12 md:col-6 p-2 fadein animation-duration-1000" *ngFor="let emp of empresas">
                 
-                <div class="py-4 flex flex-column align-items-center justify-content-center h-10rem">
-                    
-                    <ng-container *ngIf="empresa.rutaLogo; else iconFallback">
-                        <img [src]="empresa.rutaLogo" (error)="empresa.rutaLogo = ''" alt="Logo" style="max-height: 90px; max-width: 100%; object-fit: contain;">
-                    </ng-container>
-                    
-                    <ng-template #iconFallback>
-                        <div class="border-circle inline-flex justify-content-center align-items-center" 
-                             [style.backgroundColor]="empresa.color + '20'" 
-                             style="width: 80px; height: 80px;">
-                            <i [class]="empresa.logo" [style.color]="empresa.color" class="text-5xl"></i>
+                <div class="h-full bg-white border-round-2xl shadow-2 p-5 cursor-pointer transition-all transition-duration-300 hover:shadow-6 border-top-3 surface-border {{ emp.borderHover }}"
+                     (click)="seleccionar(emp)">
+
+                    <div class="flex justify-content-between align-items-start mb-4">
+                        <div class="p-3 border-round-xl {{ emp.bgClass }}">
+                            <i class="{{ emp.icon }} text-4xl {{ emp.textClass }}"></i>
                         </div>
-                    </ng-template>
+                        <i class="pi pi-arrow-up-right text-300 text-2xl transition-colors transition-duration-300 hover:text-700"></i>
+                    </div>
 
-                    <h2 class="text-2xl font-semibold mt-4 mb-0 text-800">{{ empresa.nombre }}</h2>
+                    <h2 class="text-3xl font-bold text-900 m-0 mb-3">{{ emp.nombre }}</h2>
+                    
+                    <div class="flex flex-column gap-2">
+                        <span class="text-700 font-medium flex align-items-center">
+                            <i class="pi pi-id-card mr-2 text-500"></i> 
+                            RUC: {{ emp.ruc }}
+                        </span>
+                        <span class="text-500 text-sm flex align-items-center line-height-3">
+                            <i class="pi pi-building mr-2 text-500"></i> 
+                            {{ emp.razonSocial }}
+                        </span>
+                    </div>
+
+                    <div class="mt-5 pt-3 border-top-1 surface-border flex align-items-center justify-content-between text-sm font-bold text-500">
+                        <span>Ingresar al sistema</span>
+                        <i class="pi pi-chevron-right text-xs"></i>
+                    </div>
                 </div>
+            </div>
 
-                <ng-template pTemplate="footer">
-                    <p-button [label]="'Ingresar '" 
-                              icon="pi pi-arrow-right" 
-                              iconPos="right"
-                              class="w-full" 
-                              styleClass="w-full"
-                              [style]="{ background: empresa.color, border: 'none' }">
-                    </p-button>
-                </ng-template>
-            </p-card>
+        </div>
+
+        <div class="text-center mt-6 fadein animation-duration-1000 animation-delay-300">
+            <button pButton label="Cambiar de Usuario" icon="pi pi-sign-out" class="p-button-text p-button-secondary font-bold p-button-sm" routerLink="/login"></button>
         </div>
 
     </div>

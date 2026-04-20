@@ -1,16 +1,17 @@
 export interface ICotizacion {
-  id?: string;             // Generado por Supabase
-  folio: string;           // Ejemplo: COT-2024-001
-  fecha: Date | string;
-  empresa: 'W&M' | 'VDC';
-  cliente_id?: string;
+  folio: string;
+  fecha: string;
+  empresa: string;
   cliente_nombre: string;
-  cliente_documento: string;
+  cliente_documento?: string;
   subtotal: number;
   igv: number;
   total: number;
-  estado: 'PENDIENTE' | 'APROBADA' | 'ANULADA';
-  items: ICotizacionDetalle[]; // El carrito de compras
+  estado: string;
+  items: any[];
+  
+  // ✅ Agrega esta línea:
+  vendedor?: string; 
 }
 
 export interface ICotizacionDetalle {

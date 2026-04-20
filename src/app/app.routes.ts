@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './components/login/login';
-import { SelectorEmpresaComponent } from './components/selector-empresa/selector-empresa';
+import { SelectorComponent } from './components/selector-empresa/selector-empresa';
 import { CotizadorComponent } from './components/cotizador/cotizador';
 import { LayoutComponent } from './layout/layout.component';
 import { HistorialComponent } from './components/historial/historial';
@@ -13,7 +13,7 @@ import { ClientesComponent } from './components/clientes/clientes';
 export const routes: Routes = [
   // RUTAS PÚBLICAS (Sin candado)
   { path: 'login', component: LoginComponent },
-  { path: 'selector', component: SelectorEmpresaComponent },
+  { path: 'selector', component: SelectorComponent },
   
   // EL SISTEMA (Rutas Privadas)
   {
