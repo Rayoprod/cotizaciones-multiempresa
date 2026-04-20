@@ -200,37 +200,29 @@ export class PdfService {
     const generadorPdf = (pdfMake as any).default || pdfMake;
     const document = generadorPdf.createPdf(docDefinition);
 
-    // ✅ LA SOLUCIÓN DEFINITIVA PARA MÓVILES Y ESCRITORIO
     document.getBlob((blob: Blob) => {
-      const file = new File([blob], nombreArchivo, { type: 'application/pdf' });
-      
-      // Creamos una URL temporal para el archivo en la memoria del dispositivo
-      const blobUrl = window.URL.createObjectURL(blob);
-
-      // 1. FORZAMOS LA DESCARGA FÍSICA SIEMPRE (PC, Mac, Android, iOS)
-      // Esto crea un enlace invisible, le hace clic y lo borra. Infalible.
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = nombreArchivo;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // 2. INTENTAMOS ABRIR EL MENÚ DE COMPARTIR NATIVO (WhatsApp, Correo, etc.)
+      const url = window.URL.createObjectURL(blob);
       const esMovil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      
-      if (esMovil && navigator.canShare && navigator.canShare({ files: [file] })) {
-        // Le damos un pequeñísimo respiro (300ms) al celular para que inicie la descarga primero
-        setTimeout(() => {
-          navigator.share({
-            files: [file],
-            title: nombreArchivo
-          }).catch(err => console.log('El usuario cerró el menú de compartir', err));
-        }, 300);
-      }
 
-      // Limpiamos la memoria del dispositivo después de 5 segundos
-      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 5000);
+      if (esMovil) {
+        // PLAN A: Intentamos abrir el PDF en una pestaña nueva
+        const nuevaVentana = window.open(url, '_blank');
+        
+        // PLAN B: Si el bloqueador de ventanas emergentes (Pop-ups) del celular lo cancela, 
+        // forzamos a que el PDF se abra en la pestaña actual. ¡Esto nunca falla!
+        if (!nuevaVentana || nuevaVentana.closed || typeof nuevaVentana.closed === 'undefined') {
+          window.location.assign(url);
+        }
+      } else {
+        // En Mac / PC descargamos el archivo directamente e invisiblemente
+        const link = window.document.createElement('a');
+        link.href = url;
+        link.download = nombreArchivo;
+        link.click();
+        
+        // Limpiamos la memoria
+        setTimeout(() => window.URL.revokeObjectURL(url), 100);
+      }
     });
   }
 }
