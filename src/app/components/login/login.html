@@ -1,23 +1,48 @@
-<div class="flex align-items-center justify-content-center min-h-screen bg-gray-100 p-3">
-    <p-card header="Iniciar Sesión" subheader="Sistema de Cotizaciones Multiempresa" class="shadow-4 w-full md:w-6 lg:w-3" styleClass="w-full">
+<div class="flex align-items-center justify-content-center min-h-screen p-3 relative overflow-hidden" 
+     style="background-image: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.65)), 
+                              url('https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/fondo_login.png'); 
+            background-size: cover; 
+            background-position: center; 
+            background-repeat: no-repeat;">
+    
+    <div class="p-5 shadow-6 border-round-3xl w-full sm:w-26rem mx-3 bg-black-alpha-50 relative fadein" style="backdrop-filter: blur(12px);">
         
-        <div class="flex flex-column gap-4">
-            <div class="flex flex-column gap-2">
-                <label for="email" class="font-bold">Correo Electrónico</label>
-                <input pInputText id="email" [(ngModel)]="correo" placeholder="usuario@empresa.com" class="w-full" />
+        <div class="text-center mb-5">
+            <div class="mb-4 inline-flex align-items-center justify-content-center border-circle bg-white-alpha-20" style="width: 70px; height: 70px;">
+                <i class="pi pi-building text-white text-4xl"></i>
             </div>
-
-            <div class="flex flex-column gap-2">
-                <label for="password" class="font-bold">Contraseña</label>
-                <p-password id="password" [(ngModel)]="contrasena" [feedback]="false" [toggleMask]="true" styleClass="w-full" inputStyleClass="w-full" placeholder="********"></p-password>
-            </div>
-
-            <small *ngIf="mensajeError" class="text-red-500 font-semibold text-center">
-                {{ mensajeError }}
-            </small>
-
-            <p-button label="Ingresar al Sistema" icon="pi pi-sign-in" class="w-full" styleClass="w-full" (onClick)="iniciarSesion()"></p-button>
+            <h1 class="text-white text-3xl font-bold m-0 mb-2">Bienvenido</h1>
+            <p class="text-gray-300 font-medium m-0">Gestión de Cotizaciones W&M / VDC</p>
         </div>
 
-    </p-card>
+        <div *ngIf="mensajeError" class="p-3 mb-4 bg-red-50 border-left-3 border-red-500 text-red-700 text-sm border-round-md flex align-items-center fadein">
+            <i class="pi pi-exclamation-circle mr-2 text-lg"></i>
+            <span class="font-semibold">{{ mensajeError }}</span>
+        </div>
+
+        <form (ngSubmit)="iniciarSesion()">
+            <div class="flex flex-column gap-4">
+                
+                <div class="flex flex-column gap-2 p-fluid">
+                    <label for="email" class="font-bold text-white text-sm pl-1">Correo Electrónico</label>
+                    <input pInputText id="email" type="email" [(ngModel)]="correo" name="correo" 
+                           class="w-full p-inputtext-lg border-round-xl" 
+                           placeholder="usuario@empresa.com" required autofocus autocomplete="email" />
+                </div>
+
+                <div class="flex flex-column gap-2 p-fluid">
+                    <label for="password" class="font-bold text-white text-sm pl-1">Contraseña</label>
+                    <p-password id="password" [(ngModel)]="contrasena" name="contrasena" 
+                                [toggleMask]="true" [feedback]="false" 
+                                styleClass="w-full" inputStyleClass="w-full p-inputtext-lg border-round-xl" 
+                                placeholder="••••••••" required autocomplete="current-password"></p-password>
+                </div>
+
+                <button pButton pRipple type="submit" label="Ingresar" 
+                        class="p-button-primary w-full p-button-lg mt-3 border-round-xl font-bold shadow-2" 
+                        [loading]="cargando"></button>
+            </div>
+        </form>
+
+    </div>
 </div>

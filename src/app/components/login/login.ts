@@ -8,36 +8,43 @@ import { AuthService } from '../../services/auth';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
-import { CardModule } from 'primeng/card';
+import { RippleModule } from 'primeng/ripple'; // Para el efecto click premium
 
 @Component({
   selector: 'app-login',
   standalone: true,
-imports: [
+  imports: [
     CommonModule, 
     FormsModule, 
     ButtonModule, 
     InputTextModule, 
-    PasswordModule, 
-    CardModule
-],  templateUrl: './login.html'
+    PasswordModule,
+    RippleModule
+  ],  
+  templateUrl: './login.html'
 })
 export class LoginComponent {
+  // Tus variables exactas
   correo: string = '';
   contrasena: string = '';
   mensajeError: string = '';
+  cargando: boolean = false; // <-- El toque extra para el feedback visual del botón
 
+  // Tu constructor funcional
   constructor(private authService: AuthService, private router: Router) {}
 
   async iniciarSesion() {
-    this.mensajeError = ''; // Limpiamos errores previos al hacer clic
+    this.mensajeError = ''; 
+    this.cargando = true; // Empieza a girar el botón
 
     if (!this.correo || !this.contrasena) {
       this.mensajeError = 'Por favor, ingresa tu correo y contraseña.';
+      this.cargando = false;
       return;
     }
 
     try {
+      // Tu lógica exacta y funcional conectada a AuthService
       const { data, error } = await this.authService.login(this.correo, this.contrasena);
 
       if (error) {
@@ -45,11 +52,13 @@ export class LoginComponent {
         console.error('Error de Supabase:', error.message);
       } else {
         console.log('¡Login exitoso!', data);
-        // Más adelante, aquí le diremos: "Si el login es correcto, llévame al selector de empresas"
+        // Viaje directo al selector de empresas que ya tenías configurado
         this.router.navigate(['/selector']);
       }
     } catch (err) {
       this.mensajeError = 'Ocurrió un error al intentar conectarse.';
+    } finally {
+      this.cargando = false; // Detiene el giro del botón
     }
   }
 }
