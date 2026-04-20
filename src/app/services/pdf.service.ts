@@ -18,8 +18,8 @@ const DATOS_CORPORATIVOS: any = {
     color: '#2563eb', // Azul
     direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
     telefonos: '959098427 - 914828235',
-    correo: 'wymvdc1509@gmail.com',
-    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logowym.png', 
+    correo: 'wantuilrodriguez123@gmail.com',
+    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logoswym.png', 
     rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg' 
   },
   'VDC': {
@@ -29,7 +29,7 @@ const DATOS_CORPORATIVOS: any = {
     color: '#1e40af', // Azul oscuro
     direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
     telefonos: '959098427 - 914828235',
-    correo: 'wymvdc1509@gmail.com',
+    correo: 'wantuilrodriguez123@gmail.com',
     rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logovdc.jpeg',
     rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png'
   }
@@ -102,8 +102,8 @@ export class PdfService {
     filasTotales.push([{ text: 'TOTAL FINAL:', colSpan: 5, alignment: 'right', bold: true, fontSize: 12 }, '', '', '', '', { text: `S/ ${Number(data.total).toFixed(2)}`, alignment: 'right', bold: true, fontSize: 12, color: datosEmpresa.color }]);
 
     // Validamos la fecha
-// ✅ Pon esta línea
-const fechaFormat = new Date(data.fecha).toLocaleDateString('es-PE');
+    const fechaFormat = new Date(data.fecha).toLocaleDateString('es-PE');
+    
     const docDefinition: any = {
       pageSize: 'A4',
       pageMargins: [40, 130, 40, 50], 
@@ -198,6 +198,26 @@ const fechaFormat = new Date(data.fecha).toLocaleDateString('es-PE');
 
     const nombreArchivo = `${data.folio}_${data.empresa.replace(/\s+/g, '_')}_${data.cliente_nombre.replace(/\s+/g, '_')}.pdf`;
     const generadorPdf = (pdfMake as any).default || pdfMake;
-    generadorPdf.createPdf(docDefinition).download(nombreArchivo);
+    const document = generadorPdf.createPdf(docDefinition);
+
+    // 1. Detectamos estrictamente si es celular/tablet
+    const esMovil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    // 2. Si es MÓVIL, extraemos el archivo y abrimos el menú de compartir nativo
+    if (esMovil && navigator.canShare) {
+      document.getBlob((blob: Blob) => {
+        const file = new File([blob], nombreArchivo, { type: 'application/pdf' });
+        
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file] })
+            .catch(() => document.download(nombreArchivo)); // Si cancelan, descarga normal
+        } else {
+          document.download(nombreArchivo);
+        }
+      });
+    } else {
+      // 3. Si es MAC o PC, NO HACEMOS BLOB, disparamos la descarga directa e inmediata
+      document.download(nombreArchivo);
+    }
   }
 }

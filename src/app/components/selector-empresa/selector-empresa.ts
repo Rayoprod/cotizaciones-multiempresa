@@ -29,7 +29,7 @@ export class SelectorComponent implements OnInit {
       direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
       telefonos: '959098427 - 914828235',
       correo: 'wymvdc1509@gmail.com',
-      logoUrl: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logowym.png',
+      logoUrl: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logoswym.png',
       rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg'
     },
     {
