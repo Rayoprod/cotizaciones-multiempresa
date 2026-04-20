@@ -200,29 +200,16 @@ export class PdfService {
     const generadorPdf = (pdfMake as any).default || pdfMake;
     const document = generadorPdf.createPdf(docDefinition);
 
-    document.getBlob((blob: Blob) => {
-      const url = window.URL.createObjectURL(blob);
-      const esMovil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const esMovil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-      if (esMovil) {
-        // PLAN A: Intentamos abrir el PDF en una pestaña nueva
-        const nuevaVentana = window.open(url, '_blank');
-        
-        // PLAN B: Si el bloqueador de ventanas emergentes (Pop-ups) del celular lo cancela, 
-        // forzamos a que el PDF se abra en la pestaña actual. ¡Esto nunca falla!
-        if (!nuevaVentana || nuevaVentana.closed || typeof nuevaVentana.closed === 'undefined') {
-          window.location.assign(url);
-        }
-      } else {
-        // En Mac / PC descargamos el archivo directamente e invisiblemente
-        const link = window.document.createElement('a');
-        link.href = url;
-        link.download = nombreArchivo;
-        link.click();
-        
-        // Limpiamos la memoria
-        setTimeout(() => window.URL.revokeObjectURL(url), 100);
-      }
-    });
+    if (esMovil) {
+      // ✅ LA FORMA NATIVA DE PDFMAKE: 
+      // Abre el PDF en una pestaña nueva con el visor oficial del dispositivo.
+      // Desde ahí lo puedes compartir a WhatsApp sin enlaces basura.
+      document.open();
+    } else {
+      // En la Mac/PC, se descarga instantáneamente sin preguntar.
+      document.download(nombreArchivo);
+    }
   }
 }
