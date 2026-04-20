@@ -205,38 +205,43 @@ export class CotizadorComponent implements OnInit {
   }
 
   async generarPDF() {
-    // ✅ Ahora validamos que obligatoriamente hayan puesto cantidad
     const itemsValidos = this.carrito.filter(item => item.descripcion && item.precio_unitario > 0 && item.cantidad > 0);
-    if (itemsValidos.length === 0) return alert("Agrega al menos un producto con precio y CANTIDAD asignada.");
+    
+    // Si no hay productos válidos, cancelamos en silencio sin alertas molestas
+    if (itemsValidos.length === 0) {
+      console.warn("Faltan productos o cantidades.");
+      return; 
+    }
     
     await this.procesarClienteSilencioso();
     const d = new Date();
     const folioVenta = `COT-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
     const empStr = this.empresaActiva.nombre.toUpperCase();
     
-    // ... dentro de generarPDF()
-const nuevaCotizacion: ICotizacion = {
-  folio: folioVenta,
-  fecha: new Date().toISOString(),
-  empresa: (empStr.includes('W&M')) ? 'W&M' : 'VDC',
-  cliente_nombre: this.clienteNombre,
-  cliente_documento: this.clienteDocumento,
-  subtotal: this.subtotalGeneral,
-  igv: this.igvTotal,
-  total: this.totalFinal,
-  estado: 'PENDIENTE',
-  items: itemsValidos,
-  
-  // ✅ AQUÍ SE SOLUCIONA EL "SISTEMA": Capturamos el correo real
-  vendedor: localStorage.getItem('usuario_conectado') || 'Usuario Desconocido'
-};
+    const nuevaCotizacion: ICotizacion = {
+      folio: folioVenta,
+      fecha: new Date().toISOString(),
+      empresa: (empStr.includes('W&M')) ? 'W&M' : 'VDC',
+      cliente_nombre: this.clienteNombre,
+      cliente_documento: this.clienteDocumento,
+      subtotal: this.subtotalGeneral,
+      igv: this.igvTotal,
+      total: this.totalFinal,
+      estado: 'PENDIENTE',
+      items: itemsValidos,
+      vendedor: localStorage.getItem('usuario_conectado') || 'Usuario Desconocido'
+    };
 
     try {
       await this.supabaseSvc.guardarCotizacion(nuevaCotizacion);
       await this.pdfSvc.generarYDescargarCotizacion(nuevaCotizacion);
-      alert(`¡Éxito! Cotización ${folioVenta} generada y descargada.`);
+      
+      // ✅ Cero alertas. Todo fluye en silencio y la redirección móvil funcionará perfecta.
+      console.log(`Cotización ${folioVenta} generada con éxito.`);
+      
     } catch (error) {
-      alert("Error al guardar en la base de datos.");
+      // ✅ Si hay un error, lo registramos en consola en lugar de interrumpir la pantalla
+      console.error("Error al guardar en la base de datos:", error);
     }
   }
 }

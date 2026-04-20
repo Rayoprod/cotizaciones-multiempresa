@@ -200,16 +200,27 @@ export class PdfService {
     const generadorPdf = (pdfMake as any).default || pdfMake;
     const document = generadorPdf.createPdf(docDefinition);
 
-    const esMovil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    // ✅ SOLUCIÓN ANTI-BLOQUEO PARA MÓVILES Y DESCARGA PARA PC
+    document.getBlob((blob: Blob) => {
+      const esMovil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const url = window.URL.createObjectURL(blob);
 
-    if (esMovil) {
-      // ✅ LA FORMA NATIVA DE PDFMAKE: 
-      // Abre el PDF en una pestaña nueva con el visor oficial del dispositivo.
-      // Desde ahí lo puedes compartir a WhatsApp sin enlaces basura.
-      document.open();
-    } else {
-      // En la Mac/PC, se descarga instantáneamente sin preguntar.
-      document.download(nombreArchivo);
-    }
+      if (esMovil) {
+        // EN MÓVIL: Cargamos el PDF en la misma pestaña para que Safari/Chrome 
+        // no lo detecten como una ventana emergente y lo bloqueen.
+        // Al terminar de enviarlo, el usuario solo debe presionar "Atrás".
+        window.location.href = url; 
+      } else {
+        // EN MAC/PC: Descarga directa de toda la vida
+        const link = window.document.createElement('a');
+        link.href = url;
+        link.download = nombreArchivo;
+        window.document.body.appendChild(link);
+        link.click();
+        window.document.body.removeChild(link);
+        
+        setTimeout(() => window.URL.revokeObjectURL(url), 100);
+      }
+    });
   }
 }
