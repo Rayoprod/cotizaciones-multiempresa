@@ -218,7 +218,7 @@
                         <span class="text-2xl font-bold text-900">TOTAL FINAL:</span>
                         <span class="text-3xl font-bold white-space-nowrap" [style.color]="empresaActiva?.color">S/ {{ totalFinal | number:'1.2-2':'en-US' }}</span>
                     </div>
-                    <button pButton label="Generar PDF" icon="pi pi-file-pdf" class="w-full p-button-lg shadow-2" [disabled]="carrito.length === 0 || !clienteNombre" (click)="generarPDF()" [style.background]="empresaActiva?.color" [style.border]="'none'"></button>
+                    <button type="button" pButton label="Generar PDF" icon="pi pi-file-pdf" class="w-full p-button-lg shadow-2" [disabled]="carrito.length === 0 || !clienteNombre" (click)="generarPDF()" [style.background]="empresaActiva?.color" [style.border]="'none'"></button>
                 </div>
             </div>
         </div>

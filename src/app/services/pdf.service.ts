@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ICotizacion } from '../models/cotizacion.model';
 
-// Importamos pdfMake
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 
@@ -9,16 +8,15 @@ const fuentes: any = pdfFonts;
 const vfsReal = fuentes.vfs || fuentes.pdfMake?.vfs || fuentes.default?.pdfMake?.vfs;
 Object.assign(pdfMake, { vfs: vfsReal });
 
-// Tus datos corporativos intocables
 const DATOS_CORPORATIVOS: any = {
   'W&M': {
     nombreComercial: 'W&M E.I.R.L.',
     razonSocial: null,
     ruc: '20608657364',
-    color: '#2563eb', // Azul
+    color: '#2563eb',
     direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
     telefonos: '959098427 - 914828235',
-    correo: 'wantuilrodriguez123@gmail.com',
+    correo: 'wymvdc1509@gmail.com',
     rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logoswym.png', 
     rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg' 
   },
@@ -26,10 +24,10 @@ const DATOS_CORPORATIVOS: any = {
     nombreComercial: 'ELECTROFERR. VIRGEN DEL CARMEN',
     razonSocial: 'MITMA TORRES MARIA LUZ',
     ruc: '10215770635',
-    color: '#1e40af', // Azul oscuro
+    color: '#1e40af',
     direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
     telefonos: '959098427 - 914828235',
-    correo: 'wantuilrodriguez123@gmail.com',
+    correo: 'wymvdc1509@gmail.com',
     rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logovdc.jpeg',
     rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png'
   }
@@ -42,7 +40,10 @@ export class PdfService {
     if (!url) return null;
     try {
       const response = await fetch(url);
+      if (!response.ok) return null; 
       const blob = await response.blob();
+      if (!blob.type.startsWith('image/')) return null;
+
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
@@ -56,13 +57,9 @@ export class PdfService {
     return texto.split(' ').map(palabra => palabra.length > 25 ? palabra.match(/.{1,25}/g)?.join('\u200B') : palabra).join(' ');
   }
 
-  // Genera el PDF con tu formato exacto original
   async generarYDescargarCotizacion(data: ICotizacion) {
     const datosEmpresa = DATOS_CORPORATIVOS[data.empresa];
-    if (!datosEmpresa) {
-        console.error("Empresa no reconocida:", data.empresa);
-        return;
-    }
+    if (!datosEmpresa) return;
 
     const logoConvertido = await this.cargarImagenRemota(datosEmpresa.rutaLogo);
     const firmaConvertida = await this.cargarImagenRemota(datosEmpresa.rutaFirma);
@@ -80,7 +77,6 @@ export class PdfService {
       [{ text: 'Ítem', style: 'tableHeader' }, { text: 'Descripción', style: 'tableHeader' }, { text: 'Unid.', style: 'tableHeader' }, { text: 'Cant.', style: 'tableHeader' }, { text: 'P. Unit.', style: 'tableHeader' }, { text: 'Subtotal', style: 'tableHeader' }]
     ];
 
-    // Iteramos los productos traídos desde Supabase
     data.items.forEach((item: any, index: number) => {
       filasItems.push([
         { text: (index + 1).toString(), style: 'tableBody', alignment: 'center', bold: true, color: '#4b5563' },
@@ -101,13 +97,11 @@ export class PdfService {
     }
     filasTotales.push([{ text: 'TOTAL FINAL:', colSpan: 5, alignment: 'right', bold: true, fontSize: 12 }, '', '', '', '', { text: `S/ ${Number(data.total).toFixed(2)}`, alignment: 'right', bold: true, fontSize: 12, color: datosEmpresa.color }]);
 
-    // Validamos la fecha
     const fechaFormat = new Date(data.fecha).toLocaleDateString('es-PE');
     
     const docDefinition: any = {
       pageSize: 'A4',
       pageMargins: [40, 130, 40, 50], 
-      
       header: () => {
         return {
           margin: [40, 20, 40, 0],
@@ -134,11 +128,9 @@ export class PdfService {
           ]
         };
       },
-
       footer: (currentPage: number, pageCount: number) => {
         return { margin: [40, 10, 40, 0], text: `Página ${currentPage} de ${pageCount}`, alignment: 'center', fontSize: 8, color: '#9ca3af' };
       },
-
       content: [
         {
           style: 'clienteBox',
@@ -198,29 +190,8 @@ export class PdfService {
 
     const nombreArchivo = `${data.folio}_${data.empresa.replace(/\s+/g, '_')}_${data.cliente_nombre.replace(/\s+/g, '_')}.pdf`;
     const generadorPdf = (pdfMake as any).default || pdfMake;
-    const document = generadorPdf.createPdf(docDefinition);
-
-    // ✅ SOLUCIÓN ANTI-BLOQUEO PARA MÓVILES Y DESCARGA PARA PC
-    document.getBlob((blob: Blob) => {
-      const esMovil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const url = window.URL.createObjectURL(blob);
-
-      if (esMovil) {
-        // EN MÓVIL: Cargamos el PDF en la misma pestaña para que Safari/Chrome 
-        // no lo detecten como una ventana emergente y lo bloqueen.
-        // Al terminar de enviarlo, el usuario solo debe presionar "Atrás".
-        window.location.href = url; 
-      } else {
-        // EN MAC/PC: Descarga directa de toda la vida
-        const link = window.document.createElement('a');
-        link.href = url;
-        link.download = nombreArchivo;
-        window.document.body.appendChild(link);
-        link.click();
-        window.document.body.removeChild(link);
-        
-        setTimeout(() => window.URL.revokeObjectURL(url), 100);
-      }
-    });
+    
+    // Descarga nativa directa
+    generadorPdf.createPdf(docDefinition).download(nombreArchivo);
   }
 }

@@ -16,13 +16,15 @@ import { TextareaModule } from 'primeng/textarea';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import { TooltipModule } from 'primeng/tooltip';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 
 const DATOS_CORPORATIVOS: any = {
   'WM': {
     nombreComercial: 'W&M E.I.R.L.', razonSocial: null, ruc: '20608657364',
     direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
     telefonos: '959098427 - 914828235', correo: 'wymvdc1509@gmail.com',
-    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logowym.png', 
+    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logoswym.png', 
     rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg' 
   },
   'VDC': {
@@ -40,8 +42,9 @@ const DATOS_CORPORATIVOS: any = {
   imports: [
     CommonModule, FormsModule, RouterModule, TableModule, 
     ButtonModule, CardModule, InputNumberModule, InputTextModule, 
-    TextareaModule, ToggleSwitchModule, AutoCompleteModule, TooltipModule
+    TextareaModule, ToggleSwitchModule, AutoCompleteModule, TooltipModule, ToastModule
   ],
+  providers: [MessageService],
   templateUrl: './cotizador.html'
 })
 export class CotizadorComponent implements OnInit {
@@ -64,7 +67,7 @@ export class CotizadorComponent implements OnInit {
   clienteObservaciones: string = '';
   
   incluyeIgv: boolean = true;
-  lugarEntrega: string = 'CANTERA'; // Sigue guardando el valor de tu preferencia
+  lugarEntrega: string = 'CANTERA';
 
   subtotalGeneral: number = 0;
   igvTotal: number = 0;
@@ -74,11 +77,12 @@ export class CotizadorComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     private supabaseSvc: SupabaseService,
     private pdfSvc: PdfService,
-    private router: Router
+    private router: Router,
+    private messageService: MessageService
   ) {}
 
   async ngOnInit() {
-    this.agregarFila(); // La fila inicial vacía
+    this.agregarFila();
 
     const datos = localStorage.getItem('empresa_activa');
     this.empresaActiva = datos ? JSON.parse(datos) : { nombre: 'VDC', color: '#1e40af' };
@@ -118,20 +122,20 @@ export class CotizadorComponent implements OnInit {
 
   async buscarDocumento() {
     const doc = this.clienteDocumento ? this.clienteDocumento.trim() : '';
-    if (doc.length !== 8 && doc.length !== 11) return alert(`⚠️ DNI 8 dígitos, RUC 11.`);
+    if (doc.length !== 8 && doc.length !== 11) return;
     const token = 'sk_14670.Rl3QC2eRGOShBSsUP3HL63QbRl8PmOYd';
     const tipo = doc.length === 8 ? 'reniec/dni' : 'sunat/ruc';
     
     try {
       const resp = await fetch(`/api-peru/v1/${tipo}?numero=${doc}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!resp.ok) return alert('API falló.');
+      if (!resp.ok) return;
       const datos = await resp.json();
       this.clienteNombre = doc.length === 8 ? `${datos.nombres||''} ${datos.apellidoPaterno||''} ${datos.apellidoMaterno||''}`.trim() : datos.razon_social||datos.razonSocial;
       this.clienteDireccion = datos.direccion || '';
       const c = this.clientesBD.find(c => c.documento_identidad === doc);
       this.clienteTelefono = c?.telefono || ''; this.clienteCorreo = c?.correo || '';
       this.cdr.detectChanges();
-    } catch (e) { alert('Fallo de red.'); }
+    } catch (e) { }
   }
 
   async procesarClienteSilencioso() {
@@ -147,15 +151,10 @@ export class CotizadorComponent implements OnInit {
     }
   }
 
-  // --- LÓGICA DE TABLA MEJORADA ---
   agregarFila() {
     this.carrito.push({
       sku: 'VAR-' + Math.floor(1000 + Math.random() * 9000).toString(),
-      descripcion: '', 
-      unidad: '',      // ✅ Nace vacío
-      cantidad: null,  // ✅ Nace nulo para obligar al tipeo
-      precio_unitario: null, 
-      subtotal: 0
+      descripcion: '', unidad: '', cantidad: null, precio_unitario: null, subtotal: 0
     });
   }
 
@@ -171,10 +170,7 @@ export class CotizadorComponent implements OnInit {
       item.descripcion = producto.descripcion;
       item.unidad = producto.unidad; 
       item.precio_unitario = producto.precio_unitario_base;
-      
-      // ✅ OBLIGAMOS a que la cantidad quede nula, incluso si se encontró el producto
       item.cantidad = null; 
-      
       this.recalcularItem(item);
     }
   }
@@ -186,7 +182,7 @@ export class CotizadorComponent implements OnInit {
   }
 
   recalcularItem(item: any) {
-    const cant = item.cantidad || 0; // Si es null, calcula como 0
+    const cant = item.cantidad || 0; 
     const precio = item.precio_unitario || 0;
     item.subtotal = cant * precio;
     this.recalcularTodo();
@@ -206,14 +202,16 @@ export class CotizadorComponent implements OnInit {
 
   async generarPDF() {
     const itemsValidos = this.carrito.filter(item => item.descripcion && item.precio_unitario > 0 && item.cantidad > 0);
+    if (itemsValidos.length === 0) return;
     
-    // Si no hay productos válidos, cancelamos en silencio sin alertas molestas
-    if (itemsValidos.length === 0) {
-      console.warn("Faltan productos o cantidades.");
-      return; 
-    }
-    
-    await this.procesarClienteSilencioso();
+    // Aviso efímero
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Procesando',
+      detail: 'Generando cotización...',
+      life: 2000
+    });
+
     const d = new Date();
     const folioVenta = `COT-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
     const empStr = this.empresaActiva.nombre.toUpperCase();
@@ -233,15 +231,11 @@ export class CotizadorComponent implements OnInit {
     };
 
     try {
+      await this.procesarClienteSilencioso();
       await this.supabaseSvc.guardarCotizacion(nuevaCotizacion);
       await this.pdfSvc.generarYDescargarCotizacion(nuevaCotizacion);
-      
-      // ✅ Cero alertas. Todo fluye en silencio y la redirección móvil funcionará perfecta.
-      console.log(`Cotización ${folioVenta} generada con éxito.`);
-      
     } catch (error) {
-      // ✅ Si hay un error, lo registramos en consola en lugar de interrumpir la pantalla
-      console.error("Error al guardar en la base de datos:", error);
+      console.error("Error al generar:", error);
     }
   }
 }
