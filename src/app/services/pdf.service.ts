@@ -10,24 +10,14 @@ Object.assign(pdfMake, { vfs: vfsReal });
 
 const DATOS_CORPORATIVOS: any = {
   'W&M': {
-    nombreComercial: 'W&M E.I.R.L.',
-    razonSocial: null,
-    ruc: '20608657364',
-    color: '#2563eb',
-    direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
-    telefonos: '959098427 - 914828235',
-    correo: 'wymvdc1509@gmail.com',
+    nombreComercial: 'W&M E.I.R.L.', razonSocial: null, ruc: '20608657364', color: '#2563eb',
+    direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA', telefonos: '959098427 - 914828235', correo: 'wantuilrodriguez123@gmail.com',
     rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logoswym.png', 
     rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg' 
   },
   'VDC': {
-    nombreComercial: 'ELECTROFERR. VIRGEN DEL CARMEN',
-    razonSocial: 'MITMA TORRES MARIA LUZ',
-    ruc: '10215770635',
-    color: '#1e40af',
-    direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
-    telefonos: '959098427 - 914828235',
-    correo: 'wymvdc1509@gmail.com',
+    nombreComercial: 'ELECTROFERR. VIRGEN DEL CARMEN', razonSocial: 'MITMA TORRES MARIA LUZ', ruc: '10215770635', color: '#1e40af',
+    direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA', telefonos: '959098427 - 914828235', correo: 'wantuilrodriguez123@gmail.com',
     rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logovdc.jpeg',
     rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png'
   }
@@ -43,7 +33,6 @@ export class PdfService {
       if (!response.ok) return null; 
       const blob = await response.blob();
       if (!blob.type.startsWith('image/')) return null;
-
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
@@ -57,7 +46,7 @@ export class PdfService {
     return texto.split(' ').map(palabra => palabra.length > 25 ? palabra.match(/.{1,25}/g)?.join('\u200B') : palabra).join(' ');
   }
 
-  async generarYDescargarCotizacion(data: ICotizacion) {
+  async generarYDescargarCotizacion(data: ICotizacion, lugarEntrega: string = '', observaciones: string = '', incluyeIgv: boolean = true) {
     const datosEmpresa = DATOS_CORPORATIVOS[data.empresa];
     if (!datosEmpresa) return;
 
@@ -92,13 +81,17 @@ export class PdfService {
       [{ text: 'Subtotal:', colSpan: 5, alignment: 'right', bold: true, fontSize: 10, margin: [0, 5, 0, 0] }, '', '', '', '', { text: `S/ ${Number(data.subtotal).toFixed(2)}`, alignment: 'right', fontSize: 10, margin: [0, 5, 0, 0] }]
     ];
 
-    if (data.igv > 0) {
+    if (data.igv > 0 || incluyeIgv) {
       filasTotales.push([{ text: 'IGV (18%):', colSpan: 5, alignment: 'right', bold: true, fontSize: 10 }, '', '', '', '', { text: `S/ ${Number(data.igv).toFixed(2)}`, alignment: 'right', fontSize: 10 }]);
     }
     filasTotales.push([{ text: 'TOTAL FINAL:', colSpan: 5, alignment: 'right', bold: true, fontSize: 12 }, '', '', '', '', { text: `S/ ${Number(data.total).toFixed(2)}`, alignment: 'right', bold: true, fontSize: 12, color: datosEmpresa.color }]);
 
     const fechaFormat = new Date(data.fecha).toLocaleDateString('es-PE');
     
+    let textoEntrega = 'NO ESPECIFICADO';
+    if (lugarEntrega === 'CANTERA') textoEntrega = 'PUESTO EN CANTERA';
+    if (lugarEntrega === 'OBRA') textoEntrega = 'PUESTO EN OBRA (CON FLETE)';
+
     const docDefinition: any = {
       pageSize: 'A4',
       pageMargins: [40, 130, 40, 50], 
@@ -165,9 +158,17 @@ export class PdfService {
               table: {
                 widths: ['50%', '50%'],
                 body: [
-                  [{ text: 'OBSERVACIONES', style: 'boxHeader' }, { text: 'CONDICIONES DE VENTA Y PAGOS', style: 'boxHeader' }],
+                  [{ text: 'DATOS DE ENTREGA Y OBSERVACIONES', style: 'boxHeader' }, { text: 'CONDICIONES DE VENTA Y PAGOS', style: 'boxHeader' }],
                   [
-                    { text: 'Ninguna especificación adicional.', style: 'boxContent' },
+                    { 
+                      stack: [
+                        { text: [ { text: '• Punto de Entrega: ', bold: true }, { text: textoEntrega } ], margin: [0, 0, 0, 4] },
+                        // ✅ NUEVA LÍNEA PARA ESPECIFICAR IGV
+                        { text: [ { text: '• Impuestos: ', bold: true }, { text: incluyeIgv ? 'PRECIOS INCLUYEN IGV (18%)' : 'PRECIOS NO INCLUYEN IGV' } ], margin: [0, 0, 0, 4] },
+                        { text: [ { text: '• Notas: ', bold: true }, { text: observaciones ? observaciones : 'Ninguna especificación adicional.' } ] }
+                      ],
+                      style: 'boxContent' 
+                    },
                     { stack: [ { text: 'CUENTAS PARA ABONO', style: 'boxHeaderSmall' }, { text: '• Detracción B. Nación: 00615009040', margin: [0, 0, 0, 2] }, { text: '• Cta. BCP: 194-20587879-0-35', margin: [0, 0, 0, 2] }, { text: '• CCI BCP: 00219412058787903595' } ], style: 'boxContent' }
                   ]
                 ]
@@ -190,8 +191,6 @@ export class PdfService {
 
     const nombreArchivo = `${data.folio}_${data.empresa.replace(/\s+/g, '_')}_${data.cliente_nombre.replace(/\s+/g, '_')}.pdf`;
     const generadorPdf = (pdfMake as any).default || pdfMake;
-    
-    // Descarga nativa directa
     generadorPdf.createPdf(docDefinition).download(nombreArchivo);
   }
 }

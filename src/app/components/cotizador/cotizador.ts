@@ -23,14 +23,14 @@ const DATOS_CORPORATIVOS: any = {
   'WM': {
     nombreComercial: 'W&M E.I.R.L.', razonSocial: null, ruc: '20608657364',
     direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
-    telefonos: '959098427 - 914828235', correo: 'wymvdc1509@gmail.com',
+    telefonos: '959098427 - 914828235', correo: 'wantuilrodriguez123@gmail.com',
     rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logoswym.png', 
     rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg' 
   },
   'VDC': {
     nombreComercial: 'ELECTROFERR. VIRGEN DEL CARMEN', razonSocial: 'MITMA TORRES MARIA LUZ', ruc: '10215770635',
     direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
-    telefonos: '959098427 - 914828235', correo: 'wymvdc1509@gmail.com',
+    telefonos: '959098427 - 914828235', correo: 'wantuilrodriguez123@gmail.com',
     rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logovdc.jpeg',
     rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png'
   }
@@ -216,7 +216,8 @@ export class CotizadorComponent implements OnInit {
     const folioVenta = `COT-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
     const empStr = this.empresaActiva.nombre.toUpperCase();
     
-    const nuevaCotizacion: ICotizacion = {
+    // ✅ OBJETO LIMPIO PARA SUPABASE (No incluye lugar_entrega ni observaciones)
+    const cotizacionParaBD: ICotizacion = {
       folio: folioVenta,
       fecha: new Date().toISOString(),
       empresa: (empStr.includes('W&M')) ? 'W&M' : 'VDC',
@@ -232,8 +233,13 @@ export class CotizadorComponent implements OnInit {
 
     try {
       await this.procesarClienteSilencioso();
-      await this.supabaseSvc.guardarCotizacion(nuevaCotizacion);
-      await this.pdfSvc.generarYDescargarCotizacion(nuevaCotizacion);
+      
+      // ✅ Guardamos en Supabase el objeto LIMPIO para que no lance Error 400
+      await this.supabaseSvc.guardarCotizacion(cotizacionParaBD);
+      
+      // ✅ Pasamos las variables extra DIRECTAMENTE al PDF Service, INCLUYENDO EL IGV
+      await this.pdfSvc.generarYDescargarCotizacion(cotizacionParaBD, this.lugarEntrega, this.clienteObservaciones, this.incluyeIgv);
+      
     } catch (error) {
       console.error("Error al generar:", error);
     }
