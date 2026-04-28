@@ -66,7 +66,7 @@ export class CotizadorComponent implements OnInit {
   clienteCorreo: string = '';
   clienteObservaciones: string = '';
   
-  incluyeIgv: boolean = true;
+  incluyeIgv: boolean = false;
   lugarEntrega: string = 'CANTERA';
 
   subtotalGeneral: number = 0;
