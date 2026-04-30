@@ -125,5 +125,16 @@ export class SupabaseService {
 async iniciarSesion(email: string, password: string) {
   return await this.supabase.auth.signInWithPassword({ email, password });
 }
+
+// Obtener el siguiente folio secuencial dependiento de la empresa
+  async obtenerSiguienteFolio(empresaId: string) {
+    const { data, error } = await this.supabase.rpc('get_next_folio_empresa', { empresa_id: empresaId });
+    if (error) {
+      console.error("Error al obtener folio:", error);
+      // Fallback de emergencia por si algo falla, usa la hora para que el vendedor no se quede bloqueado
+      return `COT-${empresaId}-${new Date().getTime()}`; 
+    }
+    return data;
+  }
   
 }

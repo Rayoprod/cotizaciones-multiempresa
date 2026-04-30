@@ -46,7 +46,8 @@ export class PdfService {
     return texto.split(' ').map(palabra => palabra.length > 25 ? palabra.match(/.{1,25}/g)?.join('\u200B') : palabra).join(' ');
   }
 
-  async generarYDescargarCotizacion(data: ICotizacion, lugarEntrega: string = '', observaciones: string = '', incluyeIgv: boolean = true) {
+  // ✅ SOLO 3 PARÁMETROS. Ya no existe "incluyeIgv" aquí.
+  async generarYDescargarCotizacion(data: ICotizacion, lugarEntrega: string = '', observaciones: string = '') {
     const datosEmpresa = DATOS_CORPORATIVOS[data.empresa];
     if (!datosEmpresa) return;
 
@@ -77,20 +78,27 @@ export class PdfService {
       ]);
     });
 
+    // 🔥 MAGIA 1: IGV INTELIGENTE (LA MATEMÁTICA MANDA)
+    const tieneIgv = Number(data.igv) > 0;
+
     const filasTotales: any[] = [
       [{ text: 'Subtotal:', colSpan: 5, alignment: 'right', bold: true, fontSize: 10, margin: [0, 5, 0, 0] }, '', '', '', '', { text: `S/ ${Number(data.subtotal).toFixed(2)}`, alignment: 'right', fontSize: 10, margin: [0, 5, 0, 0] }]
     ];
 
-    if (data.igv > 0 || incluyeIgv) {
+    if (tieneIgv) {
       filasTotales.push([{ text: 'IGV (18%):', colSpan: 5, alignment: 'right', bold: true, fontSize: 10 }, '', '', '', '', { text: `S/ ${Number(data.igv).toFixed(2)}`, alignment: 'right', fontSize: 10 }]);
     }
     filasTotales.push([{ text: 'TOTAL FINAL:', colSpan: 5, alignment: 'right', bold: true, fontSize: 12 }, '', '', '', '', { text: `S/ ${Number(data.total).toFixed(2)}`, alignment: 'right', bold: true, fontSize: 12, color: datosEmpresa.color }]);
 
     const fechaFormat = new Date(data.fecha).toLocaleDateString('es-PE');
     
+    // 🔥 MAGIA 2: LEER DESDE LA BASE DE DATOS PARA EL HISTORIAL
+    const entregaRaw = String(lugarEntrega || (data as any).lugar_entrega || '').toUpperCase().trim();
+    const obsFinal = observaciones || (data as any).observaciones || '';
+
     let textoEntrega = 'NO ESPECIFICADO';
-    if (lugarEntrega === 'CANTERA') textoEntrega = 'PUESTO EN CANTERA';
-    if (lugarEntrega === 'OBRA') textoEntrega = 'PUESTO EN OBRA (CON FLETE)';
+    if (entregaRaw.includes('CANTERA')) textoEntrega = 'PUESTO EN CANTERA';
+    else if (entregaRaw.includes('OBRA')) textoEntrega = 'PUESTO EN OBRA (CON FLETE)';
 
     const docDefinition: any = {
       pageSize: 'A4',
@@ -163,9 +171,8 @@ export class PdfService {
                     { 
                       stack: [
                         { text: [ { text: '• Punto de Entrega: ', bold: true }, { text: textoEntrega } ], margin: [0, 0, 0, 4] },
-                        // ✅ NUEVA LÍNEA PARA ESPECIFICAR IGV
-                        { text: [ { text: '• Impuestos: ', bold: true }, { text: incluyeIgv ? 'PRECIOS INCLUYEN IGV (18%)' : 'PRECIOS NO INCLUYEN IGV' } ], margin: [0, 0, 0, 4] },
-                        { text: [ { text: '• Notas: ', bold: true }, { text: observaciones ? observaciones : 'Ninguna especificación adicional.' } ] }
+                        { text: [ { text: '• Impuestos: ', bold: true }, { text: tieneIgv ? 'PRECIOS INCLUYEN IGV (18%)' : 'PRECIOS NO INCLUYEN IGV' } ], margin: [0, 0, 0, 4] },
+                        { text: [ { text: '• Notas: ', bold: true }, { text: obsFinal ? obsFinal : 'Ninguna especificación adicional.' } ] }
                       ],
                       style: 'boxContent' 
                     },

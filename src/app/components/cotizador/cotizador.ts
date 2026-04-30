@@ -66,7 +66,7 @@ export class CotizadorComponent implements OnInit {
   clienteCorreo: string = '';
   clienteObservaciones: string = '';
   
-  incluyeIgv: boolean = false;
+  incluyeIgv: boolean = true;
   lugarEntrega: string = 'CANTERA';
 
   subtotalGeneral: number = 0;
@@ -204,7 +204,6 @@ export class CotizadorComponent implements OnInit {
     const itemsValidos = this.carrito.filter(item => item.descripcion && item.precio_unitario > 0 && item.cantidad > 0);
     if (itemsValidos.length === 0) return;
     
-    // Aviso efímero
     this.messageService.add({
       severity: 'info',
       summary: 'Procesando',
@@ -212,33 +211,38 @@ export class CotizadorComponent implements OnInit {
       life: 2000
     });
 
-    const d = new Date();
-    const folioVenta = `COT-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
-    const empStr = this.empresaActiva.nombre.toUpperCase();
-    
-    // ✅ OBJETO LIMPIO PARA SUPABASE (No incluye lugar_entrega ni observaciones)
-    const cotizacionParaBD: ICotizacion = {
-      folio: folioVenta,
-      fecha: new Date().toISOString(),
-      empresa: (empStr.includes('W&M')) ? 'W&M' : 'VDC',
-      cliente_nombre: this.clienteNombre,
-      cliente_documento: this.clienteDocumento,
-      subtotal: this.subtotalGeneral,
-      igv: this.igvTotal,
-      total: this.totalFinal,
-      estado: 'PENDIENTE',
-      items: itemsValidos,
-      vendedor: localStorage.getItem('usuario_conectado') || 'Usuario Desconocido'
-    };
-
     try {
       await this.procesarClienteSilencioso();
+
+      // Determinamos si es WM o VDC
+      const empStr = this.empresaActiva.nombre.toUpperCase();
       
-      // ✅ Guardamos en Supabase el objeto LIMPIO para que no lance Error 400
+      // 👉 ESTA ES LA CLAVE: Separamos el código (para el folio) del nombre oficial (para BD y PDF)
+      const codigoEmpresa = empStr.includes('W&M') ? 'WM' : 'VDC';
+      const nombreEmpresaOriginal = empStr.includes('W&M') ? 'W&M' : 'VDC';
+      
+      // Obtenemos el folio único (ej. COT-WM-00001)
+      const folioSeguro = await this.supabaseSvc.obtenerSiguienteFolio(codigoEmpresa);
+      
+      const cotizacionParaBD: any = {
+        folio: folioSeguro, 
+        fecha: new Date().toISOString(),
+        empresa: nombreEmpresaOriginal, // ✅ ¡AQUÍ ESTABA EL ERROR! Ahora sí envía 'W&M'
+        cliente_nombre: this.clienteNombre,
+        cliente_documento: this.clienteDocumento,
+        subtotal: this.subtotalGeneral,
+        igv: this.igvTotal,
+        total: this.totalFinal,
+        estado: 'PENDIENTE',
+        items: itemsValidos,
+        lugar_entrega: this.lugarEntrega,
+        observaciones: this.clienteObservaciones,
+        vendedor: localStorage.getItem('usuario_conectado') || 'Usuario Desconocido'
+      };
+      
       await this.supabaseSvc.guardarCotizacion(cotizacionParaBD);
       
-      // ✅ Pasamos las variables extra DIRECTAMENTE al PDF Service, INCLUYENDO EL IGV
-      await this.pdfSvc.generarYDescargarCotizacion(cotizacionParaBD, this.lugarEntrega, this.clienteObservaciones, this.incluyeIgv);
+      await this.pdfSvc.generarYDescargarCotizacion(cotizacionParaBD, this.lugarEntrega, this.clienteObservaciones);
       
     } catch (error) {
       console.error("Error al generar:", error);
