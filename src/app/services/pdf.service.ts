@@ -12,7 +12,7 @@ const DATOS_CORPORATIVOS: any = {
   'W&M': {
     nombreComercial: 'W&M E.I.R.L.', razonSocial: null, ruc: '20608657364', color: '#2563eb',
     direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA', telefonos: '959098427 - 914828235', correo: 'wantuilrodriguez123@gmail.com',
-    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logoswym.png', 
+    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/LOGO%20WYM.jpeg', 
     rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg' 
   },
   'VDC': {
