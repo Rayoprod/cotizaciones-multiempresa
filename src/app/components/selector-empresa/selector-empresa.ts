@@ -47,6 +47,22 @@ export class SelectorComponent implements OnInit {
       correo: 'wymvdc1509@gmail.com',
       logoUrl: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logovdc.jpeg',
       rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png'
+    },
+    {
+      id: 'ONETWO',
+      nombre: 'ONETWO SERVICIOS GENERALES S.A.C.',
+      razonSocial: 'ONETWO SERVICIOS GENERALES S.A.C.',
+      ruc: '20000000000',
+      color: '#1e9cafff', // Azul oscuro corporativo
+      bgClass: 'bg-indigo-50',
+      borderHover: 'hover:border-indigo-500',
+      textClass: 'text-indigo-800',
+      icon: 'pi pi-star-fill',
+      direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
+      telefonos: '937022985',
+      correo: 'ventasonetwo@gmail.com',
+      logoUrl: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/WhatsApp%20Image%202026-05-01%20at%2014.17.55.jpeg',
+      rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg'
     }
   ];
 

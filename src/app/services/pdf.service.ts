@@ -20,6 +20,13 @@ const DATOS_CORPORATIVOS: any = {
     direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA', telefonos: '959098427 - 914828235', correo: 'wantuilrodriguez123@gmail.com',
     rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logovdc.jpeg',
     rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png'
+  },
+  // 👇 AQUÍ ESTÁ EL BLOQUE DE ONETWO QUE FALTA EN TU PDF SERVICE
+  'ONETWO': {
+    nombreComercial: 'ONETWO SERVICIOS GENERALES S.A.C.', razonSocial: 'ONETWO SERVICIOS GENERALES S.A.C.', ruc: '20000000000', color: '#1e9caf',
+    direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA', telefonos: '937022985', correo: 'ventasonetwo@gmail.com',
+    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/WhatsApp%20Image%202026-05-01%20at%2014.17.55.jpeg',
+    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg' 
   }
 };
 
@@ -46,7 +53,6 @@ export class PdfService {
     return texto.split(' ').map(palabra => palabra.length > 25 ? palabra.match(/.{1,25}/g)?.join('\u200B') : palabra).join(' ');
   }
 
-  // ✅ SOLO 3 PARÁMETROS. Ya no existe "incluyeIgv" aquí.
   async generarYDescargarCotizacion(data: ICotizacion, lugarEntrega: string = '', observaciones: string = '') {
     const datosEmpresa = DATOS_CORPORATIVOS[data.empresa];
     if (!datosEmpresa) return;

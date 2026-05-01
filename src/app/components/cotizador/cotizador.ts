@@ -33,7 +33,18 @@ const DATOS_CORPORATIVOS: any = {
     telefonos: '959098427 - 914828235', correo: 'wantuilrodriguez123@gmail.com',
     rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logovdc.jpeg',
     rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png'
-  }
+  },
+  'ONETWO': {
+    nombreComercial: 'ONETWO', 
+    razonSocial: 'Razón Social de ONETWO', // O null si es persona natural
+    ruc: '20000000000', // El RUC real
+    color: '#0c939d', // Ponle el color hexadecimal de la marca (esto solo va en el pdf.service.ts)
+    direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA', 
+    telefonos: '937022985', 
+    correo: 'ventasonetwo@gmail.com',
+    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/WhatsApp%20Image%202026-05-01%20at%2014.17.55.jpeg',
+    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg'
+}
 };
 
 @Component({
@@ -86,7 +97,16 @@ export class CotizadorComponent implements OnInit {
 
     const datos = localStorage.getItem('empresa_activa');
     this.empresaActiva = datos ? JSON.parse(datos) : { nombre: 'VDC', color: '#1e40af' };
-    const clave = (this.empresaActiva.nombre.toUpperCase().includes('W&M')) ? 'WM' : 'VDC';
+    
+    // 👇 NUEVA LÓGICA PARA RECONOCER A LAS 3 EMPRESAS EN LA PANTALLA
+    let clave = 'VDC';
+    const empStr = this.empresaActiva.nombre.toUpperCase();
+    if (empStr.includes('W&M') || empStr.includes('WM')) {
+      clave = 'WM';
+    } else if (empStr.includes('ONETWO')) {
+      clave = 'ONETWO';
+    }
+    
     this.datosActuales = DATOS_CORPORATIVOS[clave];
 
     await this.cargarDatosDesdeBD();
@@ -214,12 +234,18 @@ export class CotizadorComponent implements OnInit {
     try {
       await this.procesarClienteSilencioso();
 
-      // Determinamos si es WM o VDC
       const empStr = this.empresaActiva.nombre.toUpperCase();
       
-      // 👉 ESTA ES LA CLAVE: Separamos el código (para el folio) del nombre oficial (para BD y PDF)
-      const codigoEmpresa = empStr.includes('W&M') ? 'WM' : 'VDC';
-      const nombreEmpresaOriginal = empStr.includes('W&M') ? 'W&M' : 'VDC';
+      let codigoEmpresa = 'VDC';
+      let nombreEmpresaOriginal = 'VDC';
+
+      if (empStr.includes('W&M') || empStr.includes('WM')) {
+        codigoEmpresa = 'WM';
+        nombreEmpresaOriginal = 'W&M';
+      } else if (empStr.includes('ONETWO')) {
+        codigoEmpresa = 'ONETWO';
+        nombreEmpresaOriginal = 'ONETWO';
+      }
       
       // Obtenemos el folio único (ej. COT-WM-00001)
       const folioSeguro = await this.supabaseSvc.obtenerSiguienteFolio(codigoEmpresa);
