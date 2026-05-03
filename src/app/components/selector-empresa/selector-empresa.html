@@ -14,22 +14,29 @@
 
             <div class="col-12 md:col-6 p-2 md:p-3 fadein animation-duration-1000" *ngFor="let emp of empresas">
                 
-                <div class="h-full bg-white border-round-2xl shadow-2 p-4 md:p-5 cursor-pointer transition-all transition-duration-300 hover:shadow-6 border-top-3 surface-border {{ emp.borderHover }}"
+                <!-- CORRECCIÓN: border_hover con guion bajo -->
+                <div class="h-full bg-white border-round-2xl shadow-2 p-4 md:p-5 cursor-pointer transition-all transition-duration-300 hover:shadow-6 border-top-3 surface-border {{ emp.border_hover }}"
                      (click)="seleccionar(emp)">
 
                     <div class="flex justify-content-between align-items-start mb-4">
-                        <div class="p-2 border-round-xl {{ emp.bgClass }} flex align-items-center justify-content-center" style="width: 70px; height: 70px;">
-                            <ng-container *ngIf="emp.logoUrl; else noLogo">
-                                <img [src]="emp.logoUrl" (error)="emp.logoUrl = ''" [alt]="emp.nombre" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        <!-- CORRECCIÓN: bg_class con guion bajo -->
+                        <div class="p-2 border-round-xl {{ emp.bg_class }} flex align-items-center justify-content-center" style="width: 70px; height: 70px;">
+                            
+                            <!-- CORRECCIÓN CLAVE: Usamos ruta_logo para el IF -->
+                            <ng-container *ngIf="emp.ruta_logo; else noLogo">
+                                <img [src]="emp.ruta_logo" (error)="emp.ruta_logo = ''" [alt]="emp.nombre_comercial" style="max-width: 100%; max-height: 100%; object-fit: contain;">
                             </ng-container>
+
                             <ng-template #noLogo>
-                                <i class="{{ emp.icon }} text-4xl {{ emp.textClass }}"></i>
+                                <!-- CORRECCIÓN: text_class con guion bajo -->
+                                <i class="{{ emp.icono }} text-4xl {{ emp.text_class }}"></i>
                             </ng-template>
                         </div>
                         <i class="pi pi-arrow-up-right text-300 text-2xl transition-colors transition-duration-300 hover:text-700"></i>
                     </div>
 
-                    <h2 class="text-2xl md:text-3xl font-bold text-900 m-0 mb-3">{{ emp.nombre }}</h2>
+                    <!-- CORRECCIÓN: nombre_comercial -->
+                    <h2 class="text-2xl md:text-3xl font-bold text-900 m-0 mb-3">{{ emp.nombre_comercial }}</h2>
                     
                     <div class="flex flex-column gap-2">
                         <span class="text-700 font-medium flex align-items-center text-sm md:text-base">
@@ -38,7 +45,8 @@
                         </span>
                         <span class="text-500 text-xs md:text-sm flex align-items-center line-height-3">
                             <i class="pi pi-building mr-2 text-500"></i> 
-                            {{ emp.razonSocial }}
+                            <!-- CORRECCIÓN: razon_social -->
+                            {{ emp.razon_social }}
                         </span>
                     </div>
 

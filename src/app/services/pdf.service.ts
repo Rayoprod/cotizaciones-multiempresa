@@ -8,27 +8,6 @@ const fuentes: any = pdfFonts;
 const vfsReal = fuentes.vfs || fuentes.pdfMake?.vfs || fuentes.default?.pdfMake?.vfs;
 Object.assign(pdfMake, { vfs: vfsReal });
 
-const DATOS_CORPORATIVOS: any = {
-  'W&M': {
-    nombreComercial: 'W&M E.I.R.L.', razonSocial: null, ruc: '20608657364', color: '#2563eb',
-    direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA', telefonos: '959098427 - 914828235', correo: 'wantuilrodriguez123@gmail.com',
-    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/LOGO%20WYM.jpeg', 
-    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg' 
-  },
-  'VDC': {
-    nombreComercial: 'ELECTROFERR. VIRGEN DEL CARMEN', razonSocial: 'MITMA TORRES MARIA LUZ', ruc: '10215770635', color: '#1e40af',
-    direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA', telefonos: '959098427 - 914828235', correo: 'wantuilrodriguez123@gmail.com',
-    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logovdc.jpeg',
-    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png'
-  },
-  // 👇 AQUÍ ESTÁ EL BLOQUE DE ONETWO QUE FALTA EN TU PDF SERVICE
-  'ONETWO': {
-    nombreComercial: 'ONETWO SERVICIOS GENERALES S.A.C.', razonSocial: 'ONETWO SERVICIOS GENERALES S.A.C.', ruc: '20000000000', color: '#1e9caf',
-    direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA', telefonos: '937022985', correo: 'ventasonetwo@gmail.com',
-    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/WhatsApp%20Image%202026-05-01%20at%2014.17.55.jpeg',
-    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg' 
-  }
-};
 
 @Injectable({ providedIn: 'root' })
 export class PdfService {
@@ -53,20 +32,22 @@ export class PdfService {
     return texto.split(' ').map(palabra => palabra.length > 25 ? palabra.match(/.{1,25}/g)?.join('\u200B') : palabra).join(' ');
   }
 
-  async generarYDescargarCotizacion(data: ICotizacion, lugarEntrega: string = '', observaciones: string = '') {
-    const datosEmpresa = DATOS_CORPORATIVOS[data.empresa];
+  // 👇 Fíjate que aquí agregamos "datosEmpresa: any" para recibir la información
+  async generarYDescargarCotizacion(data: ICotizacion, datosEmpresa: any, lugarEntrega: string = '', observaciones: string = '') {
+    
     if (!datosEmpresa) return;
 
-    const logoConvertido = await this.cargarImagenRemota(datosEmpresa.rutaLogo);
-    const firmaConvertida = await this.cargarImagenRemota(datosEmpresa.rutaFirma);
+    // 🔥 CORRECCIÓN 1: Usar nombres exactos de Supabase (con guion bajo)
+    const logoConvertido = await this.cargarImagenRemota(datosEmpresa.ruta_logo);
+    const firmaConvertida = await this.cargarImagenRemota(datosEmpresa.ruta_firma);
 
     const logoIzquierda = logoConvertido 
       ? { image: logoConvertido, width: 80 } 
-      : { text: `LOGO\n${datosEmpresa.nombreComercial}`, color: datosEmpresa.color, fontSize: 10, bold: true, width: 130 };
+      : { text: `LOGO\n${datosEmpresa.nombre_comercial}`, color: datosEmpresa.color, fontSize: 10, bold: true, width: 130 };
 
     const firmaDerecha = firmaConvertida
       ? { image: firmaConvertida, width: 120, alignment: 'center' }
-      : { text: `________________________________\nGerencia General\n${datosEmpresa.nombreComercial}`, alignment: 'center', fontSize: 9, color: '#4b5563' };
+      : { text: `________________________________\nGerencia General\n${datosEmpresa.nombre_comercial}`, alignment: 'center', fontSize: 9, color: '#4b5563' };
 
     const anchosTabla = [25, '*', 35, 40, 60, 70];
     const filasItems: any[] = [
@@ -84,7 +65,6 @@ export class PdfService {
       ]);
     });
 
-    // 🔥 MAGIA 1: IGV INTELIGENTE (LA MATEMÁTICA MANDA)
     const tieneIgv = Number(data.igv) > 0;
 
     const filasTotales: any[] = [
@@ -98,7 +78,6 @@ export class PdfService {
 
     const fechaFormat = new Date(data.fecha).toLocaleDateString('es-PE');
     
-    // 🔥 MAGIA 2: LEER DESDE LA BASE DE DATOS PARA EL HISTORIAL
     const entregaRaw = String(lugarEntrega || (data as any).lugar_entrega || '').toUpperCase().trim();
     const obsFinal = observaciones || (data as any).observaciones || '';
 
@@ -120,12 +99,13 @@ export class PdfService {
                   width: '*',
                   text: [
                     { text: `COTIZACIÓN N° ${data.folio}\n`, fontSize: 14, bold: true, color: datosEmpresa.color, alignment: 'right' },
-                    { text: `${datosEmpresa.nombreComercial}\n`, bold: true, fontSize: 10, alignment: 'right' },
-                    ...(datosEmpresa.razonSocial ? [{ text: `${datosEmpresa.razonSocial}\n`, fontSize: 9, alignment: 'right' }] : []),
-                    { text: `RUC: ${datosEmpresa.ruc}\n`, alignment: 'right', fontSize: 9, color: '#4b5563' },
-                    { text: `${datosEmpresa.direccion}\n`, alignment: 'right', fontSize: 8, color: '#4b5563', leadingIndent: 0 },
-                    { text: `Cel: ${datosEmpresa.telefonos}\n`, alignment: 'right', fontSize: 8, color: '#4b5563' },
-                    { text: `${datosEmpresa.correo}\n`, alignment: 'right', fontSize: 8, color: '#4b5563' },
+                    // 🔥 CORRECCIÓN 2: nombres exactos de Supabase
+                    { text: `${datosEmpresa.nombre_comercial || 'EMPRESA'}\n`, bold: true, fontSize: 10, alignment: 'right' },
+                    ...(datosEmpresa.razon_social ? [{ text: `${datosEmpresa.razon_social}\n`, fontSize: 9, alignment: 'right' }] : []),
+                    { text: `RUC: ${datosEmpresa.ruc || '-'}\n`, alignment: 'right', fontSize: 9, color: '#4b5563' },
+                    { text: `${datosEmpresa.direccion || '-'}\n`, alignment: 'right', fontSize: 8, color: '#4b5563', leadingIndent: 0 },
+                    { text: `Cel: ${datosEmpresa.telefonos || '-'}\n`, alignment: 'right', fontSize: 8, color: '#4b5563' },
+                    { text: `${datosEmpresa.correo || '-'}\n`, alignment: 'right', fontSize: 8, color: '#4b5563' },
                     { text: `Fecha: ${fechaFormat}`, alignment: 'right', fontSize: 9, bold: true, margin: [0, 3, 0, 0] }
                   ]
                 }

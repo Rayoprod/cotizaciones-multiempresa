@@ -5,6 +5,7 @@ import { RouterModule, Router } from '@angular/router';
 
 import { SupabaseService } from '../../services/supabase.service';
 import { PdfService } from '../../services/pdf.service';
+import { ApiPeruService } from '../../services/api-peru.service'; 
 import { ICotizacion } from '../../models/cotizacion.model';
 
 import { TableModule } from 'primeng/table';
@@ -18,34 +19,6 @@ import { AutoCompleteModule } from 'primeng/autocomplete';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-
-const DATOS_CORPORATIVOS: any = {
-  'WM': {
-    nombreComercial: 'W&M E.I.R.L.', razonSocial: null, ruc: '20608657364',
-    direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
-    telefonos: '959098427 - 914828235', correo: 'wantuilrodriguez123@gmail.com',
-    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/LOGO%20WYM.jpeg', 
-    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg' 
-  },
-  'VDC': {
-    nombreComercial: 'ELECTROFERR. VIRGEN DEL CARMEN', razonSocial: 'MITMA TORRES MARIA LUZ', ruc: '10215770635',
-    direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA',
-    telefonos: '959098427 - 914828235', correo: 'wantuilrodriguez123@gmail.com',
-    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logovdc.jpeg',
-    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png'
-  },
-  'ONETWO': {
-    nombreComercial: 'ONETWO', 
-    razonSocial: 'Razón Social de ONETWO', // O null si es persona natural
-    ruc: '20000000000', // El RUC real
-    color: '#0c939d', // Ponle el color hexadecimal de la marca (esto solo va en el pdf.service.ts)
-    direccion: 'CALLE LOS SAUCES MZA. 20 LOTE 1A\nCHALA - CARAVELI - AREQUIPA', 
-    telefonos: '937022985', 
-    correo: 'ventasonetwo@gmail.com',
-    rutaLogo: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/WhatsApp%20Image%202026-05-01%20at%2014.17.55.jpeg',
-    rutaFirma: 'https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg'
-}
-};
 
 @Component({
   selector: 'app-cotizador',
@@ -65,7 +38,7 @@ export class CotizadorComponent implements OnInit {
   
   productosBD: any[] = [];
   clientesBD: any[] = [];
-  nombresClientesFiltrados: string[] = [];
+  nombresClientesFiltrados: any[] = [];
   nombresProductosFiltrados: string[] = [];
   
   carrito: any[] = [];
@@ -89,25 +62,17 @@ export class CotizadorComponent implements OnInit {
     private supabaseSvc: SupabaseService,
     private pdfSvc: PdfService,
     private router: Router,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private apiPeru: ApiPeruService 
   ) {}
 
   async ngOnInit() {
     this.agregarFila();
 
+    // Cargamos directamente TODA la info de la empresa desde la memoria
     const datos = localStorage.getItem('empresa_activa');
-    this.empresaActiva = datos ? JSON.parse(datos) : { nombre: 'VDC', color: '#1e40af' };
-    
-    // 👇 NUEVA LÓGICA PARA RECONOCER A LAS 3 EMPRESAS EN LA PANTALLA
-    let clave = 'VDC';
-    const empStr = this.empresaActiva.nombre.toUpperCase();
-    if (empStr.includes('W&M') || empStr.includes('WM')) {
-      clave = 'WM';
-    } else if (empStr.includes('ONETWO')) {
-      clave = 'ONETWO';
-    }
-    
-    this.datosActuales = DATOS_CORPORATIVOS[clave];
+    this.empresaActiva = datos ? JSON.parse(datos) : null;
+    this.datosActuales = this.empresaActiva; // Unificamos variables para el HTML
 
     await this.cargarDatosDesdeBD();
   }
@@ -123,13 +88,15 @@ export class CotizadorComponent implements OnInit {
   filtrarNombresClientes(event: any) {
     const query = event.query.toLowerCase();
     this.nombresClientesFiltrados = this.clientesBD
-      .filter(c => c.nombre_razon_social.toLowerCase().includes(query) || (c.documento_identidad && c.documento_identidad.includes(query)))
-      .map(c => c.nombre_razon_social);
+      .filter(c => (c.nombre_razon_social && c.nombre_razon_social.toLowerCase().includes(query)) || 
+                   (c.documento_identidad && String(c.documento_identidad).includes(query)))
+      .map(c => c.nombre_razon_social); 
   }
 
   alElegirNombreSugerido(event: any) {
     const nombreElegido = event.value || event;
     const cliente = this.clientesBD.find(c => c.nombre_razon_social === nombreElegido);
+    
     if (cliente) {
       this.clienteNombre = cliente.nombre_razon_social;
       this.clienteDocumento = cliente.documento_identidad || '';
@@ -141,21 +108,64 @@ export class CotizadorComponent implements OnInit {
   }
 
   async buscarDocumento() {
-    const doc = this.clienteDocumento ? this.clienteDocumento.trim() : '';
-    if (doc.length !== 8 && doc.length !== 11) return;
-    const token = 'sk_14670.Rl3QC2eRGOShBSsUP3HL63QbRl8PmOYd';
-    const tipo = doc.length === 8 ? 'reniec/dni' : 'sunat/ruc';
+    const doc = String(this.clienteDocumento || '').trim();
+    if (!doc) {
+      this.messageService?.add({ severity: 'warn', summary: 'Atención', detail: 'Escribe un DNI o RUC' });
+      return;
+    }
+
+    const clienteExistente = this.clientesBD.find(c => String(c.documento_identidad) === doc);
+    if (clienteExistente) {
+      this.clienteNombre = clienteExistente.nombre_razon_social || '';
+      this.clienteDireccion = clienteExistente.direccion || '';
+      this.clienteTelefono = clienteExistente.telefono || '';
+      this.clienteCorreo = clienteExistente.correo || '';
+      this.messageService?.add({ severity: 'success', summary: 'Local', detail: 'Datos obtenidos de tu Base de Datos.' });
+      this.cdr.detectChanges();
+      return; 
+    }
+
+    if (doc.length !== 8 && doc.length !== 11) {
+      this.messageService?.add({ severity: 'warn', summary: 'Error', detail: 'DNI (8) o RUC (11) inválido.' });
+      return;
+    }
+
+    this.messageService?.add({ severity: 'info', summary: 'Consultando', detail: 'Buscando en SUNAT/RENIEC...' });
     
     try {
-      const resp = await fetch(`/api-peru/v1/${tipo}?numero=${doc}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!resp.ok) return;
-      const datos = await resp.json();
-      this.clienteNombre = doc.length === 8 ? `${datos.nombres||''} ${datos.apellidoPaterno||''} ${datos.apellidoMaterno||''}`.trim() : datos.razon_social||datos.razonSocial;
-      this.clienteDireccion = datos.direccion || '';
-      const c = this.clientesBD.find(c => c.documento_identidad === doc);
-      this.clienteTelefono = c?.telefono || ''; this.clienteCorreo = c?.correo || '';
+      const token = 'sk_14670.Rl3QC2eRGOShBSsUP3HL63QbRl8PmOYd'; 
+      const tipo = doc.length === 8 ? 'reniec/dni' : 'sunat/ruc';
+      const respuesta = await fetch(`/api-peru/v1/${tipo}?numero=${doc}`, { headers: { Authorization: `Bearer ${token}` } });
+      const datosCrudos = await respuesta.json();
+
+      if (!respuesta.ok || !datosCrudos) throw new Error('No encontrado');
+
+      const datos = datosCrudos.data || datosCrudos.result || datosCrudos;
+      let nombreFinal = '';
+
+      if (doc.length === 8) {
+        nombreFinal = datos.full_name || datos.nombre_completo || '';
+        if (!nombreFinal) {
+          const nom = datos.first_name || datos.nombres || datos.nombre || '';
+          const pat = datos.first_last_name || datos.apellidoPaterno || datos.apellido_paterno || '';
+          const mat = datos.second_last_name || datos.apellidoMaterno || datos.apellido_materno || '';
+          nombreFinal = `${nom} ${pat} ${mat}`.trim();
+        }
+      } else {
+        nombreFinal = datos.nombre_o_razon_social || datos.razon_social || datos.razonSocial || datos.nombre_comercial || datos.name || '';
+      }
+
+      this.clienteNombre = nombreFinal;
+      this.clienteDireccion = datos.direccion_completa || datos.direccion || datos.address || '';
+      this.clienteTelefono = ''; 
+      this.clienteCorreo = '';
+
       this.cdr.detectChanges();
-    } catch (e) { }
+      this.messageService?.add({ severity: 'success', summary: 'API', detail: 'Datos obtenidos de SUNAT/RENIEC.' });
+
+    } catch (e) {
+      this.messageService?.add({ severity: 'error', summary: 'No Encontrado', detail: 'El documento no existe.' });
+    }
   }
 
   async procesarClienteSilencioso() {
@@ -171,11 +181,26 @@ export class CotizadorComponent implements OnInit {
     }
   }
 
+  // ✅ BUENA PRÁCTICA: Inmutabilidad al AGREGAR. (Sin .push)
   agregarFila() {
-    this.carrito.push({
+    const nuevoItem = {
       sku: 'VAR-' + Math.floor(1000 + Math.random() * 9000).toString(),
       descripcion: '', unidad: '', cantidad: null, precio_unitario: null, subtotal: 0
-    });
+    };
+    // Creamos un array nuevo con los elementos que ya había, y añadimos el nuevo al final.
+    this.carrito = [...this.carrito, nuevoItem];
+  }
+
+  // ✅ BUENA PRÁCTICA: Inmutabilidad al ELIMINAR. (Sin .splice)
+  eliminarItem(index: number) {
+    // Filtramos para crear un array nuevo que contenga todo EXCEPTO el índice que queremos borrar.
+    this.carrito = this.carrito.filter((_, i) => i !== index);
+    this.recalcularTodo();
+  }
+
+  // ✅ NUEVA FUNCIÓN: Para manejar el estado de los botones de Cantera / Obra desde el HTML
+  cambiarLugarEntrega(lugar: string) {
+    this.lugarEntrega = lugar;
   }
 
   filtrarNombresProductos(event: any) {
@@ -208,15 +233,11 @@ export class CotizadorComponent implements OnInit {
     this.recalcularTodo();
   }
 
-  eliminarItem(index: number) {
-    this.carrito.splice(index, 1);
-    this.recalcularTodo();
-  }
-
   recalcularTodo() {
     this.subtotalGeneral = this.carrito.reduce((acc, item) => acc + Number(item.subtotal), 0);
     this.igvTotal = this.incluyeIgv ? this.subtotalGeneral * 0.18 : 0;
     this.totalFinal = this.subtotalGeneral + this.igvTotal;
+    // Aquí sí dejamos el cdr porque es el "reloj" maestro que calcula los totales matemáticos finales.
     this.cdr.detectChanges();
   }
 
@@ -224,36 +245,20 @@ export class CotizadorComponent implements OnInit {
     const itemsValidos = this.carrito.filter(item => item.descripcion && item.precio_unitario > 0 && item.cantidad > 0);
     if (itemsValidos.length === 0) return;
     
-    this.messageService.add({
-      severity: 'info',
-      summary: 'Procesando',
-      detail: 'Generando cotización...',
-      life: 2000
-    });
+    this.messageService.add({ severity: 'info', summary: 'Procesando', detail: 'Generando cotización...', life: 2000 });
 
     try {
       await this.procesarClienteSilencioso();
 
-      const empStr = this.empresaActiva.nombre.toUpperCase();
+      const codigoEmpresa = this.empresaActiva.id; 
+      const empresaParaBD = codigoEmpresa === 'WM' ? 'W&M' : codigoEmpresa;
       
-      let codigoEmpresa = 'VDC';
-      let nombreEmpresaOriginal = 'VDC';
-
-      if (empStr.includes('W&M') || empStr.includes('WM')) {
-        codigoEmpresa = 'WM';
-        nombreEmpresaOriginal = 'W&M';
-      } else if (empStr.includes('ONETWO')) {
-        codigoEmpresa = 'ONETWO';
-        nombreEmpresaOriginal = 'ONETWO';
-      }
-      
-      // Obtenemos el folio único (ej. COT-WM-00001)
       const folioSeguro = await this.supabaseSvc.obtenerSiguienteFolio(codigoEmpresa);
       
       const cotizacionParaBD: any = {
         folio: folioSeguro, 
         fecha: new Date().toISOString(),
-        empresa: nombreEmpresaOriginal, // ✅ ¡AQUÍ ESTABA EL ERROR! Ahora sí envía 'W&M'
+        empresa: empresaParaBD,
         cliente_nombre: this.clienteNombre,
         cliente_documento: this.clienteDocumento,
         subtotal: this.subtotalGeneral,
@@ -268,7 +273,7 @@ export class CotizadorComponent implements OnInit {
       
       await this.supabaseSvc.guardarCotizacion(cotizacionParaBD);
       
-      await this.pdfSvc.generarYDescargarCotizacion(cotizacionParaBD, this.lugarEntrega, this.clienteObservaciones);
+      await this.pdfSvc.generarYDescargarCotizacion(cotizacionParaBD, this.empresaActiva, this.lugarEntrega, this.clienteObservaciones);
       
     } catch (error) {
       console.error("Error al generar:", error);

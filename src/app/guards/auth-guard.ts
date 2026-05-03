@@ -4,14 +4,13 @@ import { CanActivateFn, Router } from '@angular/router';
 export const authGuard: CanActivateFn = (route, state) => {
   const router = inject(Router);
   
-  // Revisamos si el usuario tiene una sesión activa (o si eligió empresa)
-  // Nota: Si en tu login guardas un 'token' o similar, cambia 'empresa_activa' por ese nombre.
-  const sesionActiva = localStorage.getItem('empresa_activa'); 
+  // Ahora vigilamos que exista una sesión real (el correo del login)
+  const sesionActiva = localStorage.getItem('usuario_conectado'); 
 
   if (sesionActiva) {
-    return true; // ¡Adelante, puedes pasar al sistema!
+    return true; 
   } else {
-    router.navigate(['/login']); // No hay sesión, patada al login
+    router.navigate(['/login']); 
     return false;
   }
 };

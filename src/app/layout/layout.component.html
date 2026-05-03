@@ -1,8 +1,9 @@
 <div class="flex h-screen bg-gray-50 overflow-hidden">
     
-    <div class="bg-gray-900 shadow-4 flex-column transition-transform transition-duration-300 z-5"
-         [ngClass]="menuAbierto ? 'flex absolute top-0 left-0 h-full' : 'hidden md:flex relative h-full'"
-         style="width: 17rem;">
+    <!-- SIDEBAR (Menú Lateral) con z-index 1000 para estar por encima de todo -->
+    <div class="bg-gray-900 shadow-8 flex-column transition-transform transition-duration-300"
+         [ngClass]="menuAbierto ? 'flex fixed top-0 left-0 h-full' : 'hidden md:flex relative h-full'"
+         style="width: 17rem; z-index: 1000;">
          
         <div class="flex align-items-center justify-content-between p-4 border-bottom-1 border-gray-800">
             <div class="flex align-items-center gap-3">
@@ -11,7 +12,7 @@
                 </div>
                 <div class="flex flex-column">
                     <span class="text-xl font-bold text-white tracking-wide">ADMIN</span>
-                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">W&M / VDC</span>
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">{{ empresaActiva?.nombre || 'Administración' }}</span>
                 </div>
             </div>
             <button pButton icon="pi pi-times" class="p-button-rounded p-button-text text-gray-300 hover:text-white md:hidden p-0" (click)="toggleMenu()"></button>
@@ -50,6 +51,14 @@
                 <i class="pi pi-users text-lg"></i>
                 <span class="font-medium">Directorio Clientes</span>
             </a>
+            
+            <!-- CORRECCIÓN: Evento (click)="cerrarMenu()" añadido -->
+            <a routerLink="/empresas" routerLinkActive="bg-primary text-white shadow-2" 
+               (click)="cerrarMenu()" 
+               class="p-ripple flex align-items-center gap-3 p-3 border-round-lg text-gray-300 hover:bg-gray-800 transition-colors cursor-pointer text-decoration-none">
+                <i class="pi pi-cog text-lg"></i>
+                <span class="font-medium">Configurar Empresas</span>
+            </a>
         </div>
 
         <div class="border-top-1 border-gray-800 p-3 bg-gray-900">
@@ -67,13 +76,16 @@
 
     <div class="flex-1 flex flex-column h-full relative overflow-hidden">
         
-        <div class="md:hidden h-4rem bg-white border-bottom-1 surface-border shadow-1 flex align-items-center px-3 z-4">
+        <!-- CORRECCIÓN: flex-shrink-0 y z-index 900 para que jamás desaparezca -->
+        <div class="md:hidden flex-shrink-0 sticky top-0 h-4rem bg-white border-bottom-1 surface-border shadow-2 flex align-items-center px-3" style="z-index: 900;">
             <button pButton icon="pi pi-bars" class="p-button-text p-button-secondary text-2xl p-0" (click)="toggleMenu()"></button>
-            <span class="ml-3 font-bold text-900 text-xl">W&M / VDC</span>
+            <span class="ml-3 font-bold text-900 text-xl">{{ empresaActiva?.nombre || 'Administración' }}</span>
         </div>
 
-        <div *ngIf="menuAbierto" class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-60 z-4" (click)="toggleMenu()"></div>
+        <!-- OVERLAY con z-index 990 (justo por debajo del menú que tiene 1000) -->
+        <div *ngIf="menuAbierto" class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-60" style="z-index: 990;" (click)="toggleMenu()"></div>
 
+        <!-- CONTENIDO -->
         <div class="flex-1 overflow-auto p-2 md:p-4">
             <router-outlet></router-outlet>
         </div>

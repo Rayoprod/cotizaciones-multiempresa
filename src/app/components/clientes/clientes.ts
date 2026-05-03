@@ -9,7 +9,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ToolbarModule } from 'primeng/toolbar';
 
 import { SupabaseService } from '../../services/supabase.service';
-import { ICliente } from '../../models/cliente.model'; // <-- Molde estricto
+import { ICliente } from '../../models/cliente.model';
 
 @Component({
   selector: 'app-clientes',
@@ -28,7 +28,7 @@ export class ClientesComponent implements OnInit {
   clienteActual: ICliente = { documento_identidad: '', nombre_razon_social: '', direccion: '', telefono: '', correo: '' };
   clienteOriginal: string = ''; 
   enviando: boolean = false;
-  buscandoApi: boolean = false; // Para el botón de carga de SUNAT/RENIEC
+  buscandoApi: boolean = false; 
 
   constructor(
     private supabaseSvc: SupabaseService,
@@ -61,50 +61,80 @@ export class ClientesComponent implements OnInit {
     this.clienteDialog = true;
   }
 
-  // 🔥 Tu función mágica de búsqueda, adaptada para el Modal
   async buscarDocumento() {
-    const doc = this.clienteActual.documento_identidad ? this.clienteActual.documento_identidad.trim() : '';
+    const doc = String(this.clienteActual.documento_identidad || '').trim();
 
-    if (doc.length !== 8 && doc.length !== 11) {
-      alert(`⚠️ El DNI debe tener 8 dígitos y el RUC 11.`);
+    if (!doc) {
+      alert('Escribe un DNI o RUC');
       return;
     }
 
-    this.buscandoApi = true;
-    const token = 'sk_14670.Rl3QC2eRGOShBSsUP3HL63QbRl8PmOYd'; // Tu token actual
+    console.log("🔍 Iniciando búsqueda en Directorio para:", doc);
+
+    const clienteExistente = this.clientes.find(c => String(c.documento_identidad) === doc);
+    
+    if (clienteExistente) {
+      console.log("✅ Encontrado en Base de Datos Local:", clienteExistente);
+      this.clienteActual.nombre_razon_social = clienteExistente.nombre_razon_social || '';
+      this.clienteActual.direccion = clienteExistente.direccion || '';
+      this.clienteActual.telefono = clienteExistente.telefono || '';
+      this.clienteActual.correo = clienteExistente.correo || '';
+      this.cdr.detectChanges();
+      return; 
+    }
+
+    if (doc.length !== 8 && doc.length !== 11) {
+      alert('⚠️ El DNI debe tener 8 dígitos y el RUC 11.');
+      return;
+    }
+
+    this.buscandoApi = true; 
+    const token = 'sk_14670.Rl3QC2eRGOShBSsUP3HL63QbRl8PmOYd'; 
     const tipo = doc.length === 8 ? 'reniec/dni' : 'sunat/ruc';
     const url = `/api-peru/v1/${tipo}?numero=${doc}`;
 
     try {
+      console.log("🌐 Llamando a la API desde Clientes:", url);
       const respuesta = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (!respuesta.ok) {
-        alert(`⚠️ No se encontraron datos para el documento ${doc}.`);
-        this.buscandoApi = false;
+      
+      const datosCrudos = await respuesta.json();
+      console.log("📦 Respuesta cruda de la API:", datosCrudos);
+
+      if (!respuesta.ok || !datosCrudos) {
+        alert('⚠️ El documento no existe en la base de datos de SUNAT/RENIEC.');
         return;
       }
-      
-      const datos = await respuesta.json();
-      let nombreExtraido = '';
-      
+
+      const datos = datosCrudos.data || datosCrudos.result || datosCrudos;
+      let nombreFinal = '';
+
       if (doc.length === 8) {
-        const nom = datos.nombres || datos.nombre || datos.first_name || '';
-        const pat = datos.apellidoPaterno || datos.apellido_paterno || datos.first_last_name || '';
-        const mat = datos.apellidoMaterno || datos.apellido_materno || datos.second_last_name || '';
-        nombreExtraido = `${nom} ${pat} ${mat}`.trim();
-        if (!nombreExtraido && datos.nombre_completo) nombreExtraido = datos.nombre_completo;
+        nombreFinal = datos.full_name || datos.nombre_completo || '';
+        
+        if (!nombreFinal) {
+          const nom = datos.first_name || datos.nombres || datos.nombre || '';
+          const pat = datos.first_last_name || datos.apellidoPaterno || datos.apellido_paterno || '';
+          const mat = datos.second_last_name || datos.apellidoMaterno || datos.apellido_materno || '';
+          nombreFinal = `${nom} ${pat} ${mat}`.trim();
+        }
       } else {
-        nombreExtraido = datos.razon_social || datos.razonSocial || datos.nombre || datos.nombre_comercial || '';
+        nombreFinal = datos.nombre_o_razon_social || datos.razon_social || datos.razonSocial || datos.nombre_comercial || datos.name || '';
       }
 
-      this.clienteActual.nombre_razon_social = nombreExtraido; 
-      this.clienteActual.direccion = datos.direccion || '';
+      // CORRECCIÓN: Asignamos los datos al objeto clienteActual (no a variables sueltas)
+      this.clienteActual.nombre_razon_social = nombreFinal;
+      this.clienteActual.direccion = datos.direccion_completa || datos.direccion || datos.address || '';
+      // No reseteamos teléfono ni correo si ya tenía algo escrito, o lo dejamos en blanco si es nuevo
+      if (!this.clienteActual.telefono) this.clienteActual.telefono = ''; 
+      if (!this.clienteActual.correo) this.clienteActual.correo = '';
+
       this.cdr.detectChanges();
 
-    } catch (error) {
-      console.error('ERROR DE RED', error);
+    } catch (e) {
+      console.error("❌ Error de red en la petición:", e);
       alert('Fallo al conectar con la API.');
     } finally {
-      this.buscandoApi = false;
+      this.buscandoApi = false; 
     }
   }
 
@@ -114,7 +144,6 @@ export class ClientesComponent implements OnInit {
       return;
     }
 
-    // Verificar duplicado por documento
     const docDuplicado = this.clientes.some(c => 
       c.documento_identidad === this.clienteActual.documento_identidad && c.id !== this.clienteActual.id
     );

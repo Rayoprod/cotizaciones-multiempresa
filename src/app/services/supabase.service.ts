@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 import { ICotizacion } from '../models/cotizacion.model';
+import { IEmpresa } from '../models/empresa.model';
 
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
@@ -9,6 +10,17 @@ export class SupabaseService {
 
   constructor() {
     this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey);
+  }
+
+  // Obtener todas las empresas registradas
+  async getEmpresas() {
+    const { data, error } = await this.supabase
+      .from('empresas')
+      .select('*')
+      .order('id'); 
+      
+    if (error) throw error;
+    return data as IEmpresa[];
   }
 
   // Obtener todas las cotizaciones para el historial
@@ -134,6 +146,29 @@ async iniciarSesion(email: string, password: string) {
       // Fallback de emergencia por si algo falla, usa la hora para que el vendedor no se quede bloqueado
       return `COT-${empresaId}-${new Date().getTime()}`; 
     }
+    return data;
+  }
+
+  // Actualizar datos de una empresa existente
+  async actualizarEmpresa(id: string, datos: any) {
+    const { data, error } = await this.supabase
+      .from('empresas')
+      .update(datos)
+      .eq('id', id)
+      .select();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  // Crear una nueva empresa desde cero
+  async crearEmpresa(nuevaEmpresa: any) {
+    const { data, error } = await this.supabase
+      .from('empresas')
+      .insert([nuevaEmpresa])
+      .select();
+    
+    if (error) throw error;
     return data;
   }
   

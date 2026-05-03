@@ -2,12 +2,11 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
-// PrimeNG
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { InputTextModule } from 'primeng/inputtext';
-import { SelectModule } from 'primeng/select'; // <-- ¡AQUÍ ESTÁ LA MAGIA!
+import { SelectModule } from 'primeng/select'; 
 
 import { ICotizacion } from '../../models/cotizacion.model';
 import { SupabaseService } from '../../services/supabase.service';
@@ -21,7 +20,8 @@ import { PdfService } from '../../services/pdf.service';
 })
 export class HistorialComponent implements OnInit {
   cotizaciones: ICotizacion[] = [];
-  
+  empresasBD: any[] = []; // <-- Nueva variable para guardar las empresas
+
   opcionesEstado = [
     { label: 'PENDIENTE', value: 'PENDIENTE' },
     { label: 'APROBADA', value: 'APROBADA' },
@@ -35,15 +35,13 @@ export class HistorialComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
-    await this.cargarHistorial();
-  }
-
-  async cargarHistorial() {
     try {
+      // Cargamos el historial Y las empresas para poder dibujar los PDFs
+      this.empresasBD = await this.supabaseSvc.getEmpresas();
       this.cotizaciones = await this.supabaseSvc.getHistorial();
       this.cdr.detectChanges();
     } catch (error) {
-      console.error("Error cargando historial:", error);
+      console.error("Error cargando datos:", error);
     }
   }
 
@@ -60,14 +58,22 @@ export class HistorialComponent implements OnInit {
     try {
       if (!cotizacion.id) return;
       await this.supabaseSvc.actualizarEstado(cotizacion.id, cotizacion.estado);
-      console.log(`Cotización ${cotizacion.folio} actualizada a ${cotizacion.estado}`);
     } catch (error) {
-      console.error("Error al actualizar estado", error);
       alert("Hubo un error al guardar el nuevo estado.");
     }
   }
 
-  async descargarPDF(cotizacion: ICotizacion) {
-    await this.pdfSvc.generarYDescargarCotizacion(cotizacion);
+  async descargarPDF(cotizacion: any) {
+    // 1. Buscamos a qué empresa pertenece esta cotización
+    const idBuscado = cotizacion.empresa === 'W&M' ? 'WM' : cotizacion.empresa;
+    const empresaData = this.empresasBD.find(e => e.id === idBuscado);
+
+    if (!empresaData) {
+      alert("No se encontraron los datos de la empresa para este PDF.");
+      return;
+    }
+
+    // 2. Le mandamos el paquete completo al creador de PDFs
+    await this.pdfSvc.generarYDescargarCotizacion(cotizacion, empresaData, cotizacion.lugar_entrega, cotizacion.observaciones);
   }
 }

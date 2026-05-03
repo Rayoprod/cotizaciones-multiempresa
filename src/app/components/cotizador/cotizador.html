@@ -2,16 +2,21 @@
     
     <div class="flex justify-content-between align-items-center mb-4 p-3 md:p-4 shadow-2 bg-white border-round-xl">
         <div class="flex align-items-center">
-            <ng-container *ngIf="datosActuales?.rutaLogo; else iconFallback">
-                <img [src]="datosActuales.rutaLogo" (error)="datosActuales.rutaLogo = null" alt="Logo Empresa" style="height: 40px; margin-right: 1rem; object-fit: contain;">
+            
+            <!-- CORRECCIÓN 1: Usamos ruta_logo (con guion bajo) y empresaActiva -->
+            <ng-container *ngIf="empresaActiva?.ruta_logo; else iconFallback">
+                <img [src]="empresaActiva.ruta_logo" (error)="empresaActiva.ruta_logo = null" alt="Logo Empresa" style="height: 40px; margin-right: 1rem; object-fit: contain;">
             </ng-container>
+            
             <ng-template #iconFallback>
-                <i [class]="empresaActiva?.logo" [style.color]="empresaActiva?.color" class="text-4xl md:text-5xl mr-3"></i>
+                <!-- CORRECCIÓN 2: Usamos icono en lugar de logo, con un valor por defecto -->
+                <i [class]="empresaActiva?.icono || 'pi pi-building'" [style.color]="empresaActiva?.color" class="text-4xl md:text-5xl mr-3"></i>
             </ng-template>
 
             <div>
                 <span class="text-500 font-medium block text-sm md:text-base">Emisor:</span>
-                <h2 [style.color]="empresaActiva?.color" class="m-0 text-xl md:text-3xl font-bold">{{ empresaActiva?.nombre }}</h2>
+                <!-- CORRECCIÓN 3: Usamos nombre_comercial en lugar de nombre -->
+                <h2 [style.color]="empresaActiva?.color" class="m-0 text-xl md:text-3xl font-bold">{{ empresaActiva?.nombre_comercial }}</h2>
             </div>
         </div>
         <button pButton label="Cambiar de Empresa" icon="pi pi-sync" routerLink="/selector" class="p-button-outlined p-button-secondary p-button-sm md:p-button-md"></button>
@@ -25,7 +30,17 @@
             <div class="grid mb-3">
                 <div class="col-12 md:col-8">
                     <label class="font-bold block mb-2 text-primary">Razón Social / Nombres <span class="text-red-500">*</span></label>
-                    <p-autoComplete [(ngModel)]="clienteNombre" [suggestions]="nombresClientesFiltrados" (completeMethod)="filtrarNombresClientes($event)" (onSelect)="alElegirNombreSugerido($event)" [dropdown]="true" placeholder="Escribe el nombre o usa la lupa" styleClass="w-full" [inputStyle]="{'width':'100%', 'font-weight': 'bold'}"></p-autoComplete>
+                    <!-- Agregamos el field="nombre_razon_social" para que PrimeNG sepa qué mostrar -->
+<p-autoComplete 
+    [(ngModel)]="clienteNombre" 
+    [suggestions]="nombresClientesFiltrados" 
+    (completeMethod)="filtrarNombresClientes($event)" 
+    (onSelect)="alElegirNombreSugerido($event)" 
+    [dropdown]="true" 
+    placeholder="Escribe el nombre o usa la lupa" 
+    styleClass="w-full" 
+    [inputStyle]="{'width':'100%', 'font-weight': 'bold'}">
+</p-autoComplete>
                 </div>
                 <div class="col-12 md:col-4 mt-3 md:mt-0">
                     <label class="font-bold block mb-2">RUC / DNI <span class="text-red-500">*</span></label>
