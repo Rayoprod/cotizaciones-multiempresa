@@ -69,6 +69,9 @@ export class HistorialComponent implements OnInit {
       alert('Hubo un error al guardar el nuevo estado.');
     }
   }
+  getTotalGeneral(): number {
+  return this.cotizaciones.reduce((acc, c) => acc + (Number(c.total) || 0), 0);
+}
 
   async descargarPDF(cotizacion: any) {
     // Ahora buscamos por empresa_id directamente — sin la conversión WM/W&M

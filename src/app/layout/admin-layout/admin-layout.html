@@ -1,28 +1,40 @@
-<div class="flex h-screen bg-gray-50 overflow-hidden">
+<div class="flex h-screen overflow-hidden" style="background: #f8f9fa">
 
-  <!-- SIDEBAR ADMIN -->
-  <div class="bg-gray-900 flex flex-column h-full flex-shrink-0" style="width: 17rem;">
+  <!-- OVERLAY MÓVIL -->
+  <div *ngIf="sidebarAbierto()"
+       class="fixed top-0 left-0 w-full h-full z-4 bg-black-alpha-60 md:hidden"
+       (click)="cerrarMenu()">
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="bg-gray-900 flex flex-column flex-shrink-0 h-full z-5 transition-all transition-duration-300"
+       [ngClass]="sidebarAbierto() ? 'fixed top-0 left-0' : 'hidden md:flex'"
+       style="width: 17rem;">
 
     <!-- Cabecera -->
-    <div class="flex align-items-center gap-3 p-4 border-bottom-1 border-gray-700">
-      <div class="bg-primary flex align-items-center justify-content-center border-round-lg flex-shrink-0"
-           style="width: 40px; height: 40px;">
-        <i class="pi pi-shield-check text-white text-xl"></i>
+    <div class="flex align-items-center justify-content-between p-4 border-bottom-1 border-gray-700">
+      <div class="flex align-items-center gap-3 overflow-hidden">
+        <div class="bg-primary flex align-items-center justify-content-center border-round-lg flex-shrink-0"
+             style="width: 40px; height: 40px;">
+          <i class="pi pi-shield-check text-white text-xl"></i>
+        </div>
+        <div class="flex flex-column overflow-hidden">
+          <span class="font-bold text-white text-base">PANEL ADMIN</span>
+          <span class="text-xs text-gray-400 text-overflow-ellipsis overflow-hidden white-space-nowrap">
+            {{ usuarioNombre() }}
+          </span>
+        </div>
       </div>
-      <div class="flex flex-column overflow-hidden">
-        <span class="text-base font-bold text-white">PANEL ADMIN</span>
-        <span class="text-xs text-gray-400 white-space-nowrap overflow-hidden text-overflow-ellipsis">
-          {{ usuarioNombre() }}
-        </span>
-      </div>
+      <button class="md:hidden border-none bg-transparent text-gray-400 cursor-pointer p-1"
+              (click)="cerrarMenu()" aria-label="Cerrar menú">
+        <i class="pi pi-times text-xl"></i>
+      </button>
     </div>
 
     <!-- Navegación -->
-    <nav class="flex-grow-1 px-3 py-4 flex flex-column gap-2">
+    <nav class="flex-grow-1 px-3 py-4 flex flex-column gap-1 overflow-y-auto">
 
-      <span class="text-xs font-bold text-gray-500 uppercase tracking-widest pl-2 mb-1">
-        Gestión
-      </span>
+      <span class="text-xs font-bold text-gray-500 uppercase pl-2 mb-2">Gestión</span>
 
       <a *ngFor="let item of navItems"
          [routerLink]="item.path"
@@ -34,19 +46,13 @@
         <span class="font-medium">{{ item.label }}</span>
       </a>
 
-      <!-- Separador -->
       <div class="border-top-1 border-gray-700 my-3"></div>
+      <span class="text-xs font-bold text-gray-500 uppercase pl-2 mb-2">Operación</span>
 
-      <span class="text-xs font-bold text-gray-500 uppercase tracking-widest pl-2 mb-1">
-        Operación
-      </span>
-
-      <!-- Botón operar empresa -->
-      <button
-        (click)="operarEmpresa()"
-        class="flex align-items-center gap-3 p-3 border-round-lg text-gray-300
-               hover:bg-gray-800 cursor-pointer transition-colors w-full text-left
-               border-none bg-transparent">
+      <button (click)="operarEmpresa(); cerrarMenu()"
+              class="flex align-items-center gap-3 p-3 border-round-lg text-gray-300
+                     hover:bg-gray-800 cursor-pointer transition-colors w-full text-left
+                     border-none bg-transparent">
         <i class="pi pi-briefcase text-lg"></i>
         <span class="font-medium">Operar Empresa</span>
         <i class="pi pi-arrow-right text-xs ml-auto text-gray-500"></i>
@@ -56,11 +62,10 @@
 
     <!-- Footer -->
     <div class="border-top-1 border-gray-700 p-3">
-      <button
-        (click)="logout()"
-        class="w-full flex align-items-center gap-3 p-3 border-round-lg
-               text-red-400 hover:bg-red-900 hover:text-red-200
-               cursor-pointer transition-colors border-none bg-transparent">
+      <button (click)="logout()"
+              class="w-full flex align-items-center gap-3 p-3 border-round-lg
+                     text-red-400 hover:bg-red-900 hover:text-red-200
+                     cursor-pointer transition-colors border-none bg-transparent">
         <i class="pi pi-sign-out"></i>
         <span class="font-medium">Cerrar Sesión</span>
       </button>
@@ -68,9 +73,25 @@
 
   </div>
 
-  <!-- CONTENIDO -->
-  <div class="flex-1 overflow-auto p-4">
-    <router-outlet />
-  </div>
+  <!-- CONTENIDO PRINCIPAL -->
+  <div class="flex-1 flex flex-column overflow-hidden">
 
+    <!-- TOPBAR MÓVIL -->
+    <div class="md:hidden flex-shrink-0 bg-gray-900 px-4 py-3 flex align-items-center gap-3 shadow-3">
+      <button class="border-none bg-transparent text-white cursor-pointer p-1"
+              (click)="toggleSidebar()" aria-label="Abrir menú">
+        <i class="pi pi-bars text-xl"></i>
+      </button>
+      <div class="flex align-items-center gap-2">
+        <i class="pi pi-shield-check text-primary"></i>
+        <span class="font-bold text-white">PANEL ADMIN</span>
+      </div>
+    </div>
+
+    <!-- ROUTER OUTLET -->
+    <main class="flex-1 overflow-auto">
+      <router-outlet />
+    </main>
+
+  </div>
 </div>

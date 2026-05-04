@@ -1,152 +1,279 @@
-<!-- ESTO HACE VISIBLES LAS ALERTAS -->
-<p-toast></p-toast> 
+<p-toast></p-toast>
 
-<div class="surface-card p-4 shadow-2 border-round-xl">
-    <p-toolbar styleClass="mb-4 gap-2 border-none bg-transparent p-0">
-        <ng-template pTemplate="left">
-            <h2 class="m-0 text-900 font-bold mr-4"><i class="pi pi-cog text-primary mr-2"></i>Configuración de Empresas</h2>
-            <button pButton label="Nueva Empresa" icon="pi pi-plus" class="p-button-success shadow-2" (click)="abrirNuevo()"></button>
-        </ng-template>
-    </p-toolbar>
+<div class="p-3 md:p-5">
+  <!-- Header -->
+  <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <h2 class="text-xl md:text-3xl font-bold text-900 m-0">
+        <i class="pi pi-building text-primary mr-2"></i>Configuración de Empresas
+      </h2>
+      <p class="text-color-secondary mt-1 mb-0 text-sm md:text-base">
+        Administra la identidad, estado y datos corporativos
+      </p>
+    </div>
 
-    <!-- Tabla Principal -->
-    <p-table [value]="empresas" responsiveLayout="scroll" styleClass="p-datatable-sm p-datatable-gridlines shadow-1 border-round-lg overflow-hidden">
-        <ng-template pTemplate="header">
-            <tr class="bg-gray-50">
-                <th style="width: 80px">Logo</th>
-                <th style="width: 100px">ID</th>
-                <th>Empresa</th>
-                <th class="hidden md:table-cell">RUC</th>
-                <th class="text-center">Estado</th>
-                <th class="text-center" style="width: 100px">Editar</th>
-            </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-emp>
-            <tr>
-                <td class="text-center p-2">
-                    <div class="flex align-items-center justify-content-center bg-gray-100 border-round" style="height: 40px;">
-                        <img *ngIf="emp.ruta_logo" [src]="emp.ruta_logo" [alt]="emp.nombre_comercial" style="max-height: 100%; max-width: 100%;">
-                        <i *ngIf="!emp.ruta_logo" class="pi pi-image text-300"></i>
-                    </div>
-                </td>
-                <td class="font-bold text-primary">{{ emp.id }}</td>
-                <td>
-                    <span class="font-bold block">{{ emp.nombre_comercial }}</span>
-                    <small class="text-500">{{ emp.razon_social }}</small>
-                </td>
-                <td class="hidden md:table-cell">{{ emp.ruc }}</td>
-                <td class="text-center">
-                    <span [ngClass]="emp.activa ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-1 border-round-2xl text-xs font-bold">
-                        {{ emp.activa ? 'ACTIVA' : 'INACTIVA' }}
-                    </span>
-                </td>
-                <td class="text-center">
-                    <button pButton icon="pi pi-pencil" class="p-button-rounded p-button-info p-button-text" (click)="editarEmpresa(emp)"></button>
-                </td>
-            </tr>
-        </ng-template>
+    <button
+      pButton
+      label="Nueva Empresa"
+      icon="pi pi-plus"
+      class="p-button-primary w-full md:w-auto"
+      (click)="abrirNuevo()">
+    </button>
+  </div>
+
+  <!-- Tabla -->
+  <div class="surface-card border-round-xl shadow-1 overflow-hidden">
+    <p-table
+      #dt
+      [value]="empresas"
+      [rows]="10"
+      [paginator]="true"
+      [rowHover]="true"
+      responsiveLayout="scroll"
+      [globalFilterFields]="['id', 'nombre_comercial', 'razon_social', 'ruc']"
+      styleClass="p-datatable-sm">
+
+      <ng-template pTemplate="caption">
+        <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 p-2">
+          <span class="font-bold text-900">
+            Total: <span class="text-primary">{{ empresas.length }}</span> empresas
+          </span>
+
+          <span class="p-input-icon-left w-full md:w-auto">
+            <i class="pi pi-search"></i>
+            <input
+              pInputText
+              type="text"
+              class="w-full md:w-20rem"
+              placeholder="Buscar empresa, RUC o ID..."
+              (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
+          </span>
+        </div>
+      </ng-template>
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 90px">Logo</th>
+          <th style="width: 120px">ID</th>
+          <th>Empresa</th>
+          <th class="hidden md:table-cell" style="width: 160px">RUC</th>
+          <th style="width: 130px" class="text-center">Estado</th>
+          <th style="width: 110px" class="text-center">Editar</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-emp>
+        <tr>
+          <td class="text-center">
+            <div
+              class="flex align-items-center justify-content-center border-round-lg overflow-hidden mx-auto"
+              style="width: 52px; height: 52px; background: #f8f9fa; border: 1px solid #e5e7eb;">
+              <img
+                *ngIf="emp.ruta_logo"
+                [src]="emp.ruta_logo"
+                [alt]="emp.nombre_comercial"
+                style="max-width: 90%; max-height: 90%; object-fit: contain;">
+              <i *ngIf="!emp.ruta_logo" class="pi pi-image text-400 text-xl"></i>
+            </div>
+          </td>
+
+          <td>
+            <span class="font-mono text-xs bg-gray-100 text-gray-700 px-2 py-1 border-round">
+              {{ emp.id }}
+            </span>
+          </td>
+
+          <td>
+            <div class="flex flex-column gap-1">
+              <span class="font-bold text-900">{{ emp.nombre_comercial }}</span>
+              <small class="text-500">{{ emp.razon_social || 'Sin razón social registrada' }}</small>
+            </div>
+          </td>
+
+          <td class="hidden md:table-cell">
+            <span class="text-700">{{ emp.ruc || '—' }}</span>
+          </td>
+
+          <td class="text-center">
+            <p-tag
+              [value]="emp.activa ? 'Activa' : 'Inactiva'"
+              [severity]="emp.activa ? 'success' : 'danger'">
+            </p-tag>
+          </td>
+
+          <td class="text-center">
+            <button
+              pButton
+              icon="pi pi-pencil"
+              class="p-button-rounded p-button-text p-button-info"
+              pTooltip="Editar empresa"
+              (click)="editarEmpresa(emp)">
+            </button>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="6">
+            <div class="flex flex-column align-items-center justify-content-center py-8 text-color-secondary">
+              <i class="pi pi-building text-5xl mb-3 opacity-40"></i>
+              <p class="font-semibold m-0">No hay empresas registradas</p>
+              <p class="text-sm m-0 mt-1">Crea una nueva empresa para comenzar</p>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
     </p-table>
+  </div>
 </div>
 
-<!-- MODAL REDISEÑADO Y RESPONSIVE -->
-<p-dialog [(visible)]="empresaDialog" [style]="{width: '850px', maxWidth: '95vw'}" 
-          header="Ficha de Configuración" [modal]="true" [draggable]="false" 
-          [resizable]="false" styleClass="p-fluid border-round-2xl overflow-hidden">
-    
-    <ng-template pTemplate="content">
-        <div class="grid mt-2">
-            
-            <!-- SECCIÓN IZQUIERDA: DATOS LEGALES Y CONTACTO -->
-            <div class="col-12 lg:col-8">
-                <div class="surface-ground p-3 border-round-lg mb-3">
-                    <span class="block font-bold text-900 mb-3 border-bottom-1 border-200 pb-2">Datos Legales</span>
-                    <div class="grid">
-                        <div class="col-12 md:col-4 mb-3">
-                            <label class="font-bold text-sm mb-2 block">ID del Sistema</label>
-                            <!-- CORRECCIÓN DEL BUG DEL INPUT BLOQUEADO -->
-                            <input pInputText [(ngModel)]="empresaActual.id" placeholder="Ej: ONETWO" [disabled]="esEdicion">
-                        </div>
-                        <div class="col-12 md:col-8 mb-3">
-                            <label class="font-bold text-sm mb-2 block">Nombre Comercial</label>
-                            <input pInputText [(ngModel)]="empresaActual.nombre_comercial">
-                        </div>
-                        <div class="col-12 mb-3">
-                            <label class="font-bold text-sm mb-2 block">Razón Social Completa</label>
-                            <input pInputText [(ngModel)]="empresaActual.razon_social">
-                        </div>
-                        <div class="col-12 md:col-6 mb-3">
-                            <label class="font-bold text-sm mb-2 block">RUC</label>
-                            <input pInputText [(ngModel)]="empresaActual.ruc">
-                        </div>
-                        <div class="col-12 md:col-6 mb-3">
-                            <label class="font-bold text-sm mb-2 block">Teléfonos</label>
-                            <input pInputText [(ngModel)]="empresaActual.telefonos">
-                        </div>
-                    </div>
-                </div>
+<!-- Modal -->
+<p-dialog
+  [(visible)]="empresaDialog"
+  [style]="{ width: '95vw', maxWidth: '980px' }"
+  header="Ficha de Configuración"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="p-fluid border-round-2xl overflow-hidden">
 
-                <div class="surface-ground p-3 border-round-lg">
-                    <span class="block font-bold text-900 mb-3 border-bottom-1 border-200 pb-2">Ubicación y Correo</span>
-                    <div class="grid">
-                        <div class="col-12 mb-3">
-                            <label class="font-bold text-sm mb-2 block">Dirección Fiscal</label>
-                            <input pInputText [(ngModel)]="empresaActual.direccion">
-                        </div>
-                        <div class="col-12 mb-3">
-                            <label class="font-bold text-sm mb-2 block">Email Corporativo</label>
-                            <input pInputText [(ngModel)]="empresaActual.correo">
-                        </div>
-                    </div>
-                </div>
+  <ng-template pTemplate="content">
+    <div class="grid mt-1">
+      <!-- Izquierda -->
+      <div class="col-12 lg:col-8">
+        <div class="surface-ground p-3 md:p-4 border-round-xl mb-3">
+          <span class="block font-bold text-900 mb-3 border-bottom-1 border-200 pb-2">
+            Datos Legales
+          </span>
+
+          <div class="grid">
+            <div class="col-12 md:col-4">
+              <label class="font-bold text-sm mb-2 block">ID del Sistema</label>
+              <input
+                pInputText
+                [(ngModel)]="empresaActual.id"
+                placeholder="Ej: ONETWO"
+                [disabled]="esEdicion" />
             </div>
 
-            <!-- SECCIÓN DERECHA: RECURSOS Y ESTILO -->
-            <div class="col-12 lg:col-4">
-                <div class="border-1 border-200 p-3 border-round-lg h-full bg-white shadow-1">
-                    <span class="block font-bold text-900 mb-3 border-bottom-1 border-200 pb-2 text-center">Identidad Visual</span>
-                    
-                    <div class="flex flex-column align-items-center gap-3 mb-4">
-                        <label class="font-bold text-sm">Previsualización de Logo</label>
-                        <div class="flex align-items-center justify-content-center bg-gray-50 border-1 border-300 border-round-lg overflow-hidden" style="width: 100%; height: 120px;">
-                            <img *ngIf="empresaActual.ruta_logo" [src]="empresaActual.ruta_logo" style="max-width: 90%; max-height: 90%; object-fit: contain;">
-                            <i *ngIf="!empresaActual.ruta_logo" class="pi pi-image text-4xl text-300"></i>
-                        </div>
-                    </div>
-
-                    <div class="field mb-4">
-                        <label class="font-bold text-sm">Link de Logo (Supabase)</label>
-                        <input pInputText [(ngModel)]="empresaActual.ruta_logo" placeholder="Pegar URL pública">
-                    </div>
-
-                    <div class="field mb-4">
-                        <label class="font-bold text-sm">Link de Firma</label>
-                        <input pInputText [(ngModel)]="empresaActual.ruta_firma" placeholder="Pegar URL pública">
-                    </div>
-
-                    <div class="field">
-                        <label class="font-bold text-sm mb-2 block">Color de Marca</label>
-                        <div class="flex align-items-center gap-3 border-1 border-300 p-2 border-round">
-                            <p-colorPicker [(ngModel)]="empresaActual.color" appendTo="body"></p-colorPicker>
-                            <span class="font-mono text-sm uppercase">{{ empresaActual.color }}</span>
-                        </div>
-                    </div>
-                </div>
+            <div class="col-12 md:col-8">
+              <label class="font-bold text-sm mb-2 block">Nombre Comercial</label>
+              <input pInputText [(ngModel)]="empresaActual.nombre_comercial" />
             </div>
+
+            <div class="col-12">
+              <label class="font-bold text-sm mb-2 block">Razón Social Completa</label>
+              <input pInputText [(ngModel)]="empresaActual.razon_social" />
+            </div>
+
+            <div class="col-12 md:col-6">
+              <label class="font-bold text-sm mb-2 block">RUC</label>
+              <input pInputText [(ngModel)]="empresaActual.ruc" />
+            </div>
+
+            <div class="col-12 md:col-6">
+              <label class="font-bold text-sm mb-2 block">Teléfonos</label>
+              <input pInputText [(ngModel)]="empresaActual.telefonos" />
+            </div>
+          </div>
         </div>
-    </ng-template>
 
-    <ng-template pTemplate="footer">
-        <div class="flex flex-column md:flex-row justify-content-between align-items-center gap-3 w-full border-top-1 border-100 pt-3">
-            <div class="flex align-items-center gap-3">
-                <p-toggleswitch [(ngModel)]="empresaActual.activa"></p-toggleswitch>
-                <span class="font-bold" [ngClass]="empresaActual.activa ? 'text-green-600' : 'text-red-500'">
-                    EMPRESA {{ empresaActual.activa ? 'ACTIVA' : 'INACTIVA' }}
-                </span>
+        <div class="surface-ground p-3 md:p-4 border-round-xl">
+          <span class="block font-bold text-900 mb-3 border-bottom-1 border-200 pb-2">
+            Ubicación y Correo
+          </span>
+
+          <div class="grid">
+            <div class="col-12">
+              <label class="font-bold text-sm mb-2 block">Dirección Fiscal</label>
+              <input pInputText [(ngModel)]="empresaActual.direccion" />
             </div>
-            <div class="flex gap-2 w-full md:w-auto">
-                <button pButton label="Cancelar" icon="pi pi-times" class="p-button-text p-button-secondary flex-1 md:flex-initial" (click)="empresaDialog = false"></button>
-                <button pButton label="Guardar Cambios" icon="pi pi-save" class="p-button-primary px-4 shadow-2 flex-1 md:flex-initial" (click)="guardarEmpresa()" [loading]="enviando"></button>
+
+            <div class="col-12">
+              <label class="font-bold text-sm mb-2 block">Email Corporativo</label>
+              <input pInputText [(ngModel)]="empresaActual.correo" />
             </div>
+          </div>
         </div>
-    </ng-template>
+      </div>
+
+      <!-- Derecha -->
+      <div class="col-12 lg:col-4">
+        <div class="bg-white border-round-xl border-1 border-200 p-3 md:p-4 shadow-1 h-full">
+          <span class="block font-bold text-900 mb-3 border-bottom-1 border-200 pb-2 text-center">
+            Identidad Visual
+          </span>
+
+          <div class="flex flex-column align-items-center gap-3 mb-4">
+            <label class="font-bold text-sm">Previsualización de Logo</label>
+
+            <div
+              class="flex align-items-center justify-content-center w-full border-round-xl overflow-hidden"
+              style="height: 140px; background: #f8f9fa; border: 1px solid #e5e7eb;">
+              <img
+                *ngIf="empresaActual.ruta_logo"
+                [src]="empresaActual.ruta_logo"
+                style="max-width: 90%; max-height: 90%; object-fit: contain;">
+              <i *ngIf="!empresaActual.ruta_logo" class="pi pi-image text-4xl text-400"></i>
+            </div>
+          </div>
+
+          <div class="field mb-4">
+            <label class="font-bold text-sm mb-2 block">Link de Logo</label>
+            <input
+              pInputText
+              [(ngModel)]="empresaActual.ruta_logo"
+              placeholder="Pegar URL pública del logo">
+          </div>
+
+          <div class="field mb-4">
+            <label class="font-bold text-sm mb-2 block">Link de Firma</label>
+            <input
+              pInputText
+              [(ngModel)]="empresaActual.ruta_firma"
+              placeholder="Pegar URL pública de la firma">
+          </div>
+
+          <div class="field">
+            <label class="font-bold text-sm mb-2 block">Color de Marca</label>
+            <div class="flex align-items-center gap-3 border-1 border-300 p-2 border-round-lg">
+              <p-colorPicker [(ngModel)]="empresaActual.color" appendTo="body"></p-colorPicker>
+              <span class="font-mono text-sm uppercase">{{ empresaActual.color }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template pTemplate="footer">
+    <div class="flex flex-column lg:flex-row justify-content-between align-items-start lg:align-items-center gap-3 w-full border-top-1 border-100 pt-3">
+      <div class="flex align-items-center gap-3">
+        <p-toggleswitch [(ngModel)]="empresaActual.activa"></p-toggleswitch>
+        <span class="font-bold" [ngClass]="empresaActual.activa ? 'text-green-600' : 'text-red-500'">
+          EMPRESA {{ empresaActual.activa ? 'ACTIVA' : 'INACTIVA' }}
+        </span>
+      </div>
+
+      <div class="flex flex-column md:flex-row gap-2 w-full lg:w-auto">
+        <button
+          pButton
+          label="Cancelar"
+          icon="pi pi-times"
+          class="p-button-text p-button-secondary w-full md:w-auto"
+          (click)="empresaDialog = false">
+        </button>
+
+        <button
+          pButton
+          label="Guardar Cambios"
+          icon="pi pi-save"
+          class="p-button-primary w-full md:w-auto"
+          (click)="guardarEmpresa()"
+          [loading]="enviando">
+        </button>
+      </div>
+    </div>
+  </ng-template>
 </p-dialog>

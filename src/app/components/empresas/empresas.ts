@@ -15,12 +15,16 @@ import { SupabaseService } from '../../services/supabase.service';
 import { IEmpresa } from '../../models/empresa.model';
 import { MessageService } from 'primeng/api';
 
+import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
+
 @Component({
   selector: 'app-empresas',
   standalone: true,
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule, 
-    InputTextModule, DialogModule, ToolbarModule, ColorPickerModule, ToggleSwitchModule, ToastModule
+    InputTextModule, DialogModule, ToolbarModule, ColorPickerModule, ToggleSwitchModule, ToastModule, TagModule, TooltipModule
+    
   ],
   providers: [MessageService],
   templateUrl: './empresas.html'

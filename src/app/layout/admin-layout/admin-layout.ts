@@ -38,10 +38,6 @@ export class AdminLayoutComponent {
 
   toggleSidebar() { this.sidebarAbierto.update(v => !v); }
   cerrarMenu()    { this.sidebarAbierto.set(false); }
-
-  operarEmpresa() {
-    this.router.navigate(['/admin/selector']);
-  }
-
-  logout() { this.auth.logout(); }
+  operarEmpresa() { this.router.navigate(['/admin/selector']); }
+  logout()        { this.auth.logout(); }
 }

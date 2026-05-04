@@ -228,7 +228,7 @@ async obtenerPerfil(): Promise<{ rol: string } | null> {
 async getUsuarios(): Promise<any[]> {
   const { data, error } = await this.client
     .from('profiles')
-    .select('id, rol, activo')
+    .select('id, email, rol, activo')
     .order('rol');
   if (error) throw error;
   return data || [];

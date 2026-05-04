@@ -12,12 +12,18 @@ import { ToolbarModule } from 'primeng/toolbar';
 import { SupabaseService } from '../../services/supabase.service';
 import { IProducto } from '../../models/producto.model';
 
+import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
+
 @Component({
   selector: 'app-productos',
   standalone: true,
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule,
-    InputTextModule, InputNumberModule, DialogModule, ToolbarModule
+    InputTextModule, InputNumberModule, DialogModule, ToolbarModule, 
+    TagModule, TooltipModule,
+    InputNumberModule,
+    
   ],
   templateUrl: './productos.html'
 })

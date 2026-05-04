@@ -1,22 +1,27 @@
 <p-toast />
 <p-confirmDialog />
 
-<div class="p-4">
+<div class="p-3 md:p-5">
 
   <!-- Header -->
-  <div class="flex align-items-center justify-content-between mb-4">
+  <div class="flex flex-column md:flex-row align-items-start md:align-items-center
+              justify-content-between gap-3 mb-4">
     <div>
-      <h2 class="text-2xl font-bold text-900 m-0">Gestión de Usuarios</h2>
-      <p class="text-color-secondary mt-1 mb-0">Administra los accesos al sistema</p>
+      <h2 class="text-xl md:text-3xl font-bold text-900 m-0">Gestión de Usuarios</h2>
+      <p class="text-color-secondary mt-1 mb-0 text-sm md:text-base">
+        Administra los accesos al sistema
+      </p>
     </div>
     <p-button
       label="Nuevo Usuario"
       icon="pi pi-plus"
+      class="w-full md:w-auto"
+      styleClass="w-full md:w-auto"
       (onClick)="abrirModal()" />
   </div>
 
-  <!-- Tabla -->
-  <div class="surface-card border-round-xl shadow-1 overflow-hidden">
+  <!-- DESKTOP: Tabla -->
+  <div class="surface-card border-round-xl shadow-1 overflow-hidden hidden md:block">
     <table class="w-full">
       <thead class="surface-ground">
         <tr>
@@ -27,38 +32,28 @@
         </tr>
       </thead>
       <tbody>
-
-        <!-- Loading -->
         <tr *ngIf="cargando()">
           <td colspan="4" class="text-center p-6 text-color-secondary">
             <i class="pi pi-spin pi-spinner text-2xl"></i>
             <p class="mt-2">Cargando usuarios...</p>
           </td>
         </tr>
-
-        <!-- Sin usuarios -->
         <tr *ngIf="!cargando() && usuarios.length === 0">
           <td colspan="4" class="text-center p-6 text-color-secondary">
             <i class="pi pi-users text-4xl"></i>
             <p class="mt-2">No hay usuarios registrados</p>
           </td>
         </tr>
-
-        <!-- Filas -->
-        <tr *ngFor="let u of usuarios"
-            class="border-top-1 surface-border">
-
-          <!-- Email -->
+        <tr *ngFor="let u of usuarios" class="border-top-1 surface-border hover:surface-ground transition-colors">
           <td class="p-3">
             <div class="flex align-items-center gap-2">
-              <p-tag
-                [value]="u.email || u.id"
-                severity="secondary"
-                [rounded]="true" />
+              <div class="flex align-items-center justify-content-center border-circle flex-shrink-0"
+                   [style]="{'width':'36px','height':'36px','background': u.rol==='admin' ? '#01696f' : '#6366f1'}">
+                <i class="pi pi-user text-white text-sm"></i>
+              </div>
+              <span class="font-medium text-900">{{ u.email || u.id }}</span>
             </div>
           </td>
-
-          <!-- Rol -->
           <td class="p-3">
             <p-select
               [options]="rolesOpciones"
@@ -66,40 +61,99 @@
               (ngModelChange)="cambiarRol(u, $event)"
               optionLabel="label"
               optionValue="value"
-              [style]="{'min-width': '130px'}" />
+              [style]="{'min-width':'130px'}" />
           </td>
-
-          <!-- Estado -->
           <td class="p-3">
             <p-tag
               [value]="u.activo ? 'Activo' : 'Inactivo'"
               [severity]="u.activo ? 'success' : 'warn'" />
           </td>
-
-          <!-- Acciones -->
           <td class="p-3">
             <div class="flex gap-2 justify-content-end">
               <p-button
                 [icon]="u.activo ? 'pi pi-ban' : 'pi pi-check-circle'"
                 [severity]="u.activo ? 'warn' : 'success'"
-                [outlined]="true"
-                size="small"
+                [outlined]="true" size="small"
                 [pTooltip]="u.activo ? 'Desactivar' : 'Activar'"
                 (onClick)="toggleActivo(u)" />
               <p-button
                 icon="pi pi-trash"
                 severity="danger"
-                [outlined]="true"
-                size="small"
-                pTooltip="Eliminar (solo desactivados)"
+                [outlined]="true" size="small"
+                pTooltip="Solo usuarios desactivados"
                 [disabled]="u.activo"
                 (onClick)="confirmarEliminar(u)" />
             </div>
           </td>
         </tr>
-
       </tbody>
     </table>
+  </div>
+
+  <!-- MÓVIL: Cards -->
+  <div class="flex flex-column gap-3 md:hidden">
+
+    <div *ngIf="cargando()" class="text-center p-6 text-color-secondary surface-card border-round-xl">
+      <i class="pi pi-spin pi-spinner text-2xl"></i>
+      <p class="mt-2">Cargando usuarios...</p>
+    </div>
+
+    <div *ngIf="!cargando() && usuarios.length === 0"
+         class="text-center p-6 text-color-secondary surface-card border-round-xl">
+      <i class="pi pi-users text-4xl"></i>
+      <p class="mt-2">No hay usuarios registrados</p>
+    </div>
+
+    <div *ngFor="let u of usuarios"
+         class="surface-card border-round-xl shadow-1 p-4">
+
+      <!-- Email + avatar -->
+      <div class="flex align-items-center gap-3 mb-3">
+        <div class="flex align-items-center justify-content-center border-circle flex-shrink-0"
+             [style]="{'width':'44px','height':'44px','background': u.rol==='admin' ? '#01696f' : '#6366f1'}">
+          <i class="pi pi-user text-white"></i>
+        </div>
+        <div class="overflow-hidden">
+          <p class="font-bold text-900 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap">
+            {{ u.email || u.id }}
+          </p>
+          <p-tag
+            [value]="u.activo ? 'Activo' : 'Inactivo'"
+            [severity]="u.activo ? 'success' : 'warn'"
+            styleClass="mt-1" />
+        </div>
+      </div>
+
+      <!-- Rol -->
+      <div class="mb-3">
+        <label class="text-xs font-bold text-color-secondary uppercase mb-1 block">Rol</label>
+        <p-select
+          [options]="rolesOpciones"
+          [ngModel]="u.rol"
+          (ngModelChange)="cambiarRol(u, $event)"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full" />
+      </div>
+
+      <!-- Acciones -->
+      <div class="flex gap-2">
+        <p-button
+          [label]="u.activo ? 'Desactivar' : 'Activar'"
+          [icon]="u.activo ? 'pi pi-ban' : 'pi pi-check-circle'"
+          [severity]="u.activo ? 'warn' : 'success'"
+          [outlined]="true"
+          styleClass="flex-1"
+          (onClick)="toggleActivo(u)" />
+        <p-button
+          icon="pi pi-trash"
+          severity="danger"
+          [outlined]="true"
+          [disabled]="u.activo"
+          pTooltip="Solo usuarios desactivados"
+          (onClick)="confirmarEliminar(u)" />
+      </div>
+    </div>
   </div>
 
 </div>
@@ -109,66 +163,40 @@
   header="Nuevo Usuario"
   [(visible)]="modalVisible"
   [modal]="true"
-  [style]="{'width': '420px'}"
+  [style]="{'width': '95vw', 'max-width': '440px'}"
   [closable]="!guardando">
 
   <div class="flex flex-column gap-4 pt-2">
-
     <div class="flex flex-column gap-2">
-      <label class="font-medium text-900">
-        Email <span class="text-red-500">*</span>
-      </label>
-      <input
-        pInputText
-        type="email"
-        [(ngModel)]="nuevoEmail"
-        placeholder="vendedor@empresa.com"
-        class="w-full" />
+      <label class="font-medium text-900">Email <span class="text-red-500">*</span></label>
+      <input pInputText type="email" [(ngModel)]="nuevoEmail"
+             placeholder="vendedor@empresa.com" class="w-full" />
     </div>
-
     <div class="flex flex-column gap-2">
-      <label class="font-medium text-900">
-        Contraseña temporal <span class="text-red-500">*</span>
-      </label>
-      <p-password
-        [(ngModel)]="nuevoPassword"
-        placeholder="Mínimo 6 caracteres"
-        [toggleMask]="true"
-        [feedback]="false"
-        styleClass="w-full" />
+      <label class="font-medium text-900">Contraseña temporal <span class="text-red-500">*</span></label>
+      <p-password [(ngModel)]="nuevoPassword" placeholder="Mínimo 6 caracteres"
+                  [toggleMask]="true" [feedback]="false" styleClass="w-full" />
     </div>
-
     <div class="flex flex-column gap-2">
       <label class="font-medium text-900">Rol</label>
-      <p-select
-        [options]="rolesOpciones"
-        [(ngModel)]="nuevoRol"
-        optionLabel="label"
-        optionValue="value"
-        styleClass="w-full" />
+      <p-select [options]="rolesOpciones" [(ngModel)]="nuevoRol"
+                optionLabel="label" optionValue="value" styleClass="w-full" />
     </div>
-
-    <!-- Error -->
     <div *ngIf="errorModal"
-         class="bg-red-50 border-round p-3 text-red-600 text-sm flex gap-2 align-items-center">
-      <i class="pi pi-exclamation-circle"></i>
-      {{ errorModal }}
+         class="border-round p-3 text-red-600 text-sm flex gap-2 align-items-center"
+         style="background: #fff5f5">
+      <i class="pi pi-exclamation-circle"></i>{{ errorModal }}
     </div>
-
   </div>
 
   <ng-template pTemplate="footer">
-    <p-button
-      label="Cancelar"
-      severity="secondary"
-      [text]="true"
-      [disabled]="guardando"
-      (onClick)="modalVisible = false" />
-    <p-button
-      label="Crear Usuario"
-      icon="pi pi-check"
-      [loading]="guardando"
-      (onClick)="crearUsuario()" />
+    <div class="flex flex-column md:flex-row gap-2 w-full">
+      <p-button label="Cancelar" severity="secondary" [text]="true"
+                [disabled]="guardando" styleClass="w-full md:w-auto"
+                (onClick)="modalVisible = false" />
+      <p-button label="Crear Usuario" icon="pi pi-check" [loading]="guardando"
+                styleClass="w-full md:w-auto" (onClick)="crearUsuario()" />
+    </div>
   </ng-template>
 
 </p-dialog>
