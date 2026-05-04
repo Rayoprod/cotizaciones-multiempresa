@@ -2,14 +2,14 @@
 
   <!-- SIDEBAR -->
   <div class="bg-gray-900 shadow-8 flex-column transition-transform transition-duration-300"
-       [ngClass]="menuAbierto ? 'flex fixed top-0 left-0 h-full' : 'hidden md:flex relative h-full'"
-       style="width: 17rem; z-index: 1000;">
+    [ngClass]="menuAbierto ? 'flex fixed top-0 left-0 h-full' : 'hidden md:flex relative h-full'"
+    style="width: 17rem; z-index: 1000;">
 
     <!-- CABECERA DEL MENÚ -->
     <div class="flex align-items-center justify-content-between p-4 border-bottom-1 border-gray-800">
       <div class="flex align-items-center gap-3">
         <div class="bg-primary flex align-items-center justify-content-center border-round-lg shadow-2"
-             style="width: 40px; height: 40px;">
+          style="width: 40px; height: 40px;">
           <i class="pi pi-briefcase text-white text-xl"></i>
         </div>
         <div class="flex flex-column">
@@ -20,8 +20,7 @@
         </div>
       </div>
       <button pButton icon="pi pi-times"
-              class="p-button-rounded p-button-text text-gray-300 hover:text-white md:hidden p-0"
-              (click)="toggleMenu()">
+        class="p-button-rounded p-button-text text-gray-300 hover:text-white md:hidden p-0" (click)="toggleMenu()">
       </button>
     </div>
 
@@ -32,17 +31,13 @@
         Ventas & Cotizaciones
       </span>
 
-      <a routerLink="/cotizador" routerLinkActive="bg-primary text-white shadow-2"
-         (click)="cerrarMenu()"
-         class="flex align-items-center gap-3 p-3 border-round-lg text-gray-300
+      <a routerLink="/cotizador" routerLinkActive="bg-primary text-white shadow-2" (click)="cerrarMenu()" class="flex align-items-center gap-3 p-3 border-round-lg text-gray-300
                 hover:bg-gray-800 transition-colors cursor-pointer text-decoration-none">
         <i class="pi pi-plus-circle text-lg"></i>
         <span class="font-bold">Nueva Cotización</span>
       </a>
 
-      <a routerLink="/historial" routerLinkActive="bg-primary text-white shadow-2"
-         (click)="cerrarMenu()"
-         class="flex align-items-center gap-3 p-3 border-round-lg text-gray-300
+      <a routerLink="/historial" routerLinkActive="bg-primary text-white shadow-2" (click)="cerrarMenu()" class="flex align-items-center gap-3 p-3 border-round-lg text-gray-300
                 hover:bg-gray-800 transition-colors cursor-pointer text-decoration-none">
         <i class="pi pi-book text-lg"></i>
         <span class="font-bold">Historial de Ventas</span>
@@ -52,17 +47,13 @@
         Base de Datos
       </span>
 
-      <a routerLink="/productos" routerLinkActive="bg-primary text-white shadow-2"
-         (click)="cerrarMenu()"
-         class="flex align-items-center gap-3 p-3 border-round-lg text-gray-300
+      <a routerLink="/productos" routerLinkActive="bg-primary text-white shadow-2" (click)="cerrarMenu()" class="flex align-items-center gap-3 p-3 border-round-lg text-gray-300
                 hover:bg-gray-800 transition-colors cursor-pointer text-decoration-none">
         <i class="pi pi-box text-lg"></i>
         <span class="font-medium">Catálogo / Productos</span>
       </a>
 
-      <a routerLink="/clientes" routerLinkActive="bg-primary text-white shadow-2"
-         (click)="cerrarMenu()"
-         class="flex align-items-center gap-3 p-3 border-round-lg text-gray-300
+      <a routerLink="/clientes" routerLinkActive="bg-primary text-white shadow-2" (click)="cerrarMenu()" class="flex align-items-center gap-3 p-3 border-round-lg text-gray-300
                 hover:bg-gray-800 transition-colors cursor-pointer text-decoration-none">
         <i class="pi pi-users text-lg"></i>
         <span class="font-medium">Directorio Clientes</span>
@@ -71,13 +62,20 @@
 
 
     </div>
-
+    <!-- SOLO VISIBLE PARA ADMIN: volver al panel -->
+    <ng-container *ngIf="esAdmin">
+      <div class="border-top-1 border-gray-700 mx-3 my-2"></div>
+      <button (click)="volverAlAdmin()" class="flex align-items-center gap-3 p-3 mx-3 border-round-lg
+           text-yellow-400 hover:bg-gray-800 cursor-pointer
+           transition-colors border-none bg-transparent w-auto">
+        <i class="pi pi-arrow-left"></i>
+        <span class="font-medium text-sm">Panel Admin</span>
+      </button>
+    </ng-container>
     <!-- FOOTER DEL MENÚ -->
     <div class="border-top-1 border-gray-800 p-3 bg-gray-900">
       <div class="flex align-items-center gap-3 mb-3 p-2 bg-gray-800 border-round-lg">
-        <p-avatar icon="pi pi-user"
-                  styleClass="bg-primary text-white font-bold"
-                  shape="circle">
+        <p-avatar icon="pi pi-user" styleClass="bg-primary text-white font-bold" shape="circle">
         </p-avatar>
         <div class="flex flex-column overflow-hidden">
           <!-- Muestra "Admin" o "Vendedor" según el rol -->
@@ -85,17 +83,14 @@
             {{ esAdmin ? 'Administrador' : 'Vendedor' }}
           </span>
           <span class="text-gray-400 text-xs white-space-nowrap text-overflow-ellipsis overflow-hidden"
-                [title]="usuarioActivo">
+            [title]="usuarioActivo">
             {{ usuarioActivo }}
           </span>
         </div>
       </div>
 
-      <button pButton
-              icon="pi pi-sign-out"
-              label="Cerrar Sesión"
-              class="p-button-outlined p-button-danger w-full font-bold"
-              (click)="cerrarSesion()">
+      <button pButton icon="pi pi-sign-out" label="Cerrar Sesión"
+        class="p-button-outlined p-button-danger w-full font-bold" (click)="cerrarSesion()">
       </button>
     </div>
 
@@ -106,11 +101,8 @@
 
     <!-- TOPBAR MÓVIL -->
     <div class="md:hidden flex-shrink-0 sticky top-0 h-4rem bg-white border-bottom-1 surface-border shadow-2
-                flex align-items-center px-3"
-         style="z-index: 900;">
-      <button pButton icon="pi pi-bars"
-              class="p-button-text p-button-secondary text-2xl p-0"
-              (click)="toggleMenu()">
+                flex align-items-center px-3" style="z-index: 900;">
+      <button pButton icon="pi pi-bars" class="p-button-text p-button-secondary text-2xl p-0" (click)="toggleMenu()">
       </button>
       <span class="ml-3 font-bold text-900 text-xl">
         {{ empresaActiva?.nombre_comercial || 'Administración' }}
@@ -118,10 +110,8 @@
     </div>
 
     <!-- OVERLAY MÓVIL -->
-    <div *ngIf="menuAbierto"
-         class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-60"
-         style="z-index: 990;"
-         (click)="toggleMenu()">
+    <div *ngIf="menuAbierto" class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-60" style="z-index: 990;"
+      (click)="toggleMenu()">
     </div>
 
     <!-- CONTENIDO -->

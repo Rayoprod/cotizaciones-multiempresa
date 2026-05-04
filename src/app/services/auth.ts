@@ -10,8 +10,6 @@ export class AuthService {
     private router: Router
   ) {}
 
-  // ── Autenticación ─────────────────────────────────
-
   async login(email: string, password: string) {
     return await this.supabase.iniciarSesion(email, password);
   }
@@ -22,26 +20,23 @@ export class AuthService {
 
   async logout() {
     await this.supabase.cerrarSesion();
+    localStorage.clear();
     this.router.navigate(['/login']);
   }
-
-  // ── Estado de sesión ──────────────────────────────
 
   async isLoggedIn(): Promise<boolean> {
     const sesion = await this.obtenerSesion();
     return sesion?.data?.session !== null;
   }
 
+  // ✅ Ahora lee el rol desde la tabla profiles (igual que el login)
   async isAdmin(): Promise<boolean> {
-    const sesion = await this.obtenerSesion();
-    const user = sesion?.data?.session?.user;
-    return user?.user_metadata?.['rol'] === 'admin';
+    const perfil = await this.supabase.obtenerPerfil();
+    return perfil?.rol === 'admin';
   }
 
   async getRol(): Promise<string | null> {
-    const sesion = await this.obtenerSesion();
-    const user = sesion?.data?.session?.user;
-    return user?.user_metadata?.['rol'] ?? null;
+    const perfil = await this.supabase.obtenerPerfil();
+    return perfil?.rol ?? null;
   }
-
 }

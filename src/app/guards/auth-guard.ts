@@ -7,8 +7,8 @@ export const authGuard: CanActivateFn = async () => {
   const router = inject(Router);
 
   const logueado = await auth.isLoggedIn();
+  if (!logueado) return router.createUrlTree(['/login']);
 
-  if (logueado) return true;
-
-  return router.createUrlTree(['/login']);
+  return true;
+  // ✅ Admin puede entrar al cotizador para operar — no lo bloqueamos
 };

@@ -21,17 +21,17 @@ export class LayoutComponent implements OnInit {
 
   ngOnInit() {
     this.usuarioActivo = localStorage.getItem('usuario_email') || 'Usuario';
-
-    // Rol viene de la BD, guardado en localStorage al hacer login
-    const rol = localStorage.getItem('usuario_rol') || 'vendedor';
-    this.esAdmin = rol === 'admin';
-
+    this.esAdmin = localStorage.getItem('usuario_rol') === 'admin';
     const datosEmpresa = localStorage.getItem('empresa_activa');
     this.empresaActiva = datosEmpresa ? JSON.parse(datosEmpresa) : null;
   }
 
   toggleMenu() { this.menuAbierto = !this.menuAbierto; }
   cerrarMenu()  { this.menuAbierto = false; }
+
+  volverAlAdmin() {
+    this.router.navigate(['/admin/empresas']);
+  }
 
   async cerrarSesion() {
     await this.supabaseSvc.cerrarSesion();

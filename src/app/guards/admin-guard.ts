@@ -7,14 +7,11 @@ export const adminGuard: CanActivateFn = async () => {
   const router = inject(Router);
 
   const logueado = await auth.isLoggedIn();
-  const esAdmin  = await auth.isAdmin();
+  if (!logueado) return router.createUrlTree(['/login']);
 
-  // ✅ Es admin → puede entrar
-  if (logueado && esAdmin) return true;
+  const esAdmin = await auth.isAdmin();
+  if (esAdmin) return true;
 
-  // 🔁 Logueado pero no es admin → al cotizador del vendedor
-  if (logueado) return router.createUrlTree(['/cotizador']);
-
-  // 🚪 No logueado → al login
-  return router.createUrlTree(['/login']);
+  // Logueado pero no es admin → layout vendedor
+  return router.createUrlTree(['/cotizador']);
 };

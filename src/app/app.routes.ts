@@ -6,11 +6,17 @@ import { adminGuard } from './guards/admin-guard';
 
 export const routes: Routes = [
 
+  // ── PÚBLICAS ──────────────────────────────────────
   { path: 'login', component: LoginComponent },
 
-  { path: 'selector', component: SelectorComponent, canActivate: [authGuard] },
+  // ── SELECTOR VENDEDOR ─────────────────────────────
+  {
+    path: 'selector',
+    component: SelectorComponent,
+    canActivate: [authGuard]
+  },
 
-  // ── Panel Admin ───────────────────────────────────
+  // ── PANEL ADMIN (gestión pura) ────────────────────
   {
     path: 'admin',
     loadComponent: () =>
@@ -18,17 +24,27 @@ export const routes: Routes = [
         .then(m => m.AdminLayoutComponent),
     canActivate: [adminGuard],
     children: [
-      { path: '', redirectTo: 'cotizador', pathMatch: 'full' },
-      { path: 'cotizador', loadComponent: () => import('./components/cotizador/cotizador').then(m => m.CotizadorComponent) },
-      { path: 'historial', loadComponent: () => import('./components/historial/historial').then(m => m.HistorialComponent) },
-      { path: 'productos', loadComponent: () => import('./components/productos/productos').then(m => m.ProductosComponent) },
-      { path: 'clientes',  loadComponent: () => import('./components/clientes/clientes').then(m => m.ClientesComponent)  },
-      { path: 'empresas',  loadComponent: () => import('./components/empresas/empresas').then(m => m.EmpresasComponent)  },
-      { path: 'usuarios',  loadComponent: () => import('./components/usuarios/usuarios').then(m => m.UsuariosComponent)  },
+      { path: '', redirectTo: 'empresas', pathMatch: 'full' },
+      {
+        path: 'empresas',
+        loadComponent: () =>
+          import('./components/empresas/empresas')
+            .then(m => m.EmpresasComponent)
+      },
+      {
+        path: 'usuarios',
+        loadComponent: () =>
+          import('./components/usuarios/usuarios')
+            .then(m => m.UsuariosComponent)
+      },
+      {
+        path: 'selector',
+        component: SelectorComponent   // reutilizamos el mismo selector
+      }
     ]
   },
 
-  // ── Panel Vendedor ────────────────────────────────
+  // ── COTIZADOR (vendedor + admin operando) ─────────
   {
     path: '',
     loadComponent: () =>
@@ -37,10 +53,30 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       { path: '', redirectTo: 'cotizador', pathMatch: 'full' },
-      { path: 'cotizador', loadComponent: () => import('./components/cotizador/cotizador').then(m => m.CotizadorComponent) },
-      { path: 'historial', loadComponent: () => import('./components/historial/historial').then(m => m.HistorialComponent) },
-      { path: 'productos', loadComponent: () => import('./components/productos/productos').then(m => m.ProductosComponent) },
-      { path: 'clientes',  loadComponent: () => import('./components/clientes/clientes').then(m => m.ClientesComponent)  },
+      {
+        path: 'cotizador',
+        loadComponent: () =>
+          import('./components/cotizador/cotizador')
+            .then(m => m.CotizadorComponent)
+      },
+      {
+        path: 'historial',
+        loadComponent: () =>
+          import('./components/historial/historial')
+            .then(m => m.HistorialComponent)
+      },
+      {
+        path: 'productos',
+        loadComponent: () =>
+          import('./components/productos/productos')
+            .then(m => m.ProductosComponent)
+      },
+      {
+        path: 'clientes',
+        loadComponent: () =>
+          import('./components/clientes/clientes')
+            .then(m => m.ClientesComponent)
+      }
     ]
   },
 

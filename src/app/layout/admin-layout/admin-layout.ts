@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth';
 
@@ -18,30 +18,30 @@ interface NavItem {
 })
 export class AdminLayoutComponent {
 
-  private auth = inject(AuthService);
+  private auth   = inject(AuthService);
+  private router = inject(Router);
 
   sidebarAbierto = signal(false);
   usuarioNombre  = signal<string>('');
-  usuarioRol     = signal<string>('');
 
   readonly navItems: NavItem[] = [
-    { label: 'Cotizador', icon: 'pi pi-calculator', path: '/admin/cotizador' },
-    { label: 'Historial', icon: 'pi pi-clock',      path: '/admin/historial' },
-    { label: 'Productos', icon: 'pi pi-box',         path: '/admin/productos' },
-    { label: 'Clientes',  icon: 'pi pi-users',       path: '/admin/clientes'  },
-    { label: 'Empresas',  icon: 'pi pi-building',    path: '/admin/empresas'  },
-    { label: 'Usuarios',  icon: 'pi pi-user-edit',   path: '/admin/usuarios'  },
+    { label: 'Empresas', icon: 'pi pi-building',  path: '/admin/empresas' },
+    { label: 'Usuarios', icon: 'pi pi-user-edit', path: '/admin/usuarios' },
   ];
 
   constructor() {
     this.auth.obtenerSesion().then(res => {
       const user = res?.data?.session?.user;
-      this.usuarioNombre.set(user?.user_metadata?.['nombre'] ?? user?.email ?? 'Admin');
-      this.usuarioRol.set(user?.user_metadata?.['rol'] ?? 'admin');
+      this.usuarioNombre.set(user?.email ?? 'Admin');
     });
   }
 
   toggleSidebar() { this.sidebarAbierto.update(v => !v); }
   cerrarMenu()    { this.sidebarAbierto.set(false); }
-  logout()        { this.auth.logout(); }
+
+  operarEmpresa() {
+    this.router.navigate(['/admin/selector']);
+  }
+
+  logout() { this.auth.logout(); }
 }
