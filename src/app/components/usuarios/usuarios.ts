@@ -1,20 +1,21 @@
-import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, signal, ChangeDetectorRef } from '@angular/core';import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../services/supabase.service';
 
+import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { TagModule } from 'primeng/tag';
 import { DialogModule } from 'primeng/dialog';
+import { DrawerModule } from 'primeng/drawer';
 import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
-
+import { CheckboxModule } from 'primeng/checkbox';
 interface Usuario {
   id: string;
   email?: string;
@@ -27,10 +28,9 @@ interface Usuario {
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    ButtonModule, InputTextModule, PasswordModule,
-    TagModule, DialogModule, SelectModule,
-    ToastModule, ConfirmDialogModule, TooltipModule
-  ],
+    TableModule, ButtonModule, InputTextModule, PasswordModule,
+    TagModule, DialogModule, DrawerModule, SelectModule,
+    ToastModule, ConfirmDialogModule, TooltipModule, CheckboxModule  ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './usuarios.html',
   styleUrl: './usuarios.scss'
@@ -40,6 +40,7 @@ export class UsuariosComponent implements OnInit {
   usuarios: Usuario[] = [];
   cargando = signal(true);
 
+  // Modal nuevo usuario
   modalVisible  = false;
   nuevoEmail    = '';
   nuevoPassword = '';
@@ -47,19 +48,29 @@ export class UsuariosComponent implements OnInit {
   guardando     = false;
   errorModal    = '';
 
+  // Drawer empresas
+  drawerVisible       = false;
+  usuarioSeleccionado: Usuario | null = null;
+  todasLasEmpresas:   any[] = [];
+  empresasAsignadas:  string[] = [];   // IDs seleccionados
+  guardandoEmpresas   = false;
+
   rolesOpciones = [
     { label: 'Vendedor', value: 'vendedor' },
     { label: 'Admin',    value: 'admin'    }
   ];
 
   constructor(
-    private supabase: SupabaseService,
-    private msg: MessageService,
-    private confirm: ConfirmationService
-  ) {}
+  private supabase: SupabaseService,
+  private msg: MessageService,
+  private confirm: ConfirmationService,
+  private cdr: ChangeDetectorRef   // ← agregar esto
+) {}
 
   async ngOnInit() {
     await this.cargarUsuarios();
+    // Precargamos empresas para el drawer
+    this.todasLasEmpresas = await this.supabase.getEmpresas();
   }
 
   async cargarUsuarios() {
@@ -73,6 +84,7 @@ export class UsuariosComponent implements OnInit {
     }
   }
 
+  // ── NUEVO USUARIO ────────────────────────────────
   abrirModal() {
     this.nuevoEmail    = '';
     this.nuevoPassword = '';
@@ -83,15 +95,12 @@ export class UsuariosComponent implements OnInit {
 
   async crearUsuario() {
     if (!this.nuevoEmail || !this.nuevoPassword) {
-      this.errorModal = 'Email y contraseña son obligatorios.';
-      return;
+      this.errorModal = 'Email y contraseña son obligatorios.'; return;
     }
     if (this.nuevoPassword.length < 6) {
-      this.errorModal = 'La contraseña debe tener al menos 6 caracteres.';
-      return;
+      this.errorModal = 'La contraseña debe tener al menos 6 caracteres.'; return;
     }
-    this.guardando  = true;
-    this.errorModal = '';
+    this.guardando = true; this.errorModal = '';
     try {
       await this.supabase.crearUsuario(this.nuevoEmail, this.nuevoPassword);
       this.msg.add({ severity: 'success', summary: '¡Listo!', detail: `Usuario ${this.nuevoEmail} creado` });
@@ -99,11 +108,10 @@ export class UsuariosComponent implements OnInit {
       await this.cargarUsuarios();
     } catch (err: any) {
       this.errorModal = err?.message || 'Error al crear el usuario.';
-    } finally {
-      this.guardando = false;
-    }
+    } finally { this.guardando = false; }
   }
 
+  // ── ROL / ACTIVO ─────────────────────────────────
   async cambiarRol(usuario: Usuario, nuevoRol: string) {
     try {
       await this.supabase.actualizarRolUsuario(usuario.id, nuevoRol);
@@ -115,23 +123,21 @@ export class UsuariosComponent implements OnInit {
   }
 
   async toggleActivo(usuario: Usuario) {
-    const nuevoEstado = !usuario.activo;
+    const nuevo = !usuario.activo;
     try {
-      await this.supabase.toggleActivoUsuario(usuario.id, nuevoEstado);
-      usuario.activo = nuevoEstado;
-      this.msg.add({
-        severity: nuevoEstado ? 'success' : 'warn',
-        summary: nuevoEstado ? 'Activado' : 'Desactivado',
-        detail: usuario.email || usuario.id
-      });
+      await this.supabase.toggleActivoUsuario(usuario.id, nuevo);
+      usuario.activo = nuevo;
+      this.msg.add({ severity: nuevo ? 'success' : 'warn',
+        summary: nuevo ? 'Activado' : 'Desactivado', detail: usuario.email || usuario.id });
     } catch {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cambiar el estado' });
     }
   }
 
+  // ── ELIMINAR ─────────────────────────────────────
   confirmarEliminar(usuario: Usuario) {
     this.confirm.confirm({
-      message: '¿Eliminar permanentemente este usuario? Esta acción no se puede deshacer.',
+      message: '¿Eliminar permanentemente este usuario?',
       header: 'Confirmar eliminación',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Sí, eliminar',
@@ -145,9 +151,54 @@ export class UsuariosComponent implements OnInit {
     try {
       await this.supabase.eliminarUsuario(usuario.id);
       this.usuarios = this.usuarios.filter(u => u.id !== usuario.id);
-      this.msg.add({ severity: 'success', summary: 'Eliminado', detail: 'Usuario eliminado correctamente' });
+      this.msg.add({ severity: 'success', summary: 'Eliminado', detail: 'Usuario eliminado' });
     } catch {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el usuario' });
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar' });
     }
+  }
+
+  // ── DRAWER EMPRESAS ───────────────────────────────
+  async abrirEmpresas(usuario: Usuario) {
+  this.usuarioSeleccionado = usuario;
+  this.empresasAsignadas   = [];        // limpiar antes
+  this.drawerVisible       = true;      // abrir drawer primero
+  this.cdr.detectChanges();             // forzar render del drawer
+
+  try {
+    this.empresasAsignadas = await this.supabase.getEmpresasDeUsuario(usuario.id);
+  } catch {
+    this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas' });
+  }
+
+  this.cdr.detectChanges();             // forzar render con los datos cargados
+}
+
+  toggleEmpresa(empresaId: string) {
+    const idx = this.empresasAsignadas.indexOf(empresaId);
+    if (idx >= 0) {
+      this.empresasAsignadas.splice(idx, 1);
+    } else {
+      this.empresasAsignadas.push(empresaId);
+    }
+  }
+
+  estaAsignada(empresaId: string): boolean {
+    return this.empresasAsignadas.includes(empresaId);
+  }
+
+  async guardarEmpresas() {
+    if (!this.usuarioSeleccionado) return;
+    this.guardandoEmpresas = true;
+    try {
+      await this.supabase.guardarEmpresasDeUsuario(
+        this.usuarioSeleccionado.id,
+        this.empresasAsignadas
+      );
+      this.msg.add({ severity: 'success', summary: '¡Guardado!',
+        detail: `Empresas actualizadas para ${this.usuarioSeleccionado.email}` });
+      this.drawerVisible = false;
+    } catch {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar' });
+    } finally { this.guardandoEmpresas = false; }
   }
 }

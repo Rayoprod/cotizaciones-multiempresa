@@ -263,6 +263,41 @@ async eliminarUsuario(id: string): Promise<void> {
     .eq('id', id);
   if (error) throw error;
 }
+
+// Obtener empresas asignadas a un usuario específico (para el admin)
+async getEmpresasDeUsuario(usuarioId: string): Promise<string[]> {
+  const { data, error } = await this.client
+    .from('usuario_empresa')
+    .select('empresa_id')
+    .eq('usuario_id', usuarioId)
+    .eq('activo', true);
+  if (error) throw error;
+  return (data || []).map((r: any) => r.empresa_id);
+}
+
+// Guardar asignaciones completas (reemplaza todo lo del usuario)
+async guardarEmpresasDeUsuario(usuarioId: string, empresaIds: string[]): Promise<void> {
+  // Desactivar todas las actuales
+  await this.client
+    .from('usuario_empresa')
+    .update({ activo: false })
+    .eq('usuario_id', usuarioId);
+
+  if (!empresaIds.length) return;
+
+  // Insertar o reactivar las seleccionadas
+  const filas = empresaIds.map(eid => ({
+    usuario_id: usuarioId,
+    empresa_id: eid,
+    activo: true
+  }));
+
+  const { error } = await this.client
+    .from('usuario_empresa')
+    .upsert(filas, { onConflict: 'usuario_id,empresa_id' });
+
+  if (error) throw error;
+}
   // ─── CUENTAS BANCARIAS ────────────────────────────────────────────────────
 
   async getCuentasBancarias(empresaId: string) {
