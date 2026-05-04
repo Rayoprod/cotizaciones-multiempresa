@@ -8,9 +8,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 @Component({
   selector: 'app-selector',
   standalone: true,
-  imports: [CommonModule, RouterModule, ButtonModule, ProgressSpinnerModule
-
-  ],
+  imports: [CommonModule, RouterModule, ButtonModule, ProgressSpinnerModule],
   templateUrl: './selector-empresa.html'
 })
 export class SelectorComponent implements OnInit {
@@ -19,23 +17,27 @@ export class SelectorComponent implements OnInit {
   empresas: any[] = [];
   cargando: boolean = true;
 
+  // Detecta si viene desde el panel admin para redirigir correctamente
+  private vieneDeAdmin: boolean = false;
+
   constructor(
     private router: Router,
     private supabaseSvc: SupabaseService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) {
+    const url = this.router.url;
+    this.vieneDeAdmin = url.includes('/admin/');
+  }
 
   async ngOnInit() {
-    // Obtenemos el email desde Supabase Auth directamente
     const usuario = await this.supabaseSvc.obtenerUsuarioActual();
     const email = usuario?.email || localStorage.getItem('usuario_email') || '';
     this.nombreUsuario = email.split('@')[0];
 
     try {
-      // Solo trae las empresas asignadas a este usuario
       this.empresas = await this.supabaseSvc.getEmpresasDelUsuario();
 
-      // Si solo tiene una empresa asignada, lo saltamos directo al cotizador
+      // Si solo hay una empresa, la selecciona automáticamente
       if (this.empresas.length === 1) {
         this.seleccionar(this.empresas[0]);
         return;
@@ -50,6 +52,7 @@ export class SelectorComponent implements OnInit {
 
   seleccionar(empresa: any) {
     localStorage.setItem('empresa_activa', JSON.stringify(empresa));
+    // Siempre navega al cotizador — tanto vendedor como admin operando
     this.router.navigate(['/cotizador']);
   }
 }

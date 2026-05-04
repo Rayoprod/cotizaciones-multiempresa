@@ -26,16 +26,24 @@ export class AuthService {
 
   async isLoggedIn(): Promise<boolean> {
     const sesion = await this.obtenerSesion();
-    return sesion?.data?.session !== null;
+    // null explícito = sin sesión, undefined = error de red (consideramos logueado)
+    return sesion?.data?.session !== null && sesion?.data?.session !== undefined;
   }
 
-  // ✅ Ahora lee el rol desde la tabla profiles (igual que el login)
   async isAdmin(): Promise<boolean> {
+    // Primero intenta desde localStorage (ya validado en el login)
+    const rolLocal = localStorage.getItem('usuario_rol');
+    if (rolLocal) return rolLocal === 'admin';
+
+    // Fallback: consulta la BD
     const perfil = await this.supabase.obtenerPerfil();
     return perfil?.rol === 'admin';
   }
 
   async getRol(): Promise<string | null> {
+    const rolLocal = localStorage.getItem('usuario_rol');
+    if (rolLocal) return rolLocal;
+
     const perfil = await this.supabase.obtenerPerfil();
     return perfil?.rol ?? null;
   }

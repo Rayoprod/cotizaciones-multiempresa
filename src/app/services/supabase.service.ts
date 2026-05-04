@@ -222,6 +222,47 @@ async obtenerPerfil(): Promise<{ rol: string } | null> {
   if (error) return null;
   return data;
 }
+
+// ─── USUARIOS (solo admin) ────────────────────────────────────────────────
+
+async getUsuarios(): Promise<any[]> {
+  const { data, error } = await this.client
+    .from('profiles')
+    .select('id, rol, activo')
+    .order('rol');
+  if (error) throw error;
+  return data || [];
+}
+
+async crearUsuario(email: string, password: string): Promise<any> {
+  const { data, error } = await this.client.auth.signUp({ email, password });
+  if (error) throw error;
+  return data;
+}
+
+async actualizarRolUsuario(id: string, rol: string): Promise<void> {
+  const { error } = await this.client
+    .from('profiles')
+    .update({ rol })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+async toggleActivoUsuario(id: string, activo: boolean): Promise<void> {
+  const { error } = await this.client
+    .from('profiles')
+    .update({ activo })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+async eliminarUsuario(id: string): Promise<void> {
+  const { error } = await this.client
+    .from('profiles')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
   // ─── CUENTAS BANCARIAS ────────────────────────────────────────────────────
 
   async getCuentasBancarias(empresaId: string) {
