@@ -7,7 +7,6 @@ import { IEmpresa } from '../models/empresa.model';
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
 
-  // Una sola instancia para toda la app
   readonly client: SupabaseClient;
 
   constructor() {
@@ -35,7 +34,6 @@ export class SupabaseService {
 
   // ─── EMPRESAS DEL USUARIO ─────────────────────────────────────────────────
 
-  // Solo las empresas asignadas al usuario logueado
   async getEmpresasDelUsuario(): Promise<IEmpresa[]> {
     const usuario = await this.obtenerUsuarioActual();
     if (!usuario) return [];
@@ -61,7 +59,6 @@ export class SupabaseService {
     return data as IEmpresa[];
   }
 
-  // Todas las empresas (para panel de administración)
   async getEmpresas(): Promise<IEmpresa[]> {
     const { data, error } = await this.client
       .from('empresas')
@@ -69,6 +66,58 @@ export class SupabaseService {
       .order('id');
     if (error) throw error;
     return data as IEmpresa[];
+  }
+
+  // ─── EMPRESAS CRUD ────────────────────────────────────────────────────────
+
+  async guardarEmpresa(empresa: IEmpresa): Promise<IEmpresa> {
+    // Verificar si ya existe
+    const { data: existente } = await this.client
+      .from('empresas')
+      .select('id')
+      .eq('id', empresa.id)
+      .maybeSingle();
+
+    if (existente) {
+      // UPDATE
+      const { id, ...datos } = empresa as any;
+      const { data, error } = await this.client
+        .from('empresas')
+        .update(datos)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as IEmpresa;
+    } else {
+      // INSERT
+      const { data, error } = await this.client
+        .from('empresas')
+        .insert([empresa])
+        .select()
+        .single();
+      if (error) throw error;
+      return data as IEmpresa;
+    }
+  }
+
+  async actualizarEmpresa(id: string, datos: any) {
+    const { data, error } = await this.client
+      .from('empresas')
+      .update(datos)
+      .eq('id', id)
+      .select();
+    if (error) throw error;
+    return data;
+  }
+
+  async crearEmpresa(nuevaEmpresa: any) {
+    const { data, error } = await this.client
+      .from('empresas')
+      .insert([nuevaEmpresa])
+      .select();
+    if (error) throw error;
+    return data;
   }
 
   // ─── PRODUCTOS ────────────────────────────────────────────────────────────
@@ -106,6 +155,11 @@ export class SupabaseService {
     const { error } = await this.client.from('productos').delete().eq('id', id);
     if (error) throw error;
   }
+
+  async eliminarEmpresa(id: string): Promise<void> {
+  const { error } = await this.client.from('empresas').delete().eq('id', id);
+  if (error) throw error;
+}
 
   // ─── CLIENTES ─────────────────────────────────────────────────────────────
 
@@ -187,127 +241,91 @@ export class SupabaseService {
     return data;
   }
 
-  // ─── EMPRESAS CRUD ────────────────────────────────────────────────────────
+  // ─── PERFILES Y ROLES ─────────────────────────────────────────────────────
 
-  async actualizarEmpresa(id: string, datos: any) {
+  async obtenerPerfil(): Promise<{ rol: string } | null> {
+    const usuario = await this.obtenerUsuarioActual();
+    if (!usuario) return null;
+
     const { data, error } = await this.client
-      .from('empresas')
-      .update(datos)
-      .eq('id', id)
-      .select();
-    if (error) throw error;
+      .from('profiles')
+      .select('rol')
+      .eq('id', usuario.id)
+      .single();
+
+    if (error) return null;
     return data;
   }
 
-  async crearEmpresa(nuevaEmpresa: any) {
+  // ─── USUARIOS (solo admin) ────────────────────────────────────────────────
+
+  async getUsuarios(): Promise<any[]> {
     const { data, error } = await this.client
-      .from('empresas')
-      .insert([nuevaEmpresa])
-      .select();
-    if (error) throw error;
-    return data;
-  }
-// ─── PERFILES Y ROLES ─────────────────────────────────────────────────────
-
-async obtenerPerfil(): Promise<{ rol: string } | null> {
-  const usuario = await this.obtenerUsuarioActual();
-  if (!usuario) return null;
-
-  const { data, error } = await this.client
-    .from('profiles')
-    .select('rol')
-    .eq('id', usuario.id)
-    .single();
-
-  if (error) return null;
-  return data;
-}
-
-// ─── USUARIOS (solo admin) ────────────────────────────────────────────────
-
-async getUsuarios(): Promise<any[]> {
-  const { data, error } = await this.client
-    .from('profiles')
-    .select('id, email, rol, activo')
-    .order('rol');
-  if (error) throw error;
-  return data || [];
-}
-
-async crearUsuario(email: string, password: string): Promise<any> {
-  const { data, error } = await this.client.auth.signUp({ email, password });
-  if (error) throw error;
-  return data;
-}
-
-async actualizarRolUsuario(id: string, rol: string): Promise<void> {
-  const { error } = await this.client
-    .from('profiles')
-    .update({ rol })
-    .eq('id', id);
-  if (error) throw error;
-}
-
-async toggleActivoUsuario(id: string, activo: boolean): Promise<void> {
-  const { error } = await this.client
-    .from('profiles')
-    .update({ activo })
-    .eq('id', id);
-  if (error) throw error;
-}
-
-async eliminarUsuario(id: string): Promise<void> {
-  const { error } = await this.client
-    .from('profiles')
-    .delete()
-    .eq('id', id);
-  if (error) throw error;
-}
-
-// Obtener empresas asignadas a un usuario específico (para el admin)
-async getEmpresasDeUsuario(usuarioId: string): Promise<string[]> {
-  const { data, error } = await this.client
-    .from('usuario_empresa')
-    .select('empresa_id')
-    .eq('usuario_id', usuarioId)
-    .eq('activo', true);
-  if (error) throw error;
-  return (data || []).map((r: any) => r.empresa_id);
-}
-
-// Guardar asignaciones completas (reemplaza todo lo del usuario)
-async guardarEmpresasDeUsuario(usuarioId: string, empresaIds: string[]): Promise<void> {
-  // Desactivar todas las actuales
-  await this.client
-    .from('usuario_empresa')
-    .update({ activo: false })
-    .eq('usuario_id', usuarioId);
-
-  if (!empresaIds.length) return;
-
-  // Insertar o reactivar las seleccionadas
-  const filas = empresaIds.map(eid => ({
-    usuario_id: usuarioId,
-    empresa_id: eid,
-    activo: true
-  }));
-
-  const { error } = await this.client
-    .from('usuario_empresa')
-    .upsert(filas, { onConflict: 'usuario_id,empresa_id' });
-
-  if (error) throw error;
-}
-  // ─── CUENTAS BANCARIAS ────────────────────────────────────────────────────
-
-  async getCuentasBancarias(empresaId: string) {
-    const { data, error } = await this.client
-      .from('cuentas_bancarias')
-      .select('*')
-      .eq('empresa_id', empresaId)
-      .eq('activa', true)
-      .order('orden');
+      .from('profiles')
+      .select('id, email, rol, activo')
+      .order('rol');
     if (error) throw error;
     return data || [];
+  }
+
+  async crearUsuario(email: string, password: string): Promise<any> {
+    const { data, error } = await this.client.auth.signUp({ email, password });
+    if (error) throw error;
+    return data;
+  }
+
+  async actualizarRolUsuario(id: string, rol: string): Promise<void> {
+    const { error } = await this.client
+      .from('profiles')
+      .update({ rol })
+      .eq('id', id);
+    if (error) throw error;
+  }
+
+  async toggleActivoUsuario(id: string, activo: boolean): Promise<void> {
+    const { error } = await this.client
+      .from('profiles')
+      .update({ activo })
+      .eq('id', id);
+    if (error) throw error;
+  }
+
+  async eliminarUsuario(id: string): Promise<void> {
+    const { error } = await this.client
+      .from('profiles')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  }
+
+  async getEmpresasDeUsuario(usuarioId: string): Promise<string[]> {
+    const { data, error } = await this.client
+      .from('usuario_empresa')
+      .select('empresa_id')
+      .eq('usuario_id', usuarioId)
+      .eq('activo', true);
+    if (error) throw error;
+    return (data || []).map((r: any) => r.empresa_id);
+  }
+
+  async guardarEmpresasDeUsuario(usuarioId: string, empresaIds: string[]): Promise<void> {
+    await this.client
+      .from('usuario_empresa')
+      .update({ activo: false })
+      .eq('usuario_id', usuarioId);
+
+    if (!empresaIds.length) return;
+
+    const filas = empresaIds.map(eid => ({
+      usuario_id: usuarioId,
+      empresa_id: eid,
+      activo: true
+    }));
+
+    const { error } = await this.client
+      .from('usuario_empresa')
+      .upsert(filas, { onConflict: 'usuario_id,empresa_id' });
+
+    if (error) throw error;
   }
 }

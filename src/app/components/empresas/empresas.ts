@@ -2,142 +2,160 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
+import { IEmpresa, ICuentaBancaria } from '../../models/empresa.model';
+
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
-import { ToolbarModule } from 'primeng/toolbar';
-import { ColorPickerModule } from 'primeng/colorpicker';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
-import { ToastModule } from 'primeng/toast'; // <-- FALTABA ESTO
-
-import { SupabaseService } from '../../services/supabase.service';
-import { IEmpresa } from '../../models/empresa.model';
-import { MessageService } from 'primeng/api';
-
+import { ColorPickerModule } from 'primeng/colorpicker';
+import { ToastModule } from 'primeng/toast';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
+import { MessageService, ConfirmationService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+
+import { SupabaseService } from '../../services/supabase.service';
 
 @Component({
   selector: 'app-empresas',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, TableModule, ButtonModule, 
-    InputTextModule, DialogModule, ToolbarModule, ColorPickerModule, ToggleSwitchModule, ToastModule, TagModule, TooltipModule
-    
+    CommonModule, FormsModule,
+    TableModule, ButtonModule, InputTextModule,
+    DialogModule, ToggleSwitchModule, ColorPickerModule,
+    ToastModule, TagModule, TooltipModule, ConfirmDialogModule
   ],
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
   templateUrl: './empresas.html'
 })
 export class EmpresasComponent implements OnInit {
-  
+
   empresas: IEmpresa[] = [];
-  empresaDialog: boolean = false;
-  empresaActual: any = {};
-  enviando: boolean = false;
-  
-  // 🔥 EL DETECTIVE: Nos dirá si estamos creando o actualizando
-  esEdicion: boolean = false; 
+  empresaDialog = false;
+  esEdicion     = false;
+  enviando      = false;
+
+  empresaActual: IEmpresa = this.vacia();
 
   constructor(
-    private supabaseSvc: SupabaseService,
-    private cdr: ChangeDetectorRef,
-    private messageService: MessageService
+    private supabase: SupabaseService,
+    private msg: MessageService,
+    private confirm: ConfirmationService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   async ngOnInit() {
     await this.cargarEmpresas();
   }
 
+  // ── Carga ─────────────────────────────────────────────────────────────────
+
   async cargarEmpresas() {
     try {
-      this.empresas = await this.supabaseSvc.getEmpresas();
+      const raw = await this.supabase.getEmpresas();
+      // Normaliza cuentas_bancarias null → [] y mostrar_cuentas null → true
+      this.empresas = raw.map(e => ({
+        ...e,
+        cuentas_bancarias: Array.isArray(e.cuentas_bancarias) ? e.cuentas_bancarias : [],
+        mostrar_cuentas:   e.mostrar_cuentas ?? true
+      }));
       this.cdr.detectChanges();
-    } catch (error) {
-      console.error("Error al cargar empresas:", error);
+    } catch {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas' });
     }
   }
+
+  // ── Abrir modal ───────────────────────────────────────────────────────────
 
   abrirNuevo() {
-    this.esEdicion = false; // Avisamos que es nueva
-    this.empresaActual = {
-      id: '',
-      nombre_comercial: '',
-      razon_social: '',
-      ruc: '',
-      color: '#10b9a0',
-      activa: true,
-      icono: 'pi pi-building',
-      ruta_logo: '',
-      ruta_firma: '',
-      direccion: '',
-      telefonos: '',
-      correo: ''
-    };
+    this.empresaActual = this.vacia();
+    this.esEdicion     = false;
     this.empresaDialog = true;
   }
 
-  editarEmpresa(empresa: IEmpresa) {
-    this.esEdicion = true; // Avisamos que estamos editando
-    this.empresaActual = { ...empresa };
+  editarEmpresa(emp: IEmpresa) {
+    this.empresaActual = {
+      ...emp,
+      cuentas_bancarias: Array.isArray(emp.cuentas_bancarias)
+        ? JSON.parse(JSON.stringify(emp.cuentas_bancarias))
+        : [],
+      mostrar_cuentas: emp.mostrar_cuentas ?? true
+    };
+    this.esEdicion     = true;
     this.empresaDialog = true;
   }
+
+  // ── Cuentas bancarias ─────────────────────────────────────────────────────
+
+  agregarCuenta() {
+    const nueva: ICuentaBancaria = { banco: '', tipo: 'Cuenta Corriente', numero: '', cci: '' };
+    this.empresaActual.cuentas_bancarias.push(nueva);
+  }
+
+  eliminarCuenta(i: number) {
+    this.empresaActual.cuentas_bancarias.splice(i, 1);
+  }
+
+  // ── Guardar ───────────────────────────────────────────────────────────────
 
   async guardarEmpresa() {
-    // Forzamos el ID a mayúsculas y quitamos espacios
-    this.empresaActual.id = String(this.empresaActual.id || '').trim().toUpperCase();
-
-    // Validación estricta
-    if (!this.empresaActual.id || !this.empresaActual.nombre_comercial) {
-      this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'ID y Nombre son obligatorios' });
+    if (!this.empresaActual.id?.trim() || !this.empresaActual.nombre_comercial?.trim()) {
+      this.msg.add({ severity: 'warn', summary: 'Atención', detail: 'ID y Nombre Comercial son obligatorios' });
       return;
     }
-
     this.enviando = true;
     try {
-      // Limpiamos el objeto para asegurar que enviamos todo correcto
-      const payload = {
-        id: this.empresaActual.id,
-        nombre_comercial: this.empresaActual.nombre_comercial,
-        razon_social: this.empresaActual.razon_social || '',
-        ruc: this.empresaActual.ruc || '',
-        color: this.empresaActual.color || '#10b9a0',
-        activa: this.empresaActual.activa,
-        icono: this.empresaActual.icono || 'pi pi-building',
-        ruta_logo: this.empresaActual.ruta_logo || '',
-        ruta_firma: this.empresaActual.ruta_firma || '',
-        direccion: this.empresaActual.direccion || '',
-        telefonos: this.empresaActual.telefonos || '',
-        correo: this.empresaActual.correo || '',
-        bg_class: this.empresaActual.bg_class || 'bg-gray-50',
-        text_class: this.empresaActual.text_class || 'text-gray-800',
-        border_hover: this.empresaActual.border_hover || 'hover:border-gray-500'
-      };
+      const cuentasLimpias: ICuentaBancaria[] = this.empresaActual.cuentas_bancarias
+        .filter(c => c.banco?.trim() && c.numero?.trim());
 
-      if (this.esEdicion) {
-        // ACTUALIZAR SEGURA
-        await this.supabaseSvc.actualizarEmpresa(this.empresaActual.id, payload);
-        this.messageService.add({ severity: 'success', summary: 'Actualizado', detail: 'Datos guardados correctamente' });
-      } else {
-        // CREACIÓN SEGURA (Previene sobreescribir si pones un ID que ya existe)
-        const idRepetido = this.empresas.find(e => e.id === payload.id);
-        if (idRepetido) {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Ese ID de sistema ya está siendo usado.' });
-          this.enviando = false;
-          return;
-        }
-        await this.supabaseSvc.crearEmpresa(payload);
-        this.messageService.add({ severity: 'success', summary: 'Creado', detail: 'Empresa nueva registrada' });
-      }
+      await this.supabase.guardarEmpresa({
+        ...this.empresaActual,
+        id:                this.empresaActual.id.trim().toUpperCase(),
+        cuentas_bancarias: cuentasLimpias
+      });
 
+      this.msg.add({ severity: 'success', summary: '¡Guardado!', detail: 'Empresa actualizada correctamente' });
       this.empresaDialog = false;
       await this.cargarEmpresas();
-      
-    } catch (error: any) {
-      console.error("Error al guardar:", error);
-      this.messageService.add({ severity: 'error', summary: 'Error DB', detail: 'No se pudo guardar la información.' });
+    } catch (e: any) {
+      this.msg.add({ severity: 'error', summary: 'Error al guardar', detail: e?.message || 'Error desconocido' });
     } finally {
       this.enviando = false;
     }
+  }
+
+  // ── Eliminar empresa ──────────────────────────────────────────────────────
+
+  confirmarEliminar(emp: IEmpresa) {
+    this.confirm.confirm({
+      header:  'Eliminar empresa',
+      message: `¿Eliminar <strong>${emp.nombre_comercial}</strong>? Esta acción no se puede deshacer.`,
+      icon:    'pi pi-exclamation-triangle',
+      acceptLabel:   'Sí, eliminar',
+      rejectLabel:   'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: async () => {
+        try {
+          await this.supabase.eliminarEmpresa(emp.id);
+          this.msg.add({ severity: 'success', summary: 'Eliminada', detail: `${emp.nombre_comercial} fue eliminada` });
+          await this.cargarEmpresas();
+        } catch (e: any) {
+          this.msg.add({ severity: 'error', summary: 'Error', detail: e?.message || 'No se pudo eliminar' });
+        }
+      }
+    });
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  private vacia(): IEmpresa {
+    return {
+      id: '', nombre_comercial: '', razon_social: '', ruc: '',
+      color: '#01696f', direccion: '', telefonos: '', correo: '',
+      ruta_logo: '', ruta_firma: '', activa: true,
+      cuentas_bancarias: [], contacto_aprobacion: '', mostrar_cuentas: true
+    };
   }
 }

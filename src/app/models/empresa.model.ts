@@ -1,16 +1,28 @@
 export interface IEmpresa {
   id: string;
   nombre_comercial: string;
-  razon_social: string | null;
+  razon_social?: string;
   ruc: string;
   color: string;
-  direccion: string | null;
-  telefonos: string | null;
-  correo: string | null;
-  ruta_logo: string | null;
-  ruta_firma: string | null;
-  icono: string | null;
-  bg_class: string | null;
-  text_class: string | null;
-  border_hover: string | null;
+  direccion?: string;
+  telefonos?: string;
+  correo?: string;
+  ruta_logo?: string;
+  ruta_firma?: string;
+  icono?: string;
+  bg_class?: string;
+  text_class?: string;
+  border_hover?: string;
+  // ── Nuevas columnas ───────────────────────
+  activa: boolean;
+  cuentas_bancarias: ICuentaBancaria[];
+  contacto_aprobacion?: string;
+  mostrar_cuentas: boolean;
+}
+
+export interface ICuentaBancaria {
+  banco: string;
+  tipo: string;
+  numero: string;
+  cci?: string;
 }
