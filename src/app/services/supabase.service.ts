@@ -199,21 +199,18 @@ export class SupabaseService {
 
   // ─── COTIZACIONES ─────────────────────────────────────────────────────────
 
-  async getHistorial(empresaId?: string) {
-    let query = this.client
-      .from('cotizaciones')
-      .select('*')
-      .order('fecha', { ascending: false });
+  async getHistorial(empresaId: string): Promise<ICotizacion[]> {
+  if (!empresaId) return [];   // ← guardia crítica
 
-    if (empresaId) {
-      query = query.eq('empresa_id', empresaId);
-    }
+  const { data, error } = await this.client
+    .from('cotizaciones')
+    .select('*')
+    .eq('empresa_id', empresaId)   // ← filtro obligatorio
+    .order('fecha', { ascending: false });
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
-  }
-
+  if (error) throw error;
+  return data ?? [];
+}
   async guardarCotizacion(cotizacion: ICotizacion) {
     const { data, error } = await this.client
       .from('cotizaciones')

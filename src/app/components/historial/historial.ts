@@ -45,20 +45,33 @@ export class HistorialComponent implements OnInit {
     private cdr:         ChangeDetectorRef
   ) {}
 
-  async ngOnInit() {
-    // FIX: localStorage bloqueado → leer empresa desde Supabase session
-    try {
-      this.empresasBD   = await this.supabaseSvc.getEmpresas();
-      const empresas    = await this.supabaseSvc.getEmpresasDelUsuario();
-      this.empresaActiva = empresas?.[0] ?? null;
+async ngOnInit() {
+  try {
+    this.empresasBD = await this.supabaseSvc.getEmpresas();
 
-      this.cotizaciones = await this.supabaseSvc.getHistorial(this.empresaActiva?.id);
+    // LIMPIO: session y userEmail eliminados — no se usan aquí
+    const stored = sessionStorage.getItem('empresa_activa');
+    this.empresaActiva = stored ? JSON.parse(stored) : null;
+
+    if (!this.empresaActiva?.id) {
+      this.msg.add({
+        severity: 'warn',
+        summary: 'Sin empresa',
+        detail: 'No se pudo determinar la empresa activa. Ve al selector.'
+      });
+      this.cotizaciones = [];
       this.cdr.detectChanges();
-    } catch (error) {
-      console.error('Error cargando historial:', error);
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar el historial' });
+      return;
     }
+
+    this.cotizaciones = await this.supabaseSvc.getHistorial(this.empresaActiva.id);
+    this.cdr.detectChanges();
+  } catch (error) {
+    console.error('Error cargando historial:', error);
+    this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar el historial' });
   }
+}
+
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 

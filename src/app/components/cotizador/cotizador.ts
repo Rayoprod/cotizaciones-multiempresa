@@ -25,73 +25,82 @@ import { MessageService } from 'primeng/api';
   selector: 'app-cotizador',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
-    RouterModule,
-    TableModule,
-    ButtonModule,
-    CardModule,
-    InputNumberModule,
-    InputTextModule,
-    TextareaModule,
-    ToggleSwitchModule,
-    SelectButtonModule,
-    AutoCompleteModule,
-    TooltipModule,
-    ToastModule
+    CommonModule, FormsModule, RouterModule,
+    TableModule, ButtonModule, CardModule,
+    InputNumberModule, InputTextModule, TextareaModule,
+    ToggleSwitchModule, SelectButtonModule, AutoCompleteModule,
+    TooltipModule, ToastModule
   ],
   providers: [MessageService],
   templateUrl: './cotizador.html'
 })
 export class CotizadorComponent implements OnInit {
 
-  empresaActiva: any;
-  datosActuales: any;
+  // ── Estado de empresa ─────────────────────────────────────────────────────
+  empresaActiva: any = null;
+  datosActuales: any = null;
 
-  productosBD: any[] = [];
-  clientesBD:  any[] = [];
-  nombresClientesFiltrados: any[]    = [];
+  // ── Condiciones PDF ───────────────────────────────────────────────────────
+  condiciones = {
+    mostrarValidez:       true,
+    diasValidez:          '15',
+    mostrarCuentas:       true,
+    mostrarContacto:      false,
+    mostrarObservaciones: false
+  };
+
+  // ── Datos BD ──────────────────────────────────────────────────────────────
+  productosBD:               any[]    = [];
+  clientesBD:                any[]    = [];
+  nombresClientesFiltrados:  any[]    = [];
   nombresProductosFiltrados: string[] = [];
 
+  // ── Carrito ───────────────────────────────────────────────────────────────
   carrito: any[] = [];
 
-  clienteNombre:       string = '';
-  clienteDocumento:    string = '';
-  clienteTelefono:     string = '';
-  clienteDireccion:    string = '';
-  clienteCorreo:       string = '';
+  // ── Formulario cliente ────────────────────────────────────────────────────
+  clienteNombre:        string = '';
+  clienteDocumento:     string = '';
+  clienteTelefono:      string = '';
+  clienteDireccion:     string = '';
+  clienteCorreo:        string = '';
   clienteObservaciones: string = '';
 
+  // ── Opciones ──────────────────────────────────────────────────────────────
   incluyeIgv:   boolean = true;
   lugarEntrega: string  = 'CANTERA';
-
-  subtotalGeneral: number = 0;
-  igvTotal:        number = 0;
-  totalFinal:      number = 0;
 
   opcionesLugar = [
     { label: 'En Cantera', value: 'CANTERA' },
     { label: 'En Obra',    value: 'OBRA'    }
   ];
 
+  // ── Totales ───────────────────────────────────────────────────────────────
+  subtotalGeneral: number = 0;
+  igvTotal:        number = 0;
+  totalFinal:      number = 0;
+
   constructor(
-    private cdr: ChangeDetectorRef,
-    private supabaseSvc: SupabaseService,
-    private pdfSvc: PdfService,
-    private router: Router,
+    private cdr:            ChangeDetectorRef,
+    private supabaseSvc:    SupabaseService,
+    private pdfSvc:         PdfService,
+    private router:         Router,
     private messageService: MessageService,
-    private apiPeru: ApiPeruService
+    private apiPeru:        ApiPeruService
   ) {}
+
+  // ── Init ──────────────────────────────────────────────────────────────────
 
   async ngOnInit() {
     this.agregarFila();
 
-    const datos = localStorage.getItem('empresa_activa');
+    const datos = sessionStorage.getItem('empresa_activa');
     this.empresaActiva = datos ? JSON.parse(datos) : null;
     this.datosActuales = this.empresaActiva;
-    // Después de: this.datosActuales = this.empresaActiva;
-this.condiciones.mostrarCuentas  = this.empresaActiva?.mostrar_cuentas ?? true;
-this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true);
+
+    // FIX: se setea DESPUÉS de tener empresaActiva
+    this.condiciones.mostrarCuentas  = this.empresaActiva?.mostrar_cuentas ?? true;
+    this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true);
 
     if (!this.empresaActiva?.id) {
       this.messageService.add({
@@ -106,7 +115,7 @@ this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true
     await this.cargarDatosDesdeBD();
   }
 
-  // ── Validación ───────────────────────────────────────────────────────────
+  // ── Validación ────────────────────────────────────────────────────────────
 
   tieneItemsValidos(): boolean {
     return this.carrito.some(
@@ -115,12 +124,12 @@ this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true
   }
 
   puedeGenerar(): boolean {
-    return !!this.clienteNombre    &&
+    return !!this.clienteNombre &&
            !!this.clienteDocumento &&
            this.tieneItemsValidos();
   }
 
-  // ── Carga inicial ────────────────────────────────────────────────────────
+  // ── Carga inicial ─────────────────────────────────────────────────────────
 
   async cargarDatosDesdeBD() {
     try {
@@ -139,7 +148,7 @@ this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true
     }
   }
 
-  // ── Clientes ─────────────────────────────────────────────────────────────
+  // ── Clientes ──────────────────────────────────────────────────────────────
 
   filtrarNombresClientes(event: any) {
     const query = (event.query || '').toLowerCase();
@@ -155,11 +164,11 @@ this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true
     const nombreElegido = event.value || event;
     const cliente = this.clientesBD.find(c => c.nombre_razon_social === nombreElegido);
     if (cliente) {
-      this.clienteNombre     = cliente.nombre_razon_social;
-      this.clienteDocumento  = cliente.documento_identidad || '';
-      this.clienteTelefono   = cliente.telefono  || '';
-      this.clienteDireccion  = cliente.direccion || '';
-      this.clienteCorreo     = cliente.correo    || '';
+      this.clienteNombre    = cliente.nombre_razon_social;
+      this.clienteDocumento = cliente.documento_identidad || '';
+      this.clienteTelefono  = cliente.telefono  || '';
+      this.clienteDireccion = cliente.direccion || '';
+      this.clienteCorreo    = cliente.correo    || '';
       this.cdr.detectChanges();
     }
   }
@@ -197,7 +206,7 @@ this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true
       const token = 'sk_14670.Rl3QC2eRGOShBSsUP3HL63QbRl8PmOYd';
       const tipo  = doc.length === 8 ? 'reniec/dni' : 'sunat/ruc';
 
-      const respuesta  = await fetch(`/api-peru/v1/${tipo}?numero=${doc}`, {
+      const respuesta   = await fetch(`/api-peru/v1/${tipo}?numero=${doc}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const datosCrudos = await respuesta.json();
@@ -210,9 +219,9 @@ this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true
       if (doc.length === 8) {
         nombreFinal = datos.full_name || datos.nombre_completo || '';
         if (!nombreFinal) {
-          const nom = datos.first_name  || datos.nombres          || datos.nombre           || '';
-          const pat = datos.first_last_name || datos.apellidoPaterno || datos.apellido_paterno || '';
-          const mat = datos.second_last_name || datos.apellidoMaterno || datos.apellido_materno || '';
+          const nom = datos.first_name        || datos.nombres          || datos.nombre           || '';
+          const pat = datos.first_last_name   || datos.apellidoPaterno  || datos.apellido_paterno || '';
+          const mat = datos.second_last_name  || datos.apellidoMaterno  || datos.apellido_materno || '';
           nombreFinal = `${nom} ${pat} ${mat}`.trim();
         }
       } else {
@@ -241,9 +250,9 @@ this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true
         await this.supabaseSvc.guardarCliente({
           nombre_razon_social: this.clienteNombre,
           documento_identidad: this.clienteDocumento,
-          telefono:  this.clienteTelefono  || null,
-          direccion: this.clienteDireccion || null,
-          correo:    this.clienteCorreo    || null,
+          telefono:   this.clienteTelefono  || null,
+          direccion:  this.clienteDireccion || null,
+          correo:     this.clienteCorreo    || null,
           empresa_id: this.empresaActiva.id
         });
         this.clientesBD = await this.supabaseSvc.getClientes(this.empresaActiva.id);
@@ -253,16 +262,16 @@ this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true
     }
   }
 
-  // ── Carrito ──────────────────────────────────────────────────────────────
+  // ── Carrito ───────────────────────────────────────────────────────────────
 
   agregarFila() {
     this.carrito = [...this.carrito, {
-      sku: 'VAR-' + Math.floor(1000 + Math.random() * 9000),
-      descripcion: '',
-      unidad: '',
-      cantidad: null,
+      sku:             'VAR-' + Math.floor(1000 + Math.random() * 9000),
+      descripcion:     '',
+      unidad:          '',
+      cantidad:        null,
       precio_unitario: null,
-      subtotal: 0
+      subtotal:        0
     }];
   }
 
@@ -306,15 +315,7 @@ this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true
     this.cdr.detectChanges();
   }
 
-  condiciones = {
-  mostrarValidez:       true,
-  diasValidez:          '15',
-  mostrarCuentas:       true,
-  mostrarContacto:      false,
-  mostrarObservaciones: false
-};
-
-  // ── Generar PDF ──────────────────────────────────────────────────────────
+  // ── Generar PDF ───────────────────────────────────────────────────────────
 
   async generarPDF() {
     const itemsValidos = this.carrito.filter(
@@ -337,15 +338,15 @@ this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true
         empresa_id:        this.empresaActiva.id,
         cliente_nombre:    this.clienteNombre,
         cliente_documento: this.clienteDocumento,
-        cliente_telefono:  this.clienteTelefono,   // ← nuevo
-        cliente_direccion: this.clienteDireccion,  // ← nuevo
-        cliente_correo:    this.clienteCorreo,     // ← nuevo
+        cliente_telefono:  this.clienteTelefono,
+        cliente_direccion: this.clienteDireccion,
+        cliente_correo:    this.clienteCorreo,
         subtotal:          this.subtotalGeneral,
         igv:               this.igvTotal,
         total:             this.totalFinal,
         estado:            'PENDIENTE',
         items:             itemsValidos,
-        vendedor:          localStorage.getItem('usuario_email') || '',
+        vendedor:          sessionStorage.getItem('usuario_email') ?? '',  // FIX: sin session
         lugar_entrega:     this.lugarEntrega,
         observaciones:     this.clienteObservaciones
       };
@@ -361,7 +362,6 @@ this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true
       this.messageService.add({
         severity: 'success', summary: '¡Listo!', detail: 'Cotización generada con éxito.'
       });
-
     } catch (error) {
       console.error('Error al generar:', error);
       this.messageService.add({

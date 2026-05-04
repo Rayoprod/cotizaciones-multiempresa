@@ -51,7 +51,7 @@ export class SelectorComponent implements OnInit {
   }
 
   seleccionar(empresa: any) {
-    localStorage.setItem('empresa_activa', JSON.stringify(empresa));
+sessionStorage.setItem('empresa_activa', JSON.stringify(empresa));
     // Siempre navega al cotizador — tanto vendedor como admin operando
     this.router.navigate(['/cotizador']);
   }
