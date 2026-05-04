@@ -1,9 +1,13 @@
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-usuarios',
-  imports: [],
+  standalone: true,
+  imports: [CommonModule],
   templateUrl: './usuarios.html',
-  styleUrl: './usuarios.scss',
+  styleUrl: './usuarios.scss'
 })
-export class Usuarios {}
+export class UsuariosComponent {
+  // Lógica de gestión de usuarios aquí
+}

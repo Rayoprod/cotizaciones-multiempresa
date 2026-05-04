@@ -19,7 +19,10 @@ interface NavItem {
 export class AdminLayoutComponent {
 
   private auth = inject(AuthService);
+
   sidebarAbierto = signal(false);
+  usuarioNombre  = signal<string>('');
+  usuarioRol     = signal<string>('');
 
   readonly navItems: NavItem[] = [
     { label: 'Cotizador', icon: 'pi pi-calculator', path: '/admin/cotizador' },
@@ -30,16 +33,15 @@ export class AdminLayoutComponent {
     { label: 'Usuarios',  icon: 'pi pi-user-edit',   path: '/admin/usuarios'  },
   ];
 
-  usuarioNombre = signal<string>('');
-usuarioRol    = signal<string>('');
+  constructor() {
+    this.auth.obtenerSesion().then(res => {
+      const user = res?.data?.session?.user;
+      this.usuarioNombre.set(user?.user_metadata?.['nombre'] ?? user?.email ?? 'Admin');
+      this.usuarioRol.set(user?.user_metadata?.['rol'] ?? 'admin');
+    });
+  }
 
-constructor() {
-  this.auth.obtenerSesion().then(res => {
-    const user = res?.data?.session?.user;
-    this.usuarioNombre.set(user?.user_metadata?.['nombre'] ?? user?.email ?? 'Admin');
-    this.usuarioRol.set(user?.user_metadata?.['rol'] ?? 'admin');
-  });
-}
-
-logout() { this.auth.logout(); }
+  toggleSidebar() { this.sidebarAbierto.update(v => !v); }
+  cerrarMenu()    { this.sidebarAbierto.set(false); }
+  logout()        { this.auth.logout(); }
 }

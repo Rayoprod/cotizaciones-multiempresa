@@ -68,30 +68,7 @@
         <span class="font-medium">Directorio Clientes</span>
       </a>
 
-      <!-- SOLO VISIBLE PARA EL ADMINISTRADOR -->
-<ng-container *ngIf="esAdmin">
 
-  <span class="text-xs font-bold text-gray-500 uppercase tracking-widest pl-2 mt-4 mb-2">
-    Administración
-  </span>
-
-  <a routerLink="/admin/empresas" routerLinkActive="bg-primary text-white shadow-2"
-     (click)="cerrarMenu()"
-     class="flex align-items-center gap-3 p-3 border-round-lg text-gray-300
-            hover:bg-gray-800 transition-colors cursor-pointer text-decoration-none">
-    <i class="pi pi-cog text-lg"></i>
-    <span class="font-medium">Configurar Empresas</span>
-  </a>
-
-  <a routerLink="/admin/usuarios" routerLinkActive="bg-primary text-white shadow-2"
-     (click)="cerrarMenu()"
-     class="flex align-items-center gap-3 p-3 border-round-lg text-gray-300
-            hover:bg-gray-800 transition-colors cursor-pointer text-decoration-none">
-    <i class="pi pi-user-edit text-lg"></i>
-    <span class="font-medium">Gestionar Usuarios</span>
-  </a>
-
-</ng-container>
 
     </div>
 

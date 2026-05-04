@@ -56,24 +56,18 @@ export class LoginComponent {
       // Guardamos email para mostrar en UI
       localStorage.setItem('usuario_email', data.user?.email || '');
 
-      // Consultamos el rol real desde la BD
+      // Consultamos el rol desde la tabla profiles
       const perfil = await this.supabaseSvc.obtenerPerfil();
       const rol = perfil?.rol || 'vendedor';
 
-      // Guardamos el rol en localStorage para usarlo en el layout
       localStorage.setItem('usuario_rol', rol);
 
-      // Redirigimos según el rol
+      // ✅ Redirección limpia según rol
       if (rol === 'admin') {
-        this.router.navigate(['/admin']);
+        this.router.navigate(['/admin/cotizador']);
       } else {
-const rol = await this.authService.getRol();
-
-if (rol === 'admin') {
-  this.router.navigate(['/admin/cotizador']);
-} else {
-  this.router.navigate(['/selector']);
-}      }
+        this.router.navigate(['/selector']);
+      }
 
     } catch (err) {
       this.mensajeError = 'Ocurrió un error al intentar conectarse.';
