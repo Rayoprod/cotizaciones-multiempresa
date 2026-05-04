@@ -3,39 +3,41 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth';
+import { SupabaseService } from '../../services/supabase.service';
 
-// Importaciones de PrimeNG
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
-import { RippleModule } from 'primeng/ripple'; // Para el efecto click premium
+import { RippleModule } from 'primeng/ripple';
 
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [
-    CommonModule, 
-    FormsModule, 
-    ButtonModule, 
-    InputTextModule, 
+    CommonModule,
+    FormsModule,
+    ButtonModule,
+    InputTextModule,
     PasswordModule,
     RippleModule
-  ],  
+  ],
   templateUrl: './login.html'
 })
 export class LoginComponent {
-  // Tus variables exactas
   correo: string = '';
   contrasena: string = '';
   mensajeError: string = '';
-  cargando: boolean = false; // <-- El toque extra para el feedback visual del botón
+  cargando: boolean = false;
 
-  // Tu constructor funcional
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(
+    private authService: AuthService,
+    private supabaseSvc: SupabaseService,
+    private router: Router
+  ) {}
 
   async iniciarSesion() {
-    this.mensajeError = ''; 
-    this.cargando = true; // Empieza a girar el botón
+    this.mensajeError = '';
+    this.cargando = true;
 
     if (!this.correo || !this.contrasena) {
       this.mensajeError = 'Por favor, ingresa tu correo y contraseña.';
@@ -44,26 +46,39 @@ export class LoginComponent {
     }
 
     try {
-      // Tu lógica exacta y funcional conectada a AuthService
       const { data, error } = await this.authService.login(this.correo, this.contrasena);
 
       if (error) {
         this.mensajeError = 'Correo o contraseña incorrectos.';
-        console.error('Error de Supabase:', error.message);
-      } else {
-        console.log('¡Login exitoso!', data);
-        // GUARDA EL CORREO DEL USUARIO PARA LA HUELLA
-        localStorage.setItem('usuario_conectado', this.correo); 
-        
-        // Viaje directo al selector
-        this.router.navigate(['/selector']);
-        // Viaje directo al selector de empresas que ya tenías configurado
-        this.router.navigate(['/selector']);
+        return;
       }
+
+      // Guardamos email para mostrar en UI
+      localStorage.setItem('usuario_email', data.user?.email || '');
+
+      // Consultamos el rol real desde la BD
+      const perfil = await this.supabaseSvc.obtenerPerfil();
+      const rol = perfil?.rol || 'vendedor';
+
+      // Guardamos el rol en localStorage para usarlo en el layout
+      localStorage.setItem('usuario_rol', rol);
+
+      // Redirigimos según el rol
+      if (rol === 'admin') {
+        this.router.navigate(['/admin']);
+      } else {
+const rol = await this.authService.getRol();
+
+if (rol === 'admin') {
+  this.router.navigate(['/admin/cotizador']);
+} else {
+  this.router.navigate(['/selector']);
+}      }
+
     } catch (err) {
       this.mensajeError = 'Ocurrió un error al intentar conectarse.';
     } finally {
-      this.cargando = false; // Detiene el giro del botón
+      this.cargando = false;
     }
   }
 }

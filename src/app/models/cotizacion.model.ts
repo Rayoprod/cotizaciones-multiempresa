@@ -1,7 +1,7 @@
 export interface ICotizacion {
   folio: string;
   fecha: string;
-  empresa: string;
+  empresa_id: string;
   cliente_nombre: string;
   cliente_documento?: string;
   subtotal: number;
@@ -9,9 +9,9 @@ export interface ICotizacion {
   total: number;
   estado: string;
   items: any[];
-  
-  // ✅ Agrega esta línea:
-  vendedor?: string; 
+  vendedor?: string;
+  lugar_entrega?: string;      
+  observaciones?: string;      
 }
 
 export interface ICotizacionDetalle {

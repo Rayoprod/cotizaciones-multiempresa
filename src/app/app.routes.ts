@@ -1,37 +1,48 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './components/login/login';
 import { SelectorComponent } from './components/selector-empresa/selector-empresa';
-import { CotizadorComponent } from './components/cotizador/cotizador';
-import { LayoutComponent } from './layout/layout.component';
-import { HistorialComponent } from './components/historial/historial';
-
-// Importamos a nuestro guardián
-import { authGuard } from './guards/auth-guard'; 
-import { ProductosComponent } from './components/productos/productos';
-import { ClientesComponent } from './components/clientes/clientes';
-import { EmpresasComponent } from './components/empresas/empresas';
+import { authGuard } from './guards/auth-guard';
+import { adminGuard } from './guards/admin-guard';
 
 export const routes: Routes = [
-  // RUTAS PÚBLICAS (Sin candado)
+
   { path: 'login', component: LoginComponent },
-  
-  // 🔒 RUTAS PROTEGIDAS (Requieren inicio de sesión)
-  { path: 'selector', component: SelectorComponent, canActivate: [authGuard] }, // <-- ¡Candado agregado aquí!
-  
-  // EL SISTEMA (Rutas Privadas)
+
+  { path: 'selector', component: SelectorComponent, canActivate: [authGuard] },
+
+  // ── Panel Admin ───────────────────────────────────
   {
-    path: '',
-    component: LayoutComponent,
-    canActivate: [authGuard], 
+    path: 'admin',
+    loadComponent: () =>
+      import('./layout/admin-layout/admin-layout')
+        .then(m => m.AdminLayoutComponent),
+    canActivate: [adminGuard],
     children: [
       { path: '', redirectTo: 'cotizador', pathMatch: 'full' },
-      { path: 'cotizador', component: CotizadorComponent },
-      { path: 'historial', component: HistorialComponent },
-      { path: 'productos', component: ProductosComponent},
-      { path: 'clientes', component: ClientesComponent},
-      { path: 'empresas', component: EmpresasComponent },
+      { path: 'cotizador', loadComponent: () => import('./components/cotizador/cotizador').then(m => m.CotizadorComponent) },
+      { path: 'historial', loadComponent: () => import('./components/historial/historial').then(m => m.HistorialComponent) },
+      { path: 'productos', loadComponent: () => import('./components/productos/productos').then(m => m.ProductosComponent) },
+      { path: 'clientes',  loadComponent: () => import('./components/clientes/clientes').then(m => m.ClientesComponent)  },
+      { path: 'empresas',  loadComponent: () => import('./components/empresas/empresas').then(m => m.EmpresasComponent)  },
+      { path: 'usuarios',  loadComponent: () => import('./components/usuarios/usuarios').then(m => m.UsuariosComponent)  },
     ]
   },
 
-  { path: '**', redirectTo: 'selector' } 
+  // ── Panel Vendedor ────────────────────────────────
+  {
+    path: '',
+    loadComponent: () =>
+      import('./layout/layout.component')
+        .then(m => m.LayoutComponent),
+    canActivate: [authGuard],
+    children: [
+      { path: '', redirectTo: 'cotizador', pathMatch: 'full' },
+      { path: 'cotizador', loadComponent: () => import('./components/cotizador/cotizador').then(m => m.CotizadorComponent) },
+      { path: 'historial', loadComponent: () => import('./components/historial/historial').then(m => m.HistorialComponent) },
+      { path: 'productos', loadComponent: () => import('./components/productos/productos').then(m => m.ProductosComponent) },
+      { path: 'clientes',  loadComponent: () => import('./components/clientes/clientes').then(m => m.ClientesComponent)  },
+    ]
+  },
+
+  { path: '**', redirectTo: 'login' }
 ];

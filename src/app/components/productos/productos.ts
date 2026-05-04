@@ -10,29 +10,25 @@ import { DialogModule } from 'primeng/dialog';
 import { ToolbarModule } from 'primeng/toolbar';
 
 import { SupabaseService } from '../../services/supabase.service';
-import { IProducto } from '../../models/producto.model'; // <-- Importamos el molde estricto
+import { IProducto } from '../../models/producto.model';
 
 @Component({
   selector: 'app-productos',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, TableModule, ButtonModule, 
+    CommonModule, FormsModule, TableModule, ButtonModule,
     InputTextModule, InputNumberModule, DialogModule, ToolbarModule
   ],
   templateUrl: './productos.html'
 })
 export class ProductosComponent implements OnInit {
-  
-  // ¡Adiós any[]! Ahora es estrictamente un arreglo de IProducto
+
   productos: IProducto[] = [];
-  
   productoDialog: boolean = false;
-  
-  // Inicializamos con la estructura correcta
-  productoActual: IProducto = { codigo_sku: '', descripcion: '', unidad: 'm3', precio_unitario_base: null };
-  
-  productoOriginal: string = ''; // Para comparar si hubo cambios
+  productoActual: IProducto = this.productoVacio();
+  productoOriginal: string = '';
   enviando: boolean = false;
+  empresaActiva: any;
 
   constructor(
     private supabaseSvc: SupabaseService,
@@ -40,40 +36,39 @@ export class ProductosComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
+    const datos = localStorage.getItem('empresa_activa');
+    this.empresaActiva = datos ? JSON.parse(datos) : null;
     await this.cargarProductos();
   }
 
   async cargarProductos() {
+    if (!this.empresaActiva?.id) return;
     try {
-      // Casteamos la respuesta de Supabase a nuestro tipo IProducto[]
-      this.productos = await this.supabaseSvc.getProductos() as IProducto[];
+      // Filtra por empresa activa — sin empresa_id no carga nada
+      this.productos = await this.supabaseSvc.getProductos(this.empresaActiva.id) as IProducto[];
       this.cdr.detectChanges();
     } catch (error) {
-      console.error("Error al cargar productos:", error);
+      console.error('Error al cargar productos:', error);
     }
   }
 
-  // Lógica: PRD-0001, PRD-0002...
   generarSkuAutomatico(): string {
     const cantidad = this.productos.length;
     return `PRD-${(cantidad + 1).toString().padStart(4, '0')}`;
   }
 
   abrirNuevo() {
-    this.productoActual = { 
-      codigo_sku: this.generarSkuAutomatico(), 
-      descripcion: '', 
-      unidad: 'm3', 
-      precio_unitario_base: null 
+    this.productoActual = {
+      ...this.productoVacio(),
+      codigo_sku: this.generarSkuAutomatico()
     };
     this.productoOriginal = JSON.stringify(this.productoActual);
     this.enviando = false;
     this.productoDialog = true;
   }
 
-  // Recibe estrictamente un IProducto
   editarProducto(producto: IProducto) {
-    this.productoActual = { ...producto }; 
+    this.productoActual = { ...producto };
     this.productoOriginal = JSON.stringify(this.productoActual);
     this.productoDialog = true;
   }
@@ -83,49 +78,45 @@ export class ProductosComponent implements OnInit {
       try {
         if (producto.id) {
           await this.supabaseSvc.eliminarProducto(producto.id);
-          await this.cargarProductos(); 
+          await this.cargarProductos();
         }
       } catch (error) {
-        console.error("Error al eliminar", error);
-        alert("Hubo un error al eliminar el producto.");
+        console.error('Error al eliminar:', error);
+        alert('Hubo un error al eliminar el producto.');
       }
     }
   }
 
   async guardarProducto() {
-    // 1. Validaciones
     if (!this.productoActual.descripcion || this.productoActual.precio_unitario_base === null) {
-      alert("La descripción y el precio son obligatorios.");
+      alert('La descripción y el precio son obligatorios.');
       return;
     }
 
-    // 2. Evitar SKU duplicados
-    const skuDuplicado = this.productos.some(p => 
-      p.codigo_sku === this.productoActual.codigo_sku && p.id !== this.productoActual.id
+    const skuDuplicado = this.productos.some(
+      p => p.codigo_sku === this.productoActual.codigo_sku && p.id !== this.productoActual.id
     );
 
     if (skuDuplicado) {
-      alert(`El código SKU "${this.productoActual.codigo_sku}" ya existe en el sistema.`);
+      alert(`El código SKU "${this.productoActual.codigo_sku}" ya existe.`);
       return;
     }
 
-    // 3. Detección de cambios puros
     if (this.productoOriginal === JSON.stringify(this.productoActual)) {
-      console.log("Actualización forzada: No se detectaron cambios en los datos.");
-      // Como es actualización forzada, simplemente cerramos para no gastar una llamada a internet en vano.
-      // Si quisieras guardarlo de todos modos, solo comenta el "return".
       this.productoDialog = false;
-      return; 
+      return;
     }
 
     this.enviando = true;
     try {
-      await this.supabaseSvc.guardarProducto(this.productoActual);
+      // Asigna empresa_id antes de guardar
+      const payload = { ...this.productoActual, empresa_id: this.empresaActiva.id };
+      await this.supabaseSvc.guardarProducto(payload);
       this.productoDialog = false;
-      await this.cargarProductos(); 
+      await this.cargarProductos();
     } catch (error) {
-      console.error("Error al guardar:", error);
-      alert("Hubo un error al comunicarse con la base de datos.");
+      console.error('Error al guardar:', error);
+      alert('Hubo un error al comunicarse con la base de datos.');
     } finally {
       this.enviando = false;
     }
@@ -134,5 +125,9 @@ export class ProductosComponent implements OnInit {
   ocultarDialog() {
     this.productoDialog = false;
     this.enviando = false;
+  }
+
+  private productoVacio(): IProducto {
+    return { codigo_sku: '', descripcion: '', unidad: 'm3', precio_unitario_base: null };
   }
 }

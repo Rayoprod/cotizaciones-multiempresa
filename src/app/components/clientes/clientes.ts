@@ -15,20 +15,20 @@ import { ICliente } from '../../models/cliente.model';
   selector: 'app-clientes',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, TableModule, ButtonModule, 
+    CommonModule, FormsModule, TableModule, ButtonModule,
     InputTextModule, DialogModule, ToolbarModule
   ],
   templateUrl: './clientes.html'
 })
 export class ClientesComponent implements OnInit {
-  
+
   clientes: ICliente[] = [];
   clienteDialog: boolean = false;
-  
-  clienteActual: ICliente = { documento_identidad: '', nombre_razon_social: '', direccion: '', telefono: '', correo: '' };
-  clienteOriginal: string = ''; 
+  clienteActual: ICliente = this.clienteVacio();
+  clienteOriginal: string = '';
   enviando: boolean = false;
-  buscandoApi: boolean = false; 
+  buscandoApi: boolean = false;
+  empresaActiva: any;
 
   constructor(
     private supabaseSvc: SupabaseService,
@@ -36,27 +36,31 @@ export class ClientesComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
+    const datos = localStorage.getItem('empresa_activa');
+    this.empresaActiva = datos ? JSON.parse(datos) : null;
     await this.cargarClientes();
   }
 
   async cargarClientes() {
+    if (!this.empresaActiva?.id) return;
     try {
-      this.clientes = await this.supabaseSvc.getClientes() as ICliente[];
+      // Filtra por empresa activa
+      this.clientes = await this.supabaseSvc.getClientes(this.empresaActiva.id) as ICliente[];
       this.cdr.detectChanges();
     } catch (error) {
-      console.error("Error al cargar clientes:", error);
+      console.error('Error al cargar clientes:', error);
     }
   }
 
   abrirNuevo() {
-    this.clienteActual = { documento_identidad: '', nombre_razon_social: '', direccion: '', telefono: '', correo: '' };
+    this.clienteActual = this.clienteVacio();
     this.clienteOriginal = JSON.stringify(this.clienteActual);
     this.enviando = false;
     this.clienteDialog = true;
   }
 
   editarCliente(cliente: ICliente) {
-    this.clienteActual = { ...cliente }; 
+    this.clienteActual = { ...cliente };
     this.clienteOriginal = JSON.stringify(this.clienteActual);
     this.clienteDialog = true;
   }
@@ -69,39 +73,37 @@ export class ClientesComponent implements OnInit {
       return;
     }
 
-    console.log("🔍 Iniciando búsqueda en Directorio para:", doc);
+    // Busca primero en los clientes ya cargados de esta empresa
+    const clienteExistente = this.clientes.find(
+      c => String(c.documento_identidad) === doc
+    );
 
-    const clienteExistente = this.clientes.find(c => String(c.documento_identidad) === doc);
-    
     if (clienteExistente) {
-      console.log("✅ Encontrado en Base de Datos Local:", clienteExistente);
       this.clienteActual.nombre_razon_social = clienteExistente.nombre_razon_social || '';
       this.clienteActual.direccion = clienteExistente.direccion || '';
       this.clienteActual.telefono = clienteExistente.telefono || '';
       this.clienteActual.correo = clienteExistente.correo || '';
       this.cdr.detectChanges();
-      return; 
-    }
-
-    if (doc.length !== 8 && doc.length !== 11) {
-      alert('⚠️ El DNI debe tener 8 dígitos y el RUC 11.');
       return;
     }
 
-    this.buscandoApi = true; 
-    const token = 'sk_14670.Rl3QC2eRGOShBSsUP3HL63QbRl8PmOYd'; 
+    if (doc.length !== 8 && doc.length !== 11) {
+      alert('El DNI debe tener 8 dígitos y el RUC 11.');
+      return;
+    }
+
+    this.buscandoApi = true;
+
+    const token = 'sk_14670.Rl3QC2eRGOShBSsUP3HL63QbRl8PmOYd';
     const tipo = doc.length === 8 ? 'reniec/dni' : 'sunat/ruc';
     const url = `/api-peru/v1/${tipo}?numero=${doc}`;
 
     try {
-      console.log("🌐 Llamando a la API desde Clientes:", url);
       const respuesta = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      
       const datosCrudos = await respuesta.json();
-      console.log("📦 Respuesta cruda de la API:", datosCrudos);
 
       if (!respuesta.ok || !datosCrudos) {
-        alert('⚠️ El documento no existe en la base de datos de SUNAT/RENIEC.');
+        alert('El documento no existe en SUNAT/RENIEC.');
         return;
       }
 
@@ -110,7 +112,6 @@ export class ClientesComponent implements OnInit {
 
       if (doc.length === 8) {
         nombreFinal = datos.full_name || datos.nombre_completo || '';
-        
         if (!nombreFinal) {
           const nom = datos.first_name || datos.nombres || datos.nombre || '';
           const pat = datos.first_last_name || datos.apellidoPaterno || datos.apellido_paterno || '';
@@ -118,34 +119,37 @@ export class ClientesComponent implements OnInit {
           nombreFinal = `${nom} ${pat} ${mat}`.trim();
         }
       } else {
-        nombreFinal = datos.nombre_o_razon_social || datos.razon_social || datos.razonSocial || datos.nombre_comercial || datos.name || '';
+        nombreFinal =
+          datos.nombre_o_razon_social ||
+          datos.razon_social ||
+          datos.razonSocial ||
+          datos.nombre_comercial ||
+          datos.name || '';
       }
 
-      // CORRECCIÓN: Asignamos los datos al objeto clienteActual (no a variables sueltas)
       this.clienteActual.nombre_razon_social = nombreFinal;
       this.clienteActual.direccion = datos.direccion_completa || datos.direccion || datos.address || '';
-      // No reseteamos teléfono ni correo si ya tenía algo escrito, o lo dejamos en blanco si es nuevo
-      if (!this.clienteActual.telefono) this.clienteActual.telefono = ''; 
+      if (!this.clienteActual.telefono) this.clienteActual.telefono = '';
       if (!this.clienteActual.correo) this.clienteActual.correo = '';
 
       this.cdr.detectChanges();
 
     } catch (e) {
-      console.error("❌ Error de red en la petición:", e);
+      console.error('Error de red:', e);
       alert('Fallo al conectar con la API.');
     } finally {
-      this.buscandoApi = false; 
+      this.buscandoApi = false;
     }
   }
 
   async guardarCliente() {
     if (!this.clienteActual.documento_identidad || !this.clienteActual.nombre_razon_social) {
-      alert("El DNI/RUC y el Nombre/Razón Social son obligatorios.");
+      alert('El DNI/RUC y el Nombre/Razón Social son obligatorios.');
       return;
     }
 
-    const docDuplicado = this.clientes.some(c => 
-      c.documento_identidad === this.clienteActual.documento_identidad && c.id !== this.clienteActual.id
+    const docDuplicado = this.clientes.some(
+      c => c.documento_identidad === this.clienteActual.documento_identidad && c.id !== this.clienteActual.id
     );
 
     if (docDuplicado) {
@@ -155,17 +159,19 @@ export class ClientesComponent implements OnInit {
 
     if (this.clienteOriginal === JSON.stringify(this.clienteActual)) {
       this.clienteDialog = false;
-      return; 
+      return;
     }
 
     this.enviando = true;
     try {
-      await this.supabaseSvc.guardarCliente(this.clienteActual);
+      // Asigna empresa_id antes de guardar
+      const payload = { ...this.clienteActual, empresa_id: this.empresaActiva.id };
+      await this.supabaseSvc.guardarCliente(payload);
       this.clienteDialog = false;
-      await this.cargarClientes(); 
+      await this.cargarClientes();
     } catch (error) {
-      console.error("Error al guardar:", error);
-      alert("Hubo un error al guardar el cliente.");
+      console.error('Error al guardar:', error);
+      alert('Hubo un error al guardar el cliente.');
     } finally {
       this.enviando = false;
     }
@@ -176,16 +182,20 @@ export class ClientesComponent implements OnInit {
       try {
         if (cliente.id) {
           await this.supabaseSvc.eliminarCliente(cliente.id);
-          await this.cargarClientes(); 
+          await this.cargarClientes();
         }
       } catch (error) {
-        console.error("Error al eliminar", error);
-        alert("Hubo un error al eliminar. Revisa que el cliente no tenga cotizaciones vinculadas.");
+        console.error('Error al eliminar:', error);
+        alert('Hubo un error al eliminar. Revisa que el cliente no tenga cotizaciones vinculadas.');
       }
     }
   }
 
   ocultarDialog() {
     this.clienteDialog = false;
+  }
+
+  private clienteVacio(): ICliente {
+    return { documento_identidad: '', nombre_razon_social: '', direccion: '', telefono: '', correo: '' };
   }
 }

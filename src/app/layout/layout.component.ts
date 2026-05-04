@@ -1,10 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-// Importaciones estrictas de Ruteo
 import { RouterLink, RouterLinkActive, RouterOutlet, Router } from '@angular/router';
-
 import { ButtonModule } from 'primeng/button';
-import { AvatarModule } from 'primeng/avatar'; 
+import { AvatarModule } from 'primeng/avatar';
+import { SupabaseService } from '../services/supabase.service';
 
 @Component({
   selector: 'app-layout',
@@ -15,30 +14,27 @@ import { AvatarModule } from 'primeng/avatar';
 export class LayoutComponent implements OnInit {
   menuAbierto: boolean = false;
   usuarioActivo: string = '';
-  
-  // 👇 AQUÍ ESTÁ LA VARIABLE DECLARADA CORRECTAMENTE A NIVEL DE CLASE
-  empresaActiva: any; 
-  
-  constructor(private router: Router) {}
-  
+  empresaActiva: any;
+  esAdmin: boolean = false;
+
+  constructor(private router: Router, private supabaseSvc: SupabaseService) {}
+
   ngOnInit() {
-    this.usuarioActivo = localStorage.getItem('usuario_conectado') || 'Usuario Desconocido';
-    
-    // Leemos la empresa que elegimos en el selector para mostrarla en el menú
+    this.usuarioActivo = localStorage.getItem('usuario_email') || 'Usuario';
+
+    // Rol viene de la BD, guardado en localStorage al hacer login
+    const rol = localStorage.getItem('usuario_rol') || 'vendedor';
+    this.esAdmin = rol === 'admin';
+
     const datosEmpresa = localStorage.getItem('empresa_activa');
     this.empresaActiva = datosEmpresa ? JSON.parse(datosEmpresa) : null;
   }
 
-  toggleMenu() {
-    this.menuAbierto = !this.menuAbierto;
-  }
+  toggleMenu() { this.menuAbierto = !this.menuAbierto; }
+  cerrarMenu()  { this.menuAbierto = false; }
 
-  cerrarMenu() {
-    this.menuAbierto = false;
-  }
-
-  cerrarSesion() {
-    localStorage.removeItem('usuario_conectado');
+  async cerrarSesion() {
+    await this.supabaseSvc.cerrarSesion();
     localStorage.clear();
     this.router.navigate(['/login']);
   }
