@@ -30,7 +30,7 @@
                 <td class="font-bold text-500">{{ producto.codigo_sku || 'S/C' }}</td>
                 <td>{{ producto.descripcion }}</td>
                 <td>{{ producto.unidad }}</td>
-                <td class="font-bold text-green-600">S/ {{ producto.precio_unitario_base | number:'1.2-2' }}</td>
+                <td class="font-bold" style="color: #16a34a;">S/ {{ producto.precio_unitario_base | number:'1.2-2' }}</td>
                 <td class="text-center">
                     <button pButton pRipple icon="pi pi-pencil" class="p-button-rounded p-button-info p-button-text mr-2" (click)="editarProducto(producto)"></button>
                     <button pButton pRipple icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-text" (click)="borrarProducto(producto)"></button>

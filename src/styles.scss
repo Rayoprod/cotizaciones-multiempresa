@@ -1,11 +1,10 @@
-/* Deja solo los iconos que suelen ser compatibles */
 @import "primeicons/primeicons.css";
-@import "tailwindcss";
+
 body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
-/* ── Skeleton shimmer ── */
+
 @keyframes shimmer {
   0%   { background-position: -800px 0; }
   100% { background-position:  800px 0; }

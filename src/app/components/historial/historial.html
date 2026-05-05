@@ -28,7 +28,6 @@
              [sortField]="'fecha'" [sortOrder]="-1"
              styleClass="p-datatable-sm">
 
-      <!-- Caption con buscador -->
       <ng-template pTemplate="caption">
         <div class="flex flex-column md:flex-row align-items-start md:align-items-center
                     justify-content-between gap-3 p-2">
@@ -44,13 +43,12 @@
         </div>
       </ng-template>
 
-      <!-- Cabecera -->
       <ng-template pTemplate="header">
         <tr>
-          <th pSortableColumn="fecha"    style="width:130px">
+          <th pSortableColumn="fecha" style="width:130px">
             Fecha <p-sortIcon field="fecha" />
           </th>
-          <th pSortableColumn="folio"    style="width:150px">
+          <th pSortableColumn="folio" style="width:150px">
             Folio <p-sortIcon field="folio" />
           </th>
           <th>Cliente</th>
@@ -63,7 +61,6 @@
         </tr>
       </ng-template>
 
-      <!-- Filas -->
       <ng-template pTemplate="body" let-cot>
         <tr>
           <!-- Fecha -->
@@ -75,8 +72,8 @@
 
           <!-- Folio -->
           <td>
-            <span class="font-mono text-xs font-bold text-primary
-                         bg-primary-50 px-2 py-1 border-round">
+            <span class="font-mono text-xs font-bold text-primary border-round px-2 py-1"
+                  style="background: color-mix(in srgb, var(--primary-color) 10%, white);">
               {{ cot.folio }}
             </span>
           </td>
@@ -98,12 +95,13 @@
 
           <!-- Empresa -->
           <td class="hidden lg:table-cell">
-            <span class="text-xs text-600 bg-gray-100 px-2 py-1 border-round">
+            <span class="text-xs text-600 border-round px-2 py-1"
+                  style="background:#f3f4f6;">
               {{ getNombreEmpresa(cot.empresa_id) }}
             </span>
           </td>
 
-          <!-- Estado con selector inline -->
+          <!-- Estado -->
           <td class="text-center">
             <p-select
               [options]="opcionesEstado"
@@ -121,7 +119,7 @@
             </p-select>
           </td>
 
-          <!-- Descargar PDF -->
+          <!-- PDF -->
           <td class="text-center">
             <p-button icon="pi pi-file-pdf" [text]="true" [rounded]="true"
                       severity="danger" size="small" pTooltip="Descargar PDF"
@@ -131,7 +129,6 @@
         </tr>
       </ng-template>
 
-      <!-- Empty state -->
       <ng-template pTemplate="emptymessage">
         <tr>
           <td colspan="7">

@@ -1,5 +1,4 @@
-
-<div class="min-h-screen bg-gray-50 flex p-3 md:p-5">
+<div class="min-h-screen flex p-3 md:p-5" style="background-color: #f8f9fa;">
 
   <div class="m-auto w-full py-4" style="max-width: 900px;">
 
@@ -35,22 +34,22 @@
           <p class="text-500 text-base m-0">Por favor espera un momento...</p>
         </div>
 
-        <!-- Skeleton de tarjetas mientras carga -->
+        <!-- Skeleton -->
         <div class="grid formgrid m-0 justify-content-center w-full mt-3">
           <div class="col-12 md:col-6 p-2 md:p-3" *ngFor="let s of [1,2]">
             <div class="bg-white border-round-2xl shadow-1 p-4 md:p-5">
               <div class="flex justify-content-between align-items-start mb-4">
-                <div class="border-round-xl bg-gray-100 animation-pulse"
-                     style="width:70px; height:70px;"></div>
-                <div class="bg-gray-100 border-round animation-pulse"
-                     style="width:24px; height:24px;"></div>
+                <div class="border-round-xl animation-pulse"
+                     style="width:70px; height:70px; background-color:#e9ecef;"></div>
+                <div class="border-round animation-pulse"
+                     style="width:24px; height:24px; background-color:#e9ecef;"></div>
               </div>
-              <div class="bg-gray-100 border-round animation-pulse mb-3"
-                   style="height:28px; width:70%;"></div>
-              <div class="bg-gray-100 border-round animation-pulse mb-2"
-                   style="height:16px; width:50%;"></div>
-              <div class="bg-gray-100 border-round animation-pulse"
-                   style="height:14px; width:80%;"></div>
+              <div class="border-round animation-pulse mb-3"
+                   style="height:28px; width:70%; background-color:#e9ecef;"></div>
+              <div class="border-round animation-pulse mb-2"
+                   style="height:16px; width:50%; background-color:#e9ecef;"></div>
+              <div class="border-round animation-pulse"
+                   style="height:14px; width:80%; background-color:#e9ecef;"></div>
             </div>
           </div>
         </div>
@@ -58,7 +57,7 @@
       </div>
     </ng-container>
 
-    <!-- ESTADO: SIN EMPRESAS ASIGNADAS -->
+    <!-- ESTADO: SIN EMPRESAS -->
     <ng-container *ngIf="!cargando && empresas.length === 0">
       <div class="flex flex-column align-items-center justify-content-center gap-3 py-8 fadein animation-duration-500">
         <div class="inline-flex align-items-center justify-content-center bg-orange-50 p-4 border-circle">
@@ -80,7 +79,6 @@
 
     <!-- ESTADO: EMPRESAS CARGADAS -->
     <ng-container *ngIf="!cargando && empresas.length > 0">
-
       <div class="grid formgrid m-0 justify-content-center fadein animation-duration-500">
         <div class="col-12 md:col-6 p-2 md:p-3" *ngFor="let emp of empresas">
 
@@ -131,7 +129,6 @@
           </div>
         </div>
       </div>
-
     </ng-container>
 
     <!-- BOTÓN CERRAR SESIÓN -->

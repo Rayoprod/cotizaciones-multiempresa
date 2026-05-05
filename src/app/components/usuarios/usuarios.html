@@ -126,7 +126,8 @@
         <div class="flex align-items-center justify-content-center border-circle flex-shrink-0"
              [style]="{'width':'44px','height':'44px',
                        'background': u.rol === 'admin' ? '#01696f22' : '#6366f122'}">
-          <i [class]="u.rol === 'admin' ? 'pi pi-shield text-primary' : 'pi pi-user text-indigo-400'"></i>
+          <i [class]="u.rol === 'admin' ? 'pi pi-shield text-primary' : 'pi pi-user'"
+             [style.color]="u.rol === 'admin' ? 'var(--primary-color)' : '#6366f1'"></i>
         </div>
         <div class="flex-1 overflow-hidden">
           <p class="font-bold text-900 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap">
@@ -175,12 +176,10 @@
   </ng-template>
 
   <div class="flex flex-column gap-2 py-2">
-
     <p class="text-sm text-color-secondary m-0 mb-2">
       Selecciona las empresas a las que este usuario puede acceder:
     </p>
 
-    <!-- Lista de empresas con checkbox -->
     <div *ngFor="let emp of todasLasEmpresas"
          class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer transition-colors"
          [class.surface-ground]="estaAsignada(emp.id)"
@@ -189,7 +188,6 @@
          style="border: 1px solid var(--p-content-border-color)"
          (click)="toggleEmpresa(emp.id)">
 
-      <!-- Logo o icono -->
       <div class="flex align-items-center justify-content-center border-round flex-shrink-0 overflow-hidden"
            style="width:40px;height:40px;background:#f8f9fa;border:1px solid #e5e7eb">
         <img *ngIf="emp.ruta_logo" [src]="emp.ruta_logo"
@@ -197,13 +195,11 @@
         <i *ngIf="!emp.ruta_logo" class="pi pi-building text-400"></i>
       </div>
 
-      <!-- Info -->
       <div class="flex-1 overflow-hidden">
         <p class="font-semibold text-900 m-0">{{ emp.nombre_comercial }}</p>
         <p class="text-xs text-color-secondary m-0">{{ emp.ruc }}</p>
       </div>
 
-      <!-- Check -->
       <i [class]="estaAsignada(emp.id)
            ? 'pi pi-check-circle text-primary text-xl'
            : 'pi pi-circle text-400 text-xl'">
@@ -249,8 +245,8 @@
       <p-select [options]="rolesOpciones" [(ngModel)]="nuevoRol"
                 optionLabel="label" optionValue="value" styleClass="w-full" />
     </div>
-    <div *ngIf="errorModal" class="border-round p-3 text-red-600 text-sm flex gap-2 align-items-center"
-         style="background:#fff5f5">
+    <div *ngIf="errorModal" class="border-round p-3 text-sm flex gap-2 align-items-center"
+         style="background:#fff5f5; color:#dc2626;">
       <i class="pi pi-exclamation-circle"></i>{{ errorModal }}
     </div>
   </div>
