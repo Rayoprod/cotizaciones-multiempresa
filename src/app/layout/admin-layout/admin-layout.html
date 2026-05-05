@@ -8,11 +8,8 @@
   </div>
 
   <!-- SIDEBAR -->
-  <!-- FIX: en móvil = fixed superpuesto | en desktop = relative dentro del flex -->
-  <div class="bg-gray-900 flex flex-column flex-shrink-0 h-full transition-all transition-duration-300"
-       [ngClass]="sidebarAbierto()
-         ? 'flex fixed top-0 left-0 h-full'
-         : 'hidden md:flex md:relative'"
+  <div class="bg-gray-900 flex-column flex-shrink-0 h-full transition-all transition-duration-300"
+       [ngClass]="sidebarAbierto() ? 'flex fixed top-0 left-0 h-full' : 'hidden md:flex md:relative'"
        style="width: 17rem; z-index: 999;">
 
     <!-- Cabecera -->
