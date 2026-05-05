@@ -1,8 +1,15 @@
-import { Component, inject, signal } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AuthService } from '../../services/auth';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
+
+import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
+import { DrawerModule } from 'primeng/drawer';
+import { DividerModule } from 'primeng/divider';
+
+import { AuthService } from '../../services/auth';
+
 interface NavItem {
   label: string;
   icon: string;
@@ -12,34 +19,57 @@ interface NavItem {
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, AvatarModule
-    
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    ButtonModule,
+    AvatarModule,
+    DrawerModule,
+    DividerModule
   ],
-  templateUrl: './admin-layout.html',
-  styleUrl: './admin-layout.scss'
+  templateUrl: './admin-layout.html'
 })
 export class AdminLayoutComponent {
-
-  private auth   = inject(AuthService);
+  private auth = inject(AuthService);
   private router = inject(Router);
 
-  sidebarAbierto = signal(false);
-  usuarioNombre  = signal<string>('');
+  sidebarAbierto = false;
+  usuarioNombre = '';
 
   readonly navItems: NavItem[] = [
-    { label: 'Empresas', icon: 'pi pi-building',  path: '/admin/empresas' },
-    { label: 'Usuarios', icon: 'pi pi-user-edit', path: '/admin/usuarios' },
+    { label: 'Empresas', icon: 'pi pi-building', path: '/admin/empresas' },
+    { label: 'Usuarios', icon: 'pi pi-user-edit', path: '/admin/usuarios' }
   ];
 
   constructor() {
     this.auth.obtenerSesion().then(res => {
       const user = res?.data?.session?.user;
-      this.usuarioNombre.set(user?.email ?? 'Admin');
+      this.usuarioNombre = user?.email ?? 'Admin';
     });
+
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(() => {
+        this.sidebarAbierto = false;
+      });
   }
 
-  toggleSidebar() { this.sidebarAbierto.update(v => !v); }
-  cerrarMenu()    { this.sidebarAbierto.set(false); }
-  operarEmpresa() { this.router.navigate(['/admin/selector']); }
-  logout()        { this.auth.logout(); }
+  toggleSidebar() {
+    this.sidebarAbierto = !this.sidebarAbierto;
+  }
+
+  cerrarMenu() {
+    this.sidebarAbierto = false;
+  }
+
+  operarEmpresa() {
+    this.cerrarMenu();
+    this.router.navigate(['/admin/selector']);
+  }
+
+  logout() {
+    this.auth.logout();
+  }
 }

@@ -332,32 +332,44 @@ export class CotizadorComponent implements OnInit {
 
       const folioSeguro = await this.supabaseSvc.obtenerSiguienteFolio(this.empresaActiva.id);
 
-      const cotizacionParaBD: ICotizacion = {
-        folio:             folioSeguro,
-        fecha:             new Date().toISOString(),
-        empresa_id:        this.empresaActiva.id,
-        cliente_nombre:    this.clienteNombre,
-        cliente_documento: this.clienteDocumento,
-        cliente_telefono:  this.clienteTelefono,
-        cliente_direccion: this.clienteDireccion,
-        cliente_correo:    this.clienteCorreo,
-        subtotal:          this.subtotalGeneral,
-        igv:               this.igvTotal,
-        total:             this.totalFinal,
-        estado:            'PENDIENTE',
-        items:             itemsValidos,
-        vendedor:          sessionStorage.getItem('usuario_email') ?? '',  // FIX: sin session
-        lugar_entrega:     this.lugarEntrega,
-        observaciones:     this.clienteObservaciones
-      };
+      const cotizacionParaBD: any = {
+  folio: folioSeguro,
+  fecha: new Date().toISOString(),
+  empresa_id: this.empresaActiva.id,         // ← columna real: empresa_id
+  cliente_nombre: this.clienteNombre,
+  cliente_documento: this.clienteDocumento,
+  cliente_telefono: this.clienteTelefono || null,
+  cliente_direccion: this.clienteDireccion || null,
+  cliente_correo: this.clienteCorreo || null,
+  subtotal: this.subtotalGeneral,
+  igv: this.igvTotal,
+  total: this.totalFinal,
+  estado: 'PENDIENTE',
+  items: itemsValidos,
+  vendedor: localStorage.getItem('usuarioemail'),
+  lugar_entrega: this.lugarEntrega,
+  observaciones: this.clienteObservaciones || null
+};
 
-      await this.supabaseSvc.guardarCotizacion(cotizacionParaBD);
-      await this.pdfSvc.generarYDescargarCotizacion(
-        cotizacionParaBD,
-        this.empresaActiva,
-        this.lugarEntrega,
-        this.condiciones
-      );
+await this.supabaseSvc.guardarCotizacion(cotizacionParaBD);
+
+// Adaptador para el PDF service
+const cotizacionParaPdf = {
+  ...cotizacionParaBD,
+  clientenombre: cotizacionParaBD.cliente_nombre,
+  clientedocumento: cotizacionParaBD.cliente_documento,
+  clientetelefono: cotizacionParaBD.cliente_telefono,
+  clientedireccion: cotizacionParaBD.cliente_direccion,
+  clientecorreo: cotizacionParaBD.cliente_correo,
+  lugarentrega: cotizacionParaBD.lugar_entrega
+};
+
+await this.pdfSvc.generarYDescargarCotizacion(
+  cotizacionParaPdf,
+  this.empresaActiva,
+  this.lugarEntrega,
+  this.condiciones
+);
 
       this.messageService.add({
         severity: 'success', summary: '¡Listo!', detail: 'Cotización generada con éxito.'

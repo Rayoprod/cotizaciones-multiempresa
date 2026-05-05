@@ -1,141 +1,160 @@
-<div class="flex h-screen overflow-hidden" style="background-color: #f8f9fa;">
+<div class="flex h-screen overflow-hidden">
 
-  <!-- OVERLAY MÓVIL -->
-  <div *ngIf="menuAbierto"
-       class="md:hidden fixed inset-0 bg-black-alpha-60"
-       style="z-index: 998;"
-       (click)="cerrarMenu()">
-  </div>
-
-  <!-- SIDEBAR -->
-  <div class="flex-column shadow-8 transition-transform transition-duration-300"
-       [ngClass]="menuAbierto ? 'flex fixed top-0 left-0 h-full' : 'hidden md:flex relative h-full'"
-       style="width: 17rem; z-index: 999; background-color: #1e1e2e;">
-
-    <!-- CABECERA -->
-    <div class="flex align-items-center justify-content-between p-4"
-         style="border-bottom: 1px solid #2e2e3e;">
+  <!-- ================= SIDEBAR DESKTOP (Dark Theme Admin) ================= -->
+  <aside class="hidden md:flex md:flex-column h-full shadow-2" style="width: 18rem; background: #1f2937; color: white;">
+    
+    <!-- Cabecera -->
+    <div class="p-4" style="border-bottom: 1px solid rgba(255,255,255,.08);">
       <div class="flex align-items-center gap-3">
-        <div class="bg-primary flex align-items-center justify-content-center border-round-lg shadow-2"
-             style="width: 40px; height: 40px;">
-          <i class="pi pi-briefcase text-white text-xl"></i>
-        </div>
+        <p-avatar icon="pi pi-briefcase" shape="circle" [style]="{ background: 'var(--p-primary-color)', color: 'var(--p-primary-contrast-color, #ffffff)' }"></p-avatar>
         <div class="flex flex-column">
-          <span class="text-xl font-bold" style="color: #ffffff;">COTIZADOR</span>
-          <span class="text-xs font-bold uppercase" style="color: #888;">
+          <span class="font-bold text-lg text-white">Cotizador</span>
+          <span style="color: rgba(255,255,255,.7); font-size: .85rem;">
             {{ empresaActiva?.nombre_comercial || 'Administración' }}
           </span>
         </div>
       </div>
-      <button pButton icon="pi pi-times"
-              class="p-button-rounded p-button-text md:hidden p-0"
-              style="color: #aaa; z-index: 1000; position: relative;"
-              (click)="cerrarMenu()">
-      </button>
     </div>
 
-    <!-- NAVEGACIÓN -->
-    <div class="flex-grow-1 overflow-y-auto px-3 py-4 flex flex-column gap-2">
+    <!-- Menú -->
+    <div class="flex-1 overflow-y-auto p-3">
+      <div class="mb-3" style="color: rgba(255,255,255,.6); font-size: .75rem; font-weight: 700; text-transform: uppercase;">
+        Ventas y cotizaciones
+      </div>
 
-      <span class="text-xs font-bold uppercase pl-2 mb-2" style="color: #666;">
-        Ventas & Cotizaciones
-      </span>
+      <div class="flex flex-column gap-2">
+        <a routerLink="/cotizador" routerLinkActive #rlaCot="routerLinkActive" [routerLinkActiveOptions]="{ exact: false }"
+           class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg border-1 transition-duration-200"
+           [ngClass]="rlaCot.isActive ? 'border-transparent font-bold shadow-2' : 'border-transparent text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white'"
+           [style.background]="rlaCot.isActive ? 'var(--p-primary-color)' : ''"
+           [style.color]="rlaCot.isActive ? 'var(--p-primary-contrast-color, #ffffff)' : ''">
+          <i class="pi pi-plus-circle"></i>
+          <span>Nueva cotización</span>
+        </a>
 
-      <a routerLink="/cotizador"
-   routerLinkActive #rlaCot="routerLinkActive"
-   (click)="cerrarMenu()"
-   class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none transition-colors transition-duration-200"
-   [style.background-color]="rlaCot.isActive ? 'var(--primary-color)' : 'transparent'"
-   [style.color]="rlaCot.isActive ? '#fff' : '#ccc'">
-  <i class="pi pi-plus-circle text-lg"></i>
-  <span class="font-bold">Nueva Cotización</span>
-</a>
+        <a routerLink="/historial" routerLinkActive #rlaHis="routerLinkActive" [routerLinkActiveOptions]="{ exact: false }"
+           class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg border-1 transition-duration-200"
+           [ngClass]="rlaHis.isActive ? 'border-transparent font-bold shadow-2' : 'border-transparent text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white'"
+           [style.background]="rlaHis.isActive ? 'var(--p-primary-color)' : ''"
+           [style.color]="rlaHis.isActive ? 'var(--p-primary-contrast-color, #ffffff)' : ''">
+          <i class="pi pi-book"></i>
+          <span>Historial de ventas</span>
+        </a>
 
-<a routerLink="/historial"
-   routerLinkActive #rlaHis="routerLinkActive"
-   (click)="cerrarMenu()"
-   class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none transition-colors transition-duration-200"
-   [style.background-color]="rlaHis.isActive ? 'var(--primary-color)' : 'transparent'"
-   [style.color]="rlaHis.isActive ? '#fff' : '#ccc'">
-  <i class="pi pi-book text-lg"></i>
-  <span class="font-bold">Historial de Ventas</span>
-</a>
+        <a routerLink="/productos" routerLinkActive #rlaPro="routerLinkActive" [routerLinkActiveOptions]="{ exact: false }"
+           class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg border-1 transition-duration-200"
+           [ngClass]="rlaPro.isActive ? 'border-transparent font-bold shadow-2' : 'border-transparent text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white'"
+           [style.background]="rlaPro.isActive ? 'var(--p-primary-color)' : ''"
+           [style.color]="rlaPro.isActive ? 'var(--p-primary-contrast-color, #ffffff)' : ''">
+          <i class="pi pi-box"></i>
+          <span>Catálogo / Productos</span>
+        </a>
 
-<a routerLink="/productos"
-   routerLinkActive #rlaPro="routerLinkActive"
-   (click)="cerrarMenu()"
-   class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none transition-colors transition-duration-200"
-   [style.background-color]="rlaPro.isActive ? 'var(--primary-color)' : 'transparent'"
-   [style.color]="rlaPro.isActive ? '#fff' : '#ccc'">
-  <i class="pi pi-box text-lg"></i>
-  <span class="font-medium">Catálogo / Productos</span>
-</a>
+        <a routerLink="/clientes" routerLinkActive #rlaCli="routerLinkActive" [routerLinkActiveOptions]="{ exact: false }"
+           class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg border-1 transition-duration-200"
+           [ngClass]="rlaCli.isActive ? 'border-transparent font-bold shadow-2' : 'border-transparent text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white'"
+           [style.background]="rlaCli.isActive ? 'var(--p-primary-color)' : ''"
+           [style.color]="rlaCli.isActive ? 'var(--p-primary-contrast-color, #ffffff)' : ''">
+          <i class="pi pi-users"></i>
+          <span>Directorio clientes</span>
+        </a>
 
-<a routerLink="/clientes"
-   routerLinkActive #rlaCli="routerLinkActive"
-   (click)="cerrarMenu()"
-   class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none transition-colors transition-duration-200"
-   [style.background-color]="rlaCli.isActive ? 'var(--primary-color)' : 'transparent'"
-   [style.color]="rlaCli.isActive ? '#fff' : '#ccc'">
-  <i class="pi pi-users text-lg"></i>
-  <span class="font-medium">Directorio Clientes</span>
-</a>
+        <p-divider *ngIf="esAdmin"></p-divider>
+
+        <button *ngIf="esAdmin" pButton type="button" icon="pi pi-arrow-left" label="Panel Admin" 
+                severity="secondary" class="w-full text-left" (click)="volverAlAdmin()"></button>
+      </div>
     </div>
 
-    <!-- VOLVER AL ADMIN (solo admin) -->
-    <ng-container *ngIf="esAdmin">
-      <div class="mx-3 my-2" style="border-top: 1px solid #2e2e3e;"></div>
-      <button (click)="volverAlAdmin()"
-              class="flex align-items-center gap-3 p-3 mx-3 border-round-lg cursor-pointer border-none w-auto transition-colors transition-duration-200"
-              style="background: transparent; color: #facc15;">
-        <i class="pi pi-arrow-left"></i>
-        <span class="font-medium text-sm">Panel Admin</span>
-      </button>
-    </ng-container>
-
-    <!-- FOOTER -->
-    <div class="p-3" style="border-top: 1px solid #2e2e3e; background-color: #1e1e2e;">
-      <div class="flex align-items-center gap-3 mb-3 p-2 border-round-lg"
-           style="background-color: #2e2e3e;">
-        <p-avatar icon="pi pi-user" styleClass="bg-primary text-white font-bold" shape="circle" />
+    <!-- Perfil Inferior -->
+    <div class="p-3" style="border-top: 1px solid rgba(255,255,255,.08);">
+      <div class="flex align-items-center gap-3 mb-3 p-2 border-round" style="background: rgba(255,255,255,.06);">
+        <p-avatar icon="pi pi-user" shape="circle" [style]="{ background: 'var(--p-primary-color)', color: 'var(--p-primary-contrast-color, #ffffff)' }"></p-avatar>
         <div class="flex flex-column overflow-hidden">
-          <span class="font-bold text-sm" style="color: #ddd;">
-            {{ esAdmin ? 'Administrador' : 'Vendedor' }}
-          </span>
-          <span class="text-xs white-space-nowrap text-overflow-ellipsis overflow-hidden"
-                style="color: #888;"
-                [title]="usuarioActivo">
+          <span class="font-medium text-white">{{ esAdmin ? 'Administrador' : 'Vendedor' }}</span>
+          <span class="white-space-nowrap overflow-hidden text-overflow-ellipsis" style="color: rgba(255,255,255,.7); font-size: .8rem;">
             {{ usuarioActivo }}
           </span>
         </div>
       </div>
-      <button pButton icon="pi pi-sign-out" label="Cerrar Sesión"
-              class="p-button-outlined p-button-danger w-full font-bold"
-              (click)="cerrarSesion()">
-      </button>
+      <button pButton type="button" icon="pi pi-sign-out" label="Cerrar sesión" severity="danger" class="w-full" (click)="cerrarSesion()"></button>
     </div>
+  </aside>
 
-  </div>
-
-  <!-- ÁREA PRINCIPAL -->
-  <div class="flex-1 flex flex-column h-full relative overflow-hidden">
-
-    <!-- TOPBAR MÓVIL -->
-    <div class="md:hidden flex-shrink-0 sticky top-0 h-4rem surface-0 border-bottom-1 surface-border shadow-2
-                flex align-items-center px-3" style="z-index: 900;">
-      <button pButton icon="pi pi-bars"
-              class="p-button-text p-button-secondary text-2xl p-0"
-              (click)="toggleMenu()">
-      </button>
-      <span class="ml-3 font-bold text-900 text-xl">
-        {{ empresaActiva?.nombre_comercial || 'Administración' }}
+  <!-- ================= MAIN CONTENT ================= -->
+  <div class="flex-1 flex flex-column min-w-0 overflow-hidden">
+    <!-- Topbar Móvil (Blanca igual que Admin) -->
+    <div class="md:hidden flex align-items-center gap-2 px-3" style="height: 4rem; background: white; border-bottom: 1px solid #e5e7eb;">
+      <button pButton type="button" icon="pi pi-bars" text severity="secondary" (click)="toggleMenu()"></button>
+      <span class="font-bold text-lg">
+        {{ empresaActiva?.nombre_comercial || 'Cotizador' }}
       </span>
     </div>
-
-    <!-- CONTENIDO -->
-    <div class="flex-1 overflow-auto p-2 md:p-4">
+    
+    <!-- Contenedor Gris Claro igual que Admin -->
+    <main class="flex-1 overflow-auto p-2 md:p-4" style="background: #f8fafc;">
       <router-outlet></router-outlet>
-    </div>
-
+    </main>
   </div>
 </div>
+
+<!-- ================= DRAWER MÓVIL (Clonado de Admin) ================= -->
+<p-drawer [(visible)]="menuAbierto" position="left" [modal]="true" [dismissible]="true" [blockScroll]="true" header="Menú" (onHide)="cerrarMenu()">
+  <div class="flex flex-column h-full">
+    <div class="flex align-items-center gap-3 mb-4">
+      <p-avatar icon="pi pi-briefcase" shape="circle" [style]="{ background: 'var(--p-primary-color)', color: 'var(--p-primary-contrast-color, #ffffff)' }"></p-avatar>
+      <div class="flex flex-column">
+        <span class="font-bold text-900">{{ empresaActiva?.nombre_comercial || 'Cotizador' }}</span>
+        <span style="font-size: .8rem; color: #6b7280;">{{ esAdmin ? 'Administrador' : 'Vendedor' }}</span>
+      </div>
+    </div>
+
+    <div class="flex flex-column gap-2">
+      <a routerLink="/cotizador" routerLinkActive #rlaCotM="routerLinkActive" [routerLinkActiveOptions]="{ exact: false }"
+         class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg border-1 transition-duration-200"
+         [ngClass]="rlaCotM.isActive ? 'border-transparent font-bold shadow-2' : 'surface-100 border-transparent text-color hover:surface-200'"
+         [style.background]="rlaCotM.isActive ? 'var(--p-primary-color)' : ''"
+         [style.color]="rlaCotM.isActive ? 'var(--p-primary-contrast-color, #ffffff)' : ''" (click)="cerrarMenu()">
+        <i class="pi pi-plus-circle"></i><span>Nueva cotización</span>
+      </a>
+
+      <a routerLink="/historial" routerLinkActive #rlaHisM="routerLinkActive" [routerLinkActiveOptions]="{ exact: false }"
+         class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg border-1 transition-duration-200"
+         [ngClass]="rlaHisM.isActive ? 'border-transparent font-bold shadow-2' : 'surface-100 border-transparent text-color hover:surface-200'"
+         [style.background]="rlaHisM.isActive ? 'var(--p-primary-color)' : ''"
+         [style.color]="rlaHisM.isActive ? 'var(--p-primary-contrast-color, #ffffff)' : ''" (click)="cerrarMenu()">
+        <i class="pi pi-book"></i><span>Historial de ventas</span>
+      </a>
+
+      <a routerLink="/productos" routerLinkActive #rlaProM="routerLinkActive" [routerLinkActiveOptions]="{ exact: false }"
+         class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg border-1 transition-duration-200"
+         [ngClass]="rlaProM.isActive ? 'border-transparent font-bold shadow-2' : 'surface-100 border-transparent text-color hover:surface-200'"
+         [style.background]="rlaProM.isActive ? 'var(--p-primary-color)' : ''"
+         [style.color]="rlaProM.isActive ? 'var(--p-primary-contrast-color, #ffffff)' : ''" (click)="cerrarMenu()">
+        <i class="pi pi-box"></i><span>Catálogo / Productos</span>
+      </a>
+
+      <a routerLink="/clientes" routerLinkActive #rlaCliM="routerLinkActive" [routerLinkActiveOptions]="{ exact: false }"
+         class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg border-1 transition-duration-200"
+         [ngClass]="rlaCliM.isActive ? 'border-transparent font-bold shadow-2' : 'surface-100 border-transparent text-color hover:surface-200'"
+         [style.background]="rlaCliM.isActive ? 'var(--p-primary-color)' : ''"
+         [style.color]="rlaCliM.isActive ? 'var(--p-primary-contrast-color, #ffffff)' : ''" (click)="cerrarMenu()">
+        <i class="pi pi-users"></i><span>Directorio clientes</span>
+      </a>
+
+      <p-divider *ngIf="esAdmin"></p-divider>
+      <button *ngIf="esAdmin" pButton type="button" icon="pi pi-arrow-left" label="Panel Admin" severity="secondary" class="w-full" (click)="volverAlAdmin()"></button>
+    </div>
+
+    <div class="mt-auto pt-4">
+      <div class="flex align-items-center gap-3 mb-3 p-2 border-round" style="background: #f3f4f6;">
+        <p-avatar icon="pi pi-user" shape="circle" [style]="{ background: 'var(--p-primary-color)', color: 'var(--p-primary-contrast-color, #ffffff)' }"></p-avatar>
+        <div class="flex flex-column overflow-hidden">
+          <span class="font-medium">Administrador</span>
+          <span class="white-space-nowrap overflow-hidden text-overflow-ellipsis" style="font-size: .8rem; color: #6b7280;">{{ usuarioActivo }}</span>
+        </div>
+      </div>
+      <button pButton type="button" icon="pi pi-sign-out" label="Cerrar sesión" severity="danger" class="w-full" (click)="cerrarMenu(); cerrarSesion()"></button>
+    </div>
+  </div>
+</p-drawer>

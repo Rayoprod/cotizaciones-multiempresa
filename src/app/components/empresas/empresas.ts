@@ -150,12 +150,23 @@ export class EmpresasComponent implements OnInit {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  private vacia(): IEmpresa {
-    return {
-      id: '', nombre_comercial: '', razon_social: '', ruc: '',
-      color: '#01696f', direccion: '', telefonos: '', correo: '',
-      ruta_logo: '', ruta_firma: '', activa: true,
-      cuentas_bancarias: [], contacto_aprobacion: '', mostrar_cuentas: true
-    };
-  }
+ private vacia(): IEmpresa {
+  return {
+    id: '',
+    nombre_comercial: '',
+    razon_social: '',
+    ruc: '',
+    color: '01696f',
+    direccion: '',
+    telefonos: '',
+    correo: '',
+    ruta_logo: '',
+    ruta_firma: '',
+    activa: true,
+    cuentas_bancarias: [],
+    contacto_aprobacion: '',
+    mostrar_cuentas: true,
+    prefijo: ''
+  };
+}
 }

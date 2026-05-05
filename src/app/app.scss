@@ -1,4 +1,5 @@
 @import "primeicons/primeicons.css";
+@import "primeflex/primeflex.css"; /* <-- ESTA ES LA LÍNEA MÁGICA QUE FALTABA */
 
 /* Importante para PrimeNG 21 */
 @layer primeng;

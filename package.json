@@ -23,6 +23,7 @@
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "pdfmake": "^0.3.7",
+    "primeflex": "^4.0.0",
     "primeicons": "^7.0.0",
     "primeng": "^21.1.5",
     "rxjs": "~7.8.0",

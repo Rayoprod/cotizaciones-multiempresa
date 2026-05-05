@@ -1,98 +1,82 @@
-<div class="flex h-screen overflow-hidden" style="background-color: #f8f9fa;">
-
-  <!-- OVERLAY MÓVIL -->
-  <div *ngIf="sidebarAbierto()"
-       class="md:hidden fixed inset-0 bg-black-alpha-60"
-       style="z-index: 998;"
-       (click)="cerrarMenu()">
-  </div>
-
-  <!-- SIDEBAR -->
-  <div class="flex-column shadow-8 transition-transform transition-duration-300"
-       [ngClass]="sidebarAbierto() ? 'flex fixed top-0 left-0 h-full' : 'hidden md:flex relative h-full'"
-       style="width: 17rem; z-index: 999; background-color: #1e1e2e;">
-
-    <!-- CABECERA -->
-    <div class="flex align-items-center justify-content-between p-4"
-         style="border-bottom: 1px solid #2e2e3e;">
+<div class="flex h-screen overflow-hidden">
+  <aside
+    class="hidden md:flex md:flex-column h-full"
+    style="width: 18rem; background: #1f2937; color: white;"
+  >
+    <div class="p-4" style="border-bottom: 1px solid rgba(255,255,255,.08);">
       <div class="flex align-items-center gap-3">
-        <div class="bg-primary flex align-items-center justify-content-center border-round-lg shadow-2"
-             style="width: 40px; height: 40px;">
-          <i class="pi pi-shield-check text-white text-xl"></i>
-        </div>
+        <p-avatar
+          icon="pi pi-shield-check"
+          shape="circle"
+          styleClass="text-white"
+          [style]="{ background: '#3b82f6' }"
+        ></p-avatar>
 
         <div class="flex flex-column">
-          <span class="text-xl font-bold" style="color: #ffffff;">PANEL ADMIN</span>
-          <span class="text-xs font-bold uppercase" style="color: #888;">
-            {{ usuarioNombre() }}
-          </span>
+          <span class="font-bold text-lg text-white">Panel Admin</span>
+          <span style="color: rgba(255,255,255,.7); font-size: .85rem;">Administración</span>
         </div>
       </div>
-
-      <button pButton
-              icon="pi pi-times"
-              class="p-button-rounded p-button-text md:hidden p-0"
-              style="color: #aaa; z-index: 1000; position: relative;"
-              (click)="cerrarMenu()">
-      </button>
     </div>
 
-    <!-- NAVEGACIÓN -->
-    <div class="flex-grow-1 overflow-y-auto px-3 py-4 flex flex-column gap-2">
-
-      <span class="text-xs font-bold uppercase pl-2 mb-2" style="color: #666;">
+    <div class="flex-1 overflow-y-auto p-3">
+      <div
+        class="mb-3"
+        style="color: rgba(255,255,255,.6); font-size: .75rem; font-weight: 700; text-transform: uppercase;"
+      >
         Gestión
-      </span>
+      </div>
 
-      <a *ngFor="let item of navItems"
-         [routerLink]="item.path"
-         routerLinkActive
-         #rla="routerLinkActive"
-         [routerLinkActiveOptions]="{ exact: true }"
-         (click)="cerrarMenu()"
-         class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none"
-         [style]="rla.isActive
-            ? 'background:#059669;color:#fff;font-weight:700;box-shadow:0 8px 18px rgba(5,150,105,.22);'
-            : 'background:transparent;color:#ccc;'">
-        <i [class]="item.icon + ' text-lg'"></i>
-        <span class="font-bold">{{ item.label }}</span>
-      </a>
+      <div class="flex flex-column gap-2">
+        <a
+          *ngFor="let item of navItems"
+          [routerLink]="item.path"
+          routerLinkActive
+          #rlaDesktop="routerLinkActive"
+          [routerLinkActiveOptions]="{ exact: true }"
+          ariaCurrentWhenActive="page"
+          class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg border-1 transition-duration-200"
+          [ngClass]="rlaDesktop.isActive
+            ? 'bg-primary border-primary text-white shadow-2'
+            : 'border-transparent text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white'"
+        >
+          <i [class]="item.icon"></i>
+          <span class="font-medium">{{ item.label }}</span>
+        </a>
 
-      <div class="my-3" style="border-top: 1px solid #2e2e3e;"></div>
+        <p-divider></p-divider>
 
-      <span class="text-xs font-bold uppercase pl-2 mb-2" style="color: #666;">
-        Operación
-      </span>
-
-      <button (click)="operarEmpresa(); cerrarMenu()"
-              class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none w-full text-left border-none"
-              style="background: transparent; color: #ccc;"
-              type="button">
-        <i class="pi pi-briefcase text-lg"></i>
-        <span class="font-bold">Operar Empresa</span>
-        <i class="pi pi-arrow-right text-xs ml-auto" style="color: #888;"></i>
-      </button>
+        <button
+          pButton
+          type="button"
+          icon="pi pi-briefcase"
+          label="Operar empresa"
+          severity="success"
+          class="w-full"
+          (click)="operarEmpresa()"
+        ></button>
+      </div>
     </div>
 
-    <!-- FOOTER -->
-    <div class="p-3"
-         style="border-top: 1px solid #2e2e3e; background-color: #1e1e2e; flex-shrink: 0;">
-
-      <div class="flex align-items-center gap-3 mb-3 p-2 border-round-lg"
-           style="background-color: #2e2e3e;">
-        <div class="bg-primary text-white font-bold border-circle flex align-items-center justify-content-center"
-             style="width: 2.5rem; height: 2.5rem; min-width: 2.5rem;">
-          <i class="pi pi-user"></i>
-        </div>
+    <div class="p-3" style="border-top: 1px solid rgba(255,255,255,.08);">
+      <div
+        class="flex align-items-center gap-3 mb-3 p-2 border-round"
+        style="background: rgba(255,255,255,.06);"
+      >
+        <p-avatar
+          icon="pi pi-user"
+          shape="circle"
+          styleClass="text-white"
+          [style]="{ background: '#3b82f6' }"
+        ></p-avatar>
 
         <div class="flex flex-column overflow-hidden">
-          <span class="font-bold text-sm" style="color: #ddd;">
-            Administrador
-          </span>
-          <span class="text-xs white-space-nowrap text-overflow-ellipsis overflow-hidden"
-                style="color: #888;"
-                [title]="usuarioNombre()">
-            {{ usuarioNombre() }}
+          <span class="font-medium text-white">Administrador</span>
+          <span
+            class="white-space-nowrap overflow-hidden text-overflow-ellipsis"
+            style="color: rgba(255,255,255,.7); font-size: .8rem;"
+          >
+            {{ usuarioNombre }}
           </span>
         </div>
       </div>
@@ -100,38 +84,122 @@
       <button
         pButton
         type="button"
-        class="p-button-outlined p-button-danger w-full font-bold flex align-items-center justify-content-center gap-2"
-        style="min-height: 2.75rem;"
-        (click)="logout()">
-        <i class="pi pi-sign-out"></i>
-        <span>Cerrar Sesión</span>
-      </button>
+        icon="pi pi-sign-out"
+        label="Cerrar sesión"
+        severity="danger"
+        class="w-full"
+        (click)="logout()"
+      ></button>
+    </div>
+  </aside>
+
+  <div class="flex-1 flex flex-column min-w-0 overflow-hidden">
+    <div
+      class="md:hidden flex align-items-center gap-2 px-3"
+      style="height: 4rem; background: white; border-bottom: 1px solid #e5e7eb;"
+    >
+      <button
+        pButton
+        type="button"
+        icon="pi pi-bars"
+        text
+        severity="secondary"
+        (click)="toggleSidebar()"
+      ></button>
+
+      <span class="font-bold text-lg">Panel Admin</span>
     </div>
 
-  </div>
-
-  <!-- CONTENIDO PRINCIPAL -->
-  <div class="flex-1 flex flex-column h-full relative overflow-hidden">
-
-    <!-- TOPBAR MÓVIL -->
-    <div class="md:hidden flex-shrink-0 sticky top-0 h-4rem surface-0 border-bottom-1 surface-border shadow-2
-                flex align-items-center px-3"
-         style="z-index: 900;">
-      <button pButton
-              icon="pi pi-bars"
-              class="p-button-text p-button-secondary text-2xl p-0"
-              (click)="toggleSidebar()">
-      </button>
-
-      <span class="ml-3 font-bold text-900 text-xl">
-        PANEL ADMIN
-      </span>
-    </div>
-
-    <!-- CONTENIDO -->
-    <div class="flex-1 overflow-auto p-2 md:p-4">
+    <main class="flex-1 overflow-auto p-2 md:p-4" style="background: #f8fafc;">
       <router-outlet></router-outlet>
-    </div>
-
+    </main>
   </div>
 </div>
+
+<p-drawer
+  [visible]="sidebarAbierto"
+  position="left"
+  [modal]="true"
+  [dismissible]="true"
+  [blockScroll]="true"
+  header="Panel Admin"
+  (onHide)="cerrarMenu()"
+>
+  <div class="flex flex-column h-full">
+    <div class="flex align-items-center gap-3 mb-4">
+      <p-avatar
+        icon="pi pi-shield-check"
+        shape="circle"
+        styleClass="text-white"
+        [style]="{ background: '#3b82f6' }"
+      ></p-avatar>
+
+      <div class="flex flex-column">
+        <span class="font-bold">Administración</span>
+        <span style="font-size: .8rem; color: #6b7280;">{{ usuarioNombre }}</span>
+      </div>
+    </div>
+
+    <div class="flex flex-column gap-2">
+      <a
+        *ngFor="let item of navItems"
+        [routerLink]="item.path"
+        routerLinkActive
+        #rlaMobile="routerLinkActive"
+        [routerLinkActiveOptions]="{ exact: true }"
+        ariaCurrentWhenActive="page"
+        class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg border-1 transition-duration-200"
+        [ngClass]="rlaMobile.isActive
+          ? 'bg-primary border-primary text-white shadow-2'
+          : 'surface-100 border-transparent text-color hover:surface-200'"
+        (click)="cerrarMenu()"
+      >
+        <i [class]="item.icon"></i>
+        <span class="font-medium">{{ item.label }}</span>
+      </a>
+
+      <p-divider></p-divider>
+
+      <button
+        pButton
+        type="button"
+        icon="pi pi-briefcase"
+        label="Operar empresa"
+        severity="success"
+        class="w-full"
+        (click)="operarEmpresa()"
+      ></button>
+    </div>
+
+    <div class="mt-auto pt-4">
+      <div class="flex align-items-center gap-3 mb-3 p-2 border-round" style="background: #f3f4f6;">
+        <p-avatar
+          icon="pi pi-user"
+          shape="circle"
+          styleClass="text-white"
+          [style]="{ background: '#3b82f6' }"
+        ></p-avatar>
+
+        <div class="flex flex-column overflow-hidden">
+          <span class="font-medium">Administrador</span>
+          <span
+            class="white-space-nowrap overflow-hidden text-overflow-ellipsis"
+            style="font-size: .8rem; color: #6b7280;"
+          >
+            {{ usuarioNombre }}
+          </span>
+        </div>
+      </div>
+
+      <button
+        pButton
+        type="button"
+        icon="pi pi-sign-out"
+        label="Cerrar sesión"
+        severity="danger"
+        class="w-full"
+        (click)="logout()"
+      ></button>
+    </div>
+  </div>
+</p-drawer>

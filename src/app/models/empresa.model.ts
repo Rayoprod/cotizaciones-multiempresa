@@ -13,11 +13,11 @@ export interface IEmpresa {
   bg_class?: string;
   text_class?: string;
   border_hover?: string;
-  // ── Nuevas columnas ───────────────────────
   activa: boolean;
   cuentas_bancarias: ICuentaBancaria[];
   contacto_aprobacion?: string;
   mostrar_cuentas: boolean;
+  prefijo?: string;   // ← NUEVO
 }
 
 export interface ICuentaBancaria {

@@ -166,6 +166,30 @@
               <label class="font-semibold text-sm mb-2 block">RUC</label>
               <input pInputText [(ngModel)]="empresaActual.ruc" class="w-full" />
             </div>
+
+            <!-- Prefijo de cotización -->
+<div class="col-12 md:col-6 mt-2">
+  <label class="font-semibold text-sm mb-2 block">
+    Prefijo de Cotización
+    <span class="text-red-500">*</span>
+  </label>
+
+  <input
+    pInputText
+    [(ngModel)]="empresaActual.prefijo"
+    class="w-full"
+    placeholder="Ej: BVC, MIN, TRU"
+    maxlength="5"
+    style="text-transform: uppercase;"
+    (input)="empresaActual.prefijo = (empresaActual.prefijo || '').toUpperCase()"
+  />
+
+  <small class="text-color-secondary">
+    Máx. 5 letras. El folio quedará:
+    <strong>{{ empresaActual.prefijo || 'XXX' }}-00000001</strong>
+  </small>
+</div>
+
             <div class="col-12 md:col-6 mt-2">
               <label class="font-semibold text-sm mb-2 block">Teléfonos</label>
               <input pInputText [(ngModel)]="empresaActual.telefonos" class="w-full"

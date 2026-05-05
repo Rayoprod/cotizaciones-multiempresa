@@ -229,14 +229,20 @@ export class SupabaseService {
     return data;
   }
 
-  async obtenerSiguienteFolio(empresaId: string) {
-    const { data, error } = await this.client.rpc('get_next_folio_empresa', { empresa_id: empresaId });
-    if (error) {
-      console.error('Error al obtener folio:', error);
-      return `COT-${empresaId}-${new Date().getTime()}`;
-    }
-    return data;
+  async obtenerSiguienteFolio(empresaId: string): Promise<string> {
+  const { data, error } = await this.client.rpc('getnextfolioempresa', {
+    empresaid: empresaId
+  });
+
+  if (error || !data) {
+    console.error('Error al obtener folio:', error);
+    const prefijo = (empresaId || 'EMP').substring(0, 3).toUpperCase();
+    const seq = String(Date.now() % 100000000).padStart(8, '0');
+    return `${prefijo}-${seq}`;
   }
+
+  return data;
+}
 
   // ─── PERFILES Y ROLES ─────────────────────────────────────────────────────
 
