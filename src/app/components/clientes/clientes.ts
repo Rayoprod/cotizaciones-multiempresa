@@ -36,7 +36,7 @@ export class ClientesComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
-    const datos = localStorage.getItem('empresa_activa');
+    const datos = sessionStorage.getItem('empresa_activa');
     this.empresaActiva = datos ? JSON.parse(datos) : null;
     await this.cargarClientes();
   }
@@ -44,7 +44,6 @@ export class ClientesComponent implements OnInit {
   async cargarClientes() {
     if (!this.empresaActiva?.id) return;
     try {
-      // Filtra por empresa activa
       this.clientes = await this.supabaseSvc.getClientes(this.empresaActiva.id) as ICliente[];
       this.cdr.detectChanges();
     } catch (error) {
@@ -73,7 +72,6 @@ export class ClientesComponent implements OnInit {
       return;
     }
 
-    // Busca primero en los clientes ya cargados de esta empresa
     const clienteExistente = this.clientes.find(
       c => String(c.documento_identidad) === doc
     );
@@ -164,7 +162,6 @@ export class ClientesComponent implements OnInit {
 
     this.enviando = true;
     try {
-      // Asigna empresa_id antes de guardar
       const payload = { ...this.clienteActual, empresa_id: this.empresaActiva.id };
       await this.supabaseSvc.guardarCliente(payload);
       this.clienteDialog = false;

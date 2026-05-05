@@ -20,10 +20,8 @@ import { TooltipModule } from 'primeng/tooltip';
   standalone: true,
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule,
-    InputTextModule, InputNumberModule, DialogModule, ToolbarModule, 
-    TagModule, TooltipModule,
-    InputNumberModule,
-    
+    InputTextModule, InputNumberModule, DialogModule, ToolbarModule,
+    TagModule, TooltipModule
   ],
   templateUrl: './productos.html'
 })
@@ -42,7 +40,7 @@ export class ProductosComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
-    const datos = localStorage.getItem('empresa_activa');
+    const datos = sessionStorage.getItem('empresa_activa');
     this.empresaActiva = datos ? JSON.parse(datos) : null;
     await this.cargarProductos();
   }
@@ -50,7 +48,6 @@ export class ProductosComponent implements OnInit {
   async cargarProductos() {
     if (!this.empresaActiva?.id) return;
     try {
-      // Filtra por empresa activa — sin empresa_id no carga nada
       this.productos = await this.supabaseSvc.getProductos(this.empresaActiva.id) as IProducto[];
       this.cdr.detectChanges();
     } catch (error) {
@@ -115,7 +112,6 @@ export class ProductosComponent implements OnInit {
 
     this.enviando = true;
     try {
-      // Asigna empresa_id antes de guardar
       const payload = { ...this.productoActual, empresa_id: this.empresaActiva.id };
       await this.supabaseSvc.guardarProducto(payload);
       this.productoDialog = false;
