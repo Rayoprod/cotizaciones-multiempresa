@@ -2,14 +2,18 @@
 
   <!-- OVERLAY MÓVIL -->
   <div *ngIf="sidebarAbierto()"
-       class="fixed top-0 left-0 w-full h-full z-4 bg-black-alpha-60 md:hidden"
+       class="fixed top-0 left-0 w-full h-full bg-black-alpha-60 md:hidden"
+       style="z-index: 998;"
        (click)="cerrarMenu()">
   </div>
 
   <!-- SIDEBAR -->
-  <div class="bg-gray-900 flex flex-column flex-shrink-0 h-full z-5 transition-all transition-duration-300"
-       [ngClass]="sidebarAbierto() ? 'fixed top-0 left-0' : 'hidden md:flex'"
-       style="width: 17rem;">
+  <!-- FIX: en móvil = fixed superpuesto | en desktop = relative dentro del flex -->
+  <div class="bg-gray-900 flex flex-column flex-shrink-0 h-full transition-all transition-duration-300"
+       [ngClass]="sidebarAbierto()
+         ? 'flex fixed top-0 left-0 h-full'
+         : 'hidden md:flex md:relative'"
+       style="width: 17rem; z-index: 999;">
 
     <!-- Cabecera -->
     <div class="flex align-items-center justify-content-between p-4 border-bottom-1 border-gray-700">
@@ -26,6 +30,7 @@
         </div>
       </div>
       <button class="md:hidden border-none bg-transparent text-gray-400 cursor-pointer p-1"
+              style="position: relative; z-index: 1000;"
               (click)="cerrarMenu()" aria-label="Cerrar menú">
         <i class="pi pi-times text-xl"></i>
       </button>
@@ -74,7 +79,7 @@
   </div>
 
   <!-- CONTENIDO PRINCIPAL -->
-  <div class="flex-1 flex flex-column overflow-hidden">
+  <div class="flex-1 flex flex-column overflow-hidden min-w-0">
 
     <!-- TOPBAR MÓVIL -->
     <div class="md:hidden flex-shrink-0 bg-gray-900 px-4 py-3 flex align-items-center gap-3 shadow-3">
