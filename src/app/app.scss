@@ -1,5 +1,5 @@
 @import "primeicons/primeicons.css";
-@import "primeflex/primeflex.css"; /* <-- ESTA ES LA LÍNEA MÁGICA QUE FALTABA */
+@import "primeflex/primeflex.css";
 
 /* Importante para PrimeNG 21 */
 @layer primeng;
@@ -9,4 +9,32 @@ body {
     margin: 0;
     font-family: var(--font-family, sans-serif);
     background-color: #f4f7f9;
+}
+
+/* =========================================================
+   SOLUCIÓN AL MARCO BLANCO DEL DRAWER MÓVIL
+   ========================================================= */
+.drawer-oscuro {
+    background-color: #1f2937 !important;
+    border: none !important;
+
+    .p-drawer-header {
+        background-color: #1f2937 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        color: white !important;
+        padding: 1rem 1.5rem !important;
+    }
+
+    .p-drawer-content {
+        background-color: #1f2937 !important;
+        padding: 0 !important; 
+    }
+    
+    .p-drawer-close {
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+    .p-drawer-close:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+    }
 }

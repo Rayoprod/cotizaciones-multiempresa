@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -20,14 +20,8 @@ interface NavItem {
   selector: 'app-admin-layout',
   standalone: true,
   imports: [
-    CommonModule,
-    RouterOutlet,
-    RouterLink,
-    RouterLinkActive,
-    ButtonModule,
-    AvatarModule,
-    DrawerModule,
-    DividerModule
+    CommonModule, RouterOutlet, RouterLink, RouterLinkActive,
+    ButtonModule, AvatarModule, DrawerModule, DividerModule
   ],
   templateUrl: './admin-layout.html'
 })
@@ -49,15 +43,23 @@ export class AdminLayoutComponent {
       this.usuarioNombre = user?.email ?? 'Admin';
     });
 
-    this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
-      .subscribe(() => {
-        this.sidebarAbierto = false;
-      });
+    this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
+      this.sidebarAbierto = false;
+    });
   }
 
+  // CURA DEL MENÚ DOBLE
+  // CURA DEL MENÚ DOBLE
+  @HostListener('window:resize')
+  onResize() {
+    if (window.innerWidth >= 768 && this.sidebarAbierto) {
+      this.sidebarAbierto = false;
+    }
+  }
+
+  // CURA DEL BOTÓN SÁNDWICH
   toggleSidebar() {
-    this.sidebarAbierto = !this.sidebarAbierto;
+    this.sidebarAbierto = true;
   }
 
   cerrarMenu() {
