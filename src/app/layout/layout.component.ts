@@ -20,21 +20,31 @@ export class LayoutComponent implements OnInit {
   constructor(private router: Router, private supabaseSvc: SupabaseService) {}
 
   ngOnInit() {
-    this.usuarioActivo = localStorage.getItem('usuario_email') || 'Usuario';
-    this.esAdmin = localStorage.getItem('usuario_rol') === 'admin';
-    const datosEmpresa = localStorage.getItem('empresa_activa');
+    // FIX: usar sessionStorage en vez de localStorage
+    this.usuarioActivo = sessionStorage.getItem('usuario_email')
+                      || localStorage.getItem('usuario_email')
+                      || 'Usuario';
+    this.esAdmin = (sessionStorage.getItem('usuario_rol')
+                 || localStorage.getItem('usuario_rol')) === 'admin';
+
+    const datosEmpresa = sessionStorage.getItem('empresa_activa')
+                      || localStorage.getItem('empresa_activa');
     this.empresaActiva = datosEmpresa ? JSON.parse(datosEmpresa) : null;
   }
 
   toggleMenu() { this.menuAbierto = !this.menuAbierto; }
-  cerrarMenu()  { this.menuAbierto = false; }
+
+  // FIX: cerrarMenu ahora sí cierra en móvil al tocar un link
+  cerrarMenu() { this.menuAbierto = false; }
 
   volverAlAdmin() {
+    this.cerrarMenu();
     this.router.navigate(['/admin/empresas']);
   }
 
   async cerrarSesion() {
     await this.supabaseSvc.cerrarSesion();
+    sessionStorage.clear();
     localStorage.clear();
     this.router.navigate(['/login']);
   }
