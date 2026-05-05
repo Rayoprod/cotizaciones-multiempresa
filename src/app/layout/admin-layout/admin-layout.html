@@ -1,103 +1,137 @@
-<div class="flex h-screen overflow-hidden" style="background: #f8f9fa">
+<div class="flex h-screen overflow-hidden" style="background-color: #f8f9fa;">
 
   <!-- OVERLAY MÓVIL -->
   <div *ngIf="sidebarAbierto()"
-       class="fixed top-0 left-0 w-full h-full md:hidden"
-       style="z-index: 998; background: rgba(0,0,0,0.6);"
+       class="md:hidden fixed inset-0 bg-black-alpha-60"
+       style="z-index: 998;"
        (click)="cerrarMenu()">
   </div>
 
   <!-- SIDEBAR -->
-  <div class="flex-column flex-shrink-0 h-full transition-all transition-duration-300"
-       [ngClass]="sidebarAbierto() ? 'flex fixed top-0 left-0 h-full' : 'hidden md:flex md:relative'"
-       style="width: 17rem; z-index: 999; background: #111827;">
+  <div class="flex-column shadow-8 transition-transform transition-duration-300"
+       [ngClass]="sidebarAbierto() ? 'flex fixed top-0 left-0 h-full' : 'hidden md:flex relative h-full'"
+       style="width: 17rem; z-index: 999; background-color: #1e1e2e;">
 
-    <!-- Cabecera -->
+    <!-- CABECERA -->
     <div class="flex align-items-center justify-content-between p-4"
-         style="border-bottom: 1px solid #374151;">
-      <div class="flex align-items-center gap-3 overflow-hidden">
-        <div class="bg-primary flex align-items-center justify-content-center border-round-lg flex-shrink-0"
+         style="border-bottom: 1px solid #2e2e3e;">
+      <div class="flex align-items-center gap-3">
+        <div class="bg-primary flex align-items-center justify-content-center border-round-lg shadow-2"
              style="width: 40px; height: 40px;">
-          <i class="pi pi-shield-check text-xl" style="color: white;"></i>
+          <i class="pi pi-shield-check text-white text-xl"></i>
         </div>
-        <div class="flex flex-column overflow-hidden">
-          <span class="font-bold text-base" style="color: white;">PANEL ADMIN</span>
-          <span class="text-xs text-overflow-ellipsis overflow-hidden white-space-nowrap"
-                style="color: #9ca3af;">
+
+        <div class="flex flex-column">
+          <span class="text-xl font-bold" style="color: #ffffff;">PANEL ADMIN</span>
+          <span class="text-xs font-bold uppercase" style="color: #888;">
             {{ usuarioNombre() }}
           </span>
         </div>
       </div>
-      <button class="md:hidden border-none cursor-pointer p-1"
-              style="background: transparent; color: #9ca3af; position: relative; z-index: 1000;"
-              (click)="cerrarMenu()" aria-label="Cerrar menú">
-        <i class="pi pi-times text-xl"></i>
+
+      <button pButton
+              icon="pi pi-times"
+              class="p-button-rounded p-button-text md:hidden p-0"
+              style="color: #aaa; z-index: 1000; position: relative;"
+              (click)="cerrarMenu()">
       </button>
     </div>
 
-    <!-- Navegación -->
-    <nav class="flex-grow-1 px-3 py-4 flex flex-column gap-1 overflow-y-auto">
+    <!-- NAVEGACIÓN -->
+    <div class="flex-grow-1 overflow-y-auto px-3 py-4 flex flex-column gap-2">
 
-      <span class="text-xs font-bold uppercase pl-2 mb-2"
-            style="color: #6b7280;">Gestión</span>
+      <span class="text-xs font-bold uppercase pl-2 mb-2" style="color: #666;">
+        Gestión
+      </span>
 
       <a *ngFor="let item of navItems"
          [routerLink]="item.path"
-         routerLinkActive="bg-primary"
+         routerLinkActive
+         #rla="routerLinkActive"
+         [routerLinkActiveOptions]="{ exact: true }"
          (click)="cerrarMenu()"
-         class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none transition-colors"
-         style="color: #d1d5db;">
+         class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none"
+         [style]="rla.isActive
+            ? 'background:#059669;color:#fff;font-weight:700;box-shadow:0 8px 18px rgba(5,150,105,.22);'
+            : 'background:transparent;color:#ccc;'">
         <i [class]="item.icon + ' text-lg'"></i>
-        <span class="font-medium">{{ item.label }}</span>
+        <span class="font-bold">{{ item.label }}</span>
       </a>
 
-      <div class="my-3" style="border-top: 1px solid #374151;"></div>
-      <span class="text-xs font-bold uppercase pl-2 mb-2"
-            style="color: #6b7280;">Operación</span>
+      <div class="my-3" style="border-top: 1px solid #2e2e3e;"></div>
+
+      <span class="text-xs font-bold uppercase pl-2 mb-2" style="color: #666;">
+        Operación
+      </span>
 
       <button (click)="operarEmpresa(); cerrarMenu()"
-              class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer transition-colors w-full text-left border-none"
-              style="color: #d1d5db; background: transparent;">
+              class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none w-full text-left border-none"
+              style="background: transparent; color: #ccc;"
+              type="button">
         <i class="pi pi-briefcase text-lg"></i>
-        <span class="font-medium">Operar Empresa</span>
-        <i class="pi pi-arrow-right text-xs ml-auto" style="color: #6b7280;"></i>
+        <span class="font-bold">Operar Empresa</span>
+        <i class="pi pi-arrow-right text-xs ml-auto" style="color: #888;"></i>
       </button>
+    </div>
 
-    </nav>
+    <!-- FOOTER -->
+    <div class="p-3"
+         style="border-top: 1px solid #2e2e3e; background-color: #1e1e2e; flex-shrink: 0;">
 
-    <!-- Footer -->
-    <div class="p-3" style="border-top: 1px solid #374151;">
-      <button (click)="logout()"
-              class="w-full flex align-items-center gap-3 p-3 border-round-lg cursor-pointer transition-colors border-none"
-              style="color: #f87171; background: transparent;">
+      <div class="flex align-items-center gap-3 mb-3 p-2 border-round-lg"
+           style="background-color: #2e2e3e;">
+        <div class="bg-primary text-white font-bold border-circle flex align-items-center justify-content-center"
+             style="width: 2.5rem; height: 2.5rem; min-width: 2.5rem;">
+          <i class="pi pi-user"></i>
+        </div>
+
+        <div class="flex flex-column overflow-hidden">
+          <span class="font-bold text-sm" style="color: #ddd;">
+            Administrador
+          </span>
+          <span class="text-xs white-space-nowrap text-overflow-ellipsis overflow-hidden"
+                style="color: #888;"
+                [title]="usuarioNombre()">
+            {{ usuarioNombre() }}
+          </span>
+        </div>
+      </div>
+
+      <button
+        pButton
+        type="button"
+        class="p-button-outlined p-button-danger w-full font-bold flex align-items-center justify-content-center gap-2"
+        style="min-height: 2.75rem;"
+        (click)="logout()">
         <i class="pi pi-sign-out"></i>
-        <span class="font-medium">Cerrar Sesión</span>
+        <span>Cerrar Sesión</span>
       </button>
     </div>
 
   </div>
 
   <!-- CONTENIDO PRINCIPAL -->
-  <div class="flex-1 flex flex-column overflow-hidden min-w-0">
+  <div class="flex-1 flex flex-column h-full relative overflow-hidden">
 
     <!-- TOPBAR MÓVIL -->
-    <div class="md:hidden flex-shrink-0 px-4 py-3 flex align-items-center gap-3 shadow-3"
-         style="background: #111827;">
-      <button class="border-none cursor-pointer p-1"
-              style="background: transparent; color: white;"
-              (click)="toggleSidebar()" aria-label="Abrir menú">
-        <i class="pi pi-bars text-xl"></i>
+    <div class="md:hidden flex-shrink-0 sticky top-0 h-4rem surface-0 border-bottom-1 surface-border shadow-2
+                flex align-items-center px-3"
+         style="z-index: 900;">
+      <button pButton
+              icon="pi pi-bars"
+              class="p-button-text p-button-secondary text-2xl p-0"
+              (click)="toggleSidebar()">
       </button>
-      <div class="flex align-items-center gap-2">
-        <i class="pi pi-shield-check text-primary"></i>
-        <span class="font-bold" style="color: white;">PANEL ADMIN</span>
-      </div>
+
+      <span class="ml-3 font-bold text-900 text-xl">
+        PANEL ADMIN
+      </span>
     </div>
 
-    <!-- ROUTER OUTLET -->
-    <main class="flex-1 overflow-auto">
-      <router-outlet />
-    </main>
+    <!-- CONTENIDO -->
+    <div class="flex-1 overflow-auto p-2 md:p-4">
+      <router-outlet></router-outlet>
+    </div>
 
   </div>
 </div>

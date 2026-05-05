@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth';
-
+import { AvatarModule } from 'primeng/avatar';
 interface NavItem {
   label: string;
   icon: string;
@@ -12,7 +12,9 @@ interface NavItem {
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, AvatarModule
+    
+  ],
   templateUrl: './admin-layout.html',
   styleUrl: './admin-layout.scss'
 })

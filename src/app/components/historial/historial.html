@@ -22,11 +22,9 @@
 
   <!-- ── Tabla ────────────────────────────────────────────────────────────── -->
   <div class="surface-card border-round-xl shadow-1 overflow-hidden">
-    <p-table #dt [value]="cotizaciones" [rows]="15" [paginator]="true"
-             [rowHover]="true" responsiveLayout="scroll"
-             [globalFilterFields]="['folio','cliente_nombre','cliente_documento','estado']"
-             [sortField]="'fecha'" [sortOrder]="-1"
-             styleClass="p-datatable-sm">
+    <p-table #dt [value]="cotizaciones" [rows]="15" [paginator]="true" [rowHover]="true" responsiveLayout="scroll"
+      [globalFilterFields]="['folio','cliente_nombre','cliente_documento','estado']" [sortField]="'fecha'"
+      [sortOrder]="-1" styleClass="p-datatable-sm">
 
       <ng-template pTemplate="caption">
         <div class="flex flex-column md:flex-row align-items-start md:align-items-center
@@ -36,9 +34,8 @@
           </span>
           <span class="p-input-icon-left w-full md:w-auto">
             <i class="pi pi-search"></i>
-            <input pInputText type="text" class="w-full md:w-22rem"
-                   placeholder="Buscar por folio, cliente o estado..."
-                   (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
+            <input pInputText type="text" class="w-full md:w-22rem" placeholder="Buscar por folio, cliente o estado..."
+              (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
           </span>
         </div>
       </ng-template>
@@ -57,7 +54,7 @@
           </th>
           <th class="hidden lg:table-cell" style="width:120px">Empresa</th>
           <th style="width:150px" class="text-center">Estado</th>
-          <th style="width:80px"  class="text-center">PDF</th>
+          <th style="width:80px" class="text-center">PDF</th>
         </tr>
       </ng-template>
 
@@ -73,7 +70,7 @@
           <!-- Folio -->
           <td>
             <span class="font-mono text-xs font-bold text-primary border-round px-2 py-1"
-                  style="background: color-mix(in srgb, var(--primary-color) 10%, white);">
+              style="background: color-mix(in srgb, var(--primary-color) 10%, white);">
               {{ cot.folio }}
             </span>
           </td>
@@ -95,36 +92,26 @@
 
           <!-- Empresa -->
           <td class="hidden lg:table-cell">
-            <span class="text-xs text-600 border-round px-2 py-1"
-                  style="background:#f3f4f6;">
+            <span class="text-xs text-600 border-round px-2 py-1" style="background:#f3f4f6;">
               {{ getNombreEmpresa(cot.empresa_id) }}
             </span>
           </td>
 
           <!-- Estado -->
           <td class="text-center">
-            <p-select
-              [options]="opcionesEstado"
-              [(ngModel)]="cot.estado"
-              optionLabel="label"
-              optionValue="value"
-              [style]="{'width':'130px'}"
-              styleClass="text-xs"
-              (onChange)="cambiarEstado(cot)">
+            <!-- DESPUÉS -->
+            <p-select [options]="opcionesEstado" [(ngModel)]="cot.estado" optionLabel="label" optionValue="value"
+              [style]="{'width':'130px'}" styleClass="text-xs" appendTo="body" (onChange)="cambiarEstado(cot)">
               <ng-template pTemplate="selectedItem" let-item>
-                <p-tag [value]="item.label"
-                       [severity]="getSeverity(item.value)"
-                       styleClass="text-xs" />
+                <p-tag [value]="item.label" [severity]="getSeverity(item.value)" styleClass="text-xs" />
               </ng-template>
             </p-select>
           </td>
 
           <!-- PDF -->
           <td class="text-center">
-            <p-button icon="pi pi-file-pdf" [text]="true" [rounded]="true"
-                      severity="danger" size="small" pTooltip="Descargar PDF"
-                      [loading]="descargando === cot.id"
-                      (onClick)="descargarPDF(cot)" />
+            <p-button icon="pi pi-file-pdf" [text]="true" [rounded]="true" severity="danger" size="small"
+              pTooltip="Descargar PDF" [loading]="descargando === cot.id" (onClick)="descargarPDF(cot)" />
           </td>
         </tr>
       </ng-template>

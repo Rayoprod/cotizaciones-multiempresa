@@ -41,11 +41,12 @@
         Ventas & Cotizaciones
       </span>
 
-<a routerLink="/cotizador"
+      <a routerLink="/cotizador"
    routerLinkActive #rlaCot="routerLinkActive"
    (click)="cerrarMenu()"
-   class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none"
-   [style]="rlaCot.isActive ? 'background:#059669;color:#fff;font-weight:700;' : 'background:transparent;color:#ccc;'">
+   class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none transition-colors transition-duration-200"
+   [style.background-color]="rlaCot.isActive ? 'var(--primary-color)' : 'transparent'"
+   [style.color]="rlaCot.isActive ? '#fff' : '#ccc'">
   <i class="pi pi-plus-circle text-lg"></i>
   <span class="font-bold">Nueva Cotización</span>
 </a>
@@ -53,8 +54,9 @@
 <a routerLink="/historial"
    routerLinkActive #rlaHis="routerLinkActive"
    (click)="cerrarMenu()"
-   class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none"
-   [style]="rlaHis.isActive ? 'background:#059669;color:#fff;font-weight:700;' : 'background:transparent;color:#ccc;'">
+   class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none transition-colors transition-duration-200"
+   [style.background-color]="rlaHis.isActive ? 'var(--primary-color)' : 'transparent'"
+   [style.color]="rlaHis.isActive ? '#fff' : '#ccc'">
   <i class="pi pi-book text-lg"></i>
   <span class="font-bold">Historial de Ventas</span>
 </a>
@@ -62,8 +64,9 @@
 <a routerLink="/productos"
    routerLinkActive #rlaPro="routerLinkActive"
    (click)="cerrarMenu()"
-   class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none"
-   [style]="rlaPro.isActive ? 'background:#059669;color:#fff;font-weight:700;' : 'background:transparent;color:#ccc;'">
+   class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none transition-colors transition-duration-200"
+   [style.background-color]="rlaPro.isActive ? 'var(--primary-color)' : 'transparent'"
+   [style.color]="rlaPro.isActive ? '#fff' : '#ccc'">
   <i class="pi pi-box text-lg"></i>
   <span class="font-medium">Catálogo / Productos</span>
 </a>
@@ -71,8 +74,9 @@
 <a routerLink="/clientes"
    routerLinkActive #rlaCli="routerLinkActive"
    (click)="cerrarMenu()"
-   class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none"
-   [style]="rlaCli.isActive ? 'background:#059669;color:#fff;font-weight:700;' : 'background:transparent;color:#ccc;'">
+   class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer text-decoration-none transition-colors transition-duration-200"
+   [style.background-color]="rlaCli.isActive ? 'var(--primary-color)' : 'transparent'"
+   [style.color]="rlaCli.isActive ? '#fff' : '#ccc'">
   <i class="pi pi-users text-lg"></i>
   <span class="font-medium">Directorio Clientes</span>
 </a>

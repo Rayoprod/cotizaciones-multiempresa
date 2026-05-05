@@ -21,17 +21,15 @@
 
   <div class="grid m-0 gap-4">
 
-    <!-- ══════════════════════════════════════════
-         COLUMNA IZQUIERDA — Cliente + Items
-    ══════════════════════════════════════════ -->
+    <!-- COLUMNA IZQUIERDA -->
     <div class="col-12 lg:col-8 p-0 flex flex-column gap-4">
 
       <!-- SECCIÓN 1: CLIENTE -->
       <div class="surface-card border-round-xl shadow-1 p-4">
         <div class="flex align-items-center gap-2 mb-4 border-bottom-1 border-200 pb-3">
-          <div class="flex align-items-center justify-content-center border-circle bg-primary"
-               style="width:28px;height:28px;min-width:28px">
-            <span class="text-white font-bold text-xs">1</span>
+          <div class="flex align-items-center justify-content-center border-circle flex-shrink-0"
+               style="width:28px;height:28px;min-width:28px;background:var(--p-primary-color)">
+            <span class="font-bold text-xs" style="color:#ffffff !important">1</span>
           </div>
           <span class="font-bold text-900 text-lg">Datos del Cliente</span>
         </div>
@@ -94,9 +92,9 @@
       <div class="surface-card border-round-xl shadow-1 p-4">
         <div class="flex align-items-center justify-content-between mb-4 border-bottom-1 border-200 pb-3">
           <div class="flex align-items-center gap-2">
-            <div class="flex align-items-center justify-content-center border-circle bg-primary"
-                 style="width:28px;height:28px;min-width:28px">
-              <span class="text-white font-bold text-xs">2</span>
+            <div class="flex align-items-center justify-content-center border-circle flex-shrink-0"
+                 style="width:28px;height:28px;min-width:28px;background:var(--p-primary-color)">
+              <span class="font-bold text-xs" style="color:#ffffff !important">2</span>
             </div>
             <span class="font-bold text-900 text-lg">Detalle de Cotización</span>
           </div>
@@ -125,7 +123,6 @@
             <ng-template pTemplate="body" let-item let-i="rowIndex">
               <tr>
                 <td class="text-center text-color-secondary font-bold">{{ i + 1 }}</td>
-
                 <td>
                   <p-autoComplete
                     [(ngModel)]="item.descripcion"
@@ -138,32 +135,27 @@
                     styleClass="w-full"
                     [maxlength]="100" />
                 </td>
-
                 <td>
                   <input pInputText [(ngModel)]="item.unidad"
                          class="w-full text-center" placeholder="m3" />
                 </td>
-
                 <td>
                   <p-inputNumber [(ngModel)]="item.cantidad"
                                  [min]="1" placeholder="0"
                                  (ngModelChange)="recalcularItem(item)"
                                  inputStyleClass="w-full text-center" />
                 </td>
-
                 <td>
                   <p-inputNumber [(ngModel)]="item.precio_unitario"
                                  mode="currency" currency="PEN" locale="es-PE"
                                  (ngModelChange)="recalcularItem(item)"
                                  inputStyleClass="w-full text-right" />
                 </td>
-
                 <td class="text-right">
                   <span class="font-bold white-space-nowrap" style="color:#16a34a;">
                     S/ {{ item.subtotal | number:'1.2-2' }}
                   </span>
                 </td>
-
                 <td class="text-center">
                   <button pButton icon="pi pi-trash"
                           class="p-button-danger p-button-text p-button-rounded p-button-sm"
@@ -210,20 +202,17 @@
                   [dropdown]="true" appendTo="body"
                   styleClass="w-full" [maxlength]="100" />
               </div>
-
               <div class="col-4 mb-2">
                 <label class="text-xs font-bold text-color-secondary mb-1 block">Unidad</label>
                 <input pInputText [(ngModel)]="item.unidad"
                        class="w-full text-center" placeholder="m3" />
               </div>
-
               <div class="col-4 mb-2">
                 <label class="text-xs font-bold text-color-secondary mb-1 block">Cantidad</label>
                 <p-inputNumber [(ngModel)]="item.cantidad" [min]="1"
                                (ngModelChange)="recalcularItem(item)"
                                inputStyleClass="w-full text-center" />
               </div>
-
               <div class="col-4 mb-2">
                 <label class="text-xs font-bold text-color-secondary mb-1 block">P. Unit.</label>
                 <p-inputNumber [(ngModel)]="item.precio_unitario"
@@ -231,7 +220,6 @@
                                (ngModelChange)="recalcularItem(item)"
                                inputStyleClass="w-full" />
               </div>
-
               <div class="col-12 pt-2 border-top-1 border-200 flex justify-content-between align-items-center">
                 <span class="text-sm font-bold text-color-secondary">Subtotal</span>
                 <span class="font-bold text-lg" style="color:#16a34a;">
@@ -256,17 +244,15 @@
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════
-         COLUMNA DERECHA — Config + Totales
-    ══════════════════════════════════════════ -->
+    <!-- COLUMNA DERECHA -->
     <div class="col-12 lg:col p-0 flex flex-column gap-4">
 
       <!-- SECCIÓN 3: CONFIG -->
       <div class="surface-card border-round-xl shadow-1 p-4">
         <div class="flex align-items-center gap-2 mb-4 border-bottom-1 border-200 pb-3">
-          <div class="flex align-items-center justify-content-center border-circle bg-primary"
-               style="width:28px;height:28px;min-width:28px">
-            <span class="text-white font-bold text-xs">3</span>
+          <div class="flex align-items-center justify-content-center border-circle flex-shrink-0"
+               style="width:28px;height:28px;min-width:28px;background:var(--p-primary-color)">
+            <span class="font-bold text-xs" style="color:#ffffff !important">3</span>
           </div>
           <span class="font-bold text-900 text-lg">Condiciones del PDF</span>
         </div>
@@ -289,15 +275,14 @@
         <div class="mb-3">
           <label class="font-semibold text-900 text-sm mb-2 block">Punto de Entrega</label>
           <p-selectButton [options]="opcionesLugar" [(ngModel)]="lugarEntrega"
-                          optionLabel="label" optionValue="value" styleClass="w-full" />
+                          optionLabel="label" optionValue="value" styleClass="w-full"
+                          [allowEmpty]="false" />
         </div>
 
         <!-- Condiciones PDF -->
         <div class="surface-ground border-round-lg p-3 mb-3">
           <p class="font-bold text-sm text-900 mb-3 m-0">¿Qué mostrar en el PDF?</p>
-
           <div class="flex flex-column gap-2">
-
             <div class="flex align-items-center justify-content-between">
               <div class="flex align-items-center gap-2">
                 <p-toggleSwitch [(ngModel)]="condiciones.mostrarValidez" />
@@ -309,24 +294,20 @@
                 <span class="text-sm text-color-secondary">días</span>
               </div>
             </div>
-
             <div class="flex align-items-center gap-2">
               <p-toggleSwitch [(ngModel)]="condiciones.mostrarCuentas" />
               <span class="text-sm text-900">Cuentas bancarias</span>
               <span *ngIf="!empresaActiva?.mostrar_cuentas"
                     class="text-xs text-orange-500">(desactivado en empresa)</span>
             </div>
-
             <div class="flex align-items-center gap-2">
               <p-toggleSwitch [(ngModel)]="condiciones.mostrarContacto" />
               <span class="text-sm text-900">Mensaje de contacto</span>
             </div>
-
             <div class="flex align-items-center gap-2">
               <p-toggleSwitch [(ngModel)]="condiciones.mostrarObservaciones" />
               <span class="text-sm text-900">Observaciones personalizadas</span>
             </div>
-
           </div>
         </div>
 
@@ -350,11 +331,10 @@
           <span class="font-semibold text-900">S/ {{ subtotalGeneral | number:'1.2-2' }}</span>
         </div>
 
-        <div class="flex justify-content-between align-items-center mb-3"
-             *ngIf="incluyeIgv">
+        <div class="flex justify-content-between align-items-center mb-3" *ngIf="incluyeIgv">
           <span class="text-color-secondary font-medium flex align-items-center gap-2">
             <span class="text-xs border-round px-2 py-1 font-bold"
-                  style="background:#fee2e2; color:#dc2626;">18%</span>
+                  style="background:#fee2e2;color:#dc2626;">18%</span>
             IGV
           </span>
           <span class="font-semibold text-red-500">+ S/ {{ igvTotal | number:'1.2-2' }}</span>
@@ -379,9 +359,7 @@
 
         <div class="flex align-items-center gap-2 text-sm text-color-secondary mb-4">
           <i class="pi pi-list"></i>
-          <span>
-            {{ carrito.length }} ítem{{ carrito.length !== 1 ? 's' : '' }} en la cotización
-          </span>
+          <span>{{ carrito.length }} ítem{{ carrito.length !== 1 ? 's' : '' }} en la cotización</span>
         </div>
 
         <div *ngIf="!clienteNombre || !clienteDocumento"
@@ -411,4 +389,4 @@
 
     </div>
   </div>
-</div>
+</div>  
