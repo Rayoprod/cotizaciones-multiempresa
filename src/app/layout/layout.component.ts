@@ -1,11 +1,10 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, HostListener, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
 import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
-import { DrawerModule } from 'primeng/drawer';
 import { DividerModule } from 'primeng/divider';
 
 import { SupabaseService } from '../services/supabase.service';
@@ -15,7 +14,7 @@ import { SupabaseService } from '../services/supabase.service';
   standalone: true,
   imports: [
     CommonModule, RouterLink, RouterLinkActive, RouterOutlet,
-    ButtonModule, AvatarModule, DrawerModule, DividerModule,
+    ButtonModule, AvatarModule, DividerModule,
   ],
   templateUrl: './layout.component.html'
 })
@@ -27,7 +26,8 @@ export class LayoutComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private supabaseSvc: SupabaseService
+    private supabaseSvc: SupabaseService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -37,26 +37,26 @@ export class LayoutComponent implements OnInit {
     this.empresaActiva = datosEmpresa ? JSON.parse(datosEmpresa) : null;
 
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
-      this.menuAbierto = false;
+      this.cerrarMenu();
     });
   }
 
-  // ESTA ES LA CURA PARA EL MENÚ DOBLE AL MAXIMIZAR LA PANTALLA
-  // CURA PARA EL MENÚ DOBLE AL MAXIMIZAR
   @HostListener('window:resize')
   onResize() {
     if (window.innerWidth >= 768 && this.menuAbierto) {
       this.menuAbierto = false;
+      this.cdr.detectChanges();
     }
   }
 
-  // ESTA ES LA CURA PARA QUE EL BOTÓN SÁNDWICH FUNCIONE A LA PRIMERA
   toggleMenu() {
-    this.menuAbierto = true;
+    this.menuAbierto = !this.menuAbierto;
+    this.cdr.detectChanges();
   }
 
   cerrarMenu() {
     this.menuAbierto = false;
+    this.cdr.detectChanges();
   }
 
   volverAlAdmin() {

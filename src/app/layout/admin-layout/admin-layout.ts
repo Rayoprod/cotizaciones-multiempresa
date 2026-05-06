@@ -1,12 +1,12 @@
-import { Component, inject, HostListener } from '@angular/core';
+import { Component, inject, HostListener, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
 import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
-import { DrawerModule } from 'primeng/drawer';
 import { DividerModule } from 'primeng/divider';
+// Eliminamos DrawerModule ya que no usaremos el componente forzado
 
 import { AuthService } from '../../services/auth';
 
@@ -21,13 +21,14 @@ interface NavItem {
   standalone: true,
   imports: [
     CommonModule, RouterOutlet, RouterLink, RouterLinkActive,
-    ButtonModule, AvatarModule, DrawerModule, DividerModule
+    ButtonModule, AvatarModule, DividerModule
   ],
   templateUrl: './admin-layout.html'
 })
 export class AdminLayoutComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef); // Inyectamos el detector de cambios
 
   sidebarAbierto = false;
   usuarioNombre = '';
@@ -41,29 +42,30 @@ export class AdminLayoutComponent {
     this.auth.obtenerSesion().then(res => {
       const user = res?.data?.session?.user;
       this.usuarioNombre = user?.email ?? 'Admin';
+      this.cdr.detectChanges(); // Forzamos actualización al cargar el usuario
     });
 
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
-      this.sidebarAbierto = false;
+      this.cerrarMenu();
     });
   }
 
-  // CURA DEL MENÚ DOBLE
-  // CURA DEL MENÚ DOBLE
   @HostListener('window:resize')
   onResize() {
     if (window.innerWidth >= 768 && this.sidebarAbierto) {
       this.sidebarAbierto = false;
+      this.cdr.detectChanges(); // Evita congelamientos al rotar pantalla
     }
   }
 
-  // CURA DEL BOTÓN SÁNDWICH
   toggleSidebar() {
-    this.sidebarAbierto = true;
+    this.sidebarAbierto = !this.sidebarAbierto;
+    this.cdr.detectChanges();
   }
 
   cerrarMenu() {
     this.sidebarAbierto = false;
+    this.cdr.detectChanges();
   }
 
   operarEmpresa() {
