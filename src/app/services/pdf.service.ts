@@ -13,8 +13,9 @@ export class PdfService {
 
   // ── Utilidades ───────────────────────────────────────────────────────────
 
-  private async cargarImagenRemota(url: string): Promise<string | null> {
+  private async cargarImagen(url: string): Promise<string | null> {
     if (!url) return null;
+    if (url.startsWith('data:')) return url;
     try {
       const response = await fetch(url);
       if (!response.ok) return null;
@@ -31,7 +32,7 @@ export class PdfService {
   private formatearTextoLargo(texto: string): string {
     if (!texto) return '';
     return texto.split(' ')
-      .map(p => p.length > 25 ? p.match(/.{1,25}/g)?.join('\u200B') : p)
+      .map(p => p.length > 30 ? p.match(/.{1,30}/g)?.join('\u200B') : p)
       .join(' ');
   }
 
@@ -50,341 +51,278 @@ export class PdfService {
     if (!datosEmpresa) return;
 
     const colorEmpresa    = this.color(datosEmpresa);
-    const logoConvertido  = await this.cargarImagenRemota(datosEmpresa.ruta_logo);
-    const firmaConvertida = await this.cargarImagenRemota(datosEmpresa.ruta_firma);
+    const logoConvertido  = await this.cargarImagen(datosEmpresa.ruta_logo);
+    const firmaConvertida = await this.cargarImagen(datosEmpresa.ruta_firma);
 
-    // ── Logo ──────────────────────────────────────────────────────────────
-    const logoIzquierda = logoConvertido
-      ? { image: logoConvertido, width: 90, margin: [0, 0, 0, 0] }
-      : {
-          text: datosEmpresa.nombre_comercial || 'EMPRESA',
-          color: colorEmpresa, fontSize: 13, bold: true, width: 130
-        };
-
-    // ── Firma ─────────────────────────────────────────────────────────────
-    const bloquesFirma: any[] = [
-      firmaConvertida
-        ? { image: firmaConvertida, width: 110, alignment: 'center', margin: [0, 0, 0, 4] }
-        : { text: ' ', margin: [0, 30, 0, 4] },
-      { canvas: [{ type: 'line', x1: 10, y1: 0, x2: 150, y2: 0, lineWidth: 0.8, lineColor: '#9ca3af' }] },
-      { text: 'Gerencia General', alignment: 'center', fontSize: 8, color: '#6b7280', margin: [0, 3, 0, 0] },
-      { text: datosEmpresa.nombre_comercial || '', alignment: 'center', fontSize: 7, color: '#9ca3af' }
-    ];
-
-    // ── Fecha ─────────────────────────────────────────────────────────────
+    // ── Datos comunes ─────────────────────────────────────────────────────
     const fechaFormat = new Date(data.fecha).toLocaleDateString('es-PE', {
       day: '2-digit', month: 'long', year: 'numeric'
     });
 
-    // ── Lugar de entrega ──────────────────────────────────────────────────
     const entregaRaw = String(lugarEntrega || (data as any).lugar_entrega || '').toUpperCase().trim();
     let textoEntrega = 'NO ESPECIFICADO';
     if (entregaRaw.includes('CANTERA')) textoEntrega = 'PUESTO EN CANTERA';
     else if (entregaRaw.includes('OBRA')) textoEntrega = 'PUESTO EN OBRA (CON FLETE)';
 
-    // ── FIX #1: era "observaciones" suelto, ahora lee condiciones ────────
     const obsFinal = condiciones.observaciones || (data as any).observaciones || '';
     const vendedor = (data as any).vendedor || '';
     const tieneIgv = Number(data.igv) > 0;
 
-    // ── Tabla de ítems ────────────────────────────────────────────────────
-    const anchosTabla = [22, '*', 35, 38, 60, 68];
-
-    const filasItems: any[] = [
-      [
-        { text: '#',        style: 'thCell' },
-        { text: 'Descripción del Producto / Servicio', style: 'thCell' },
-        { text: 'Unid.',    style: 'thCell' },
-        { text: 'Cant.',    style: 'thCell' },
-        { text: 'P. Unit.', style: 'thCell' },
-        { text: 'Subtotal', style: 'thCell' }
-      ],
-      ...data.items.map((item: any, i: number) => [
-        { text: (i + 1).toString(), style: 'tdCell', alignment: 'center',
-          fillColor: i % 2 === 0 ? '#ffffff' : '#f8fafc' },
-        { text: this.formatearTextoLargo(item.descripcion), style: 'tdCell',
-          fillColor: i % 2 === 0 ? '#ffffff' : '#f8fafc' },
-        { text: item.unidad || '', style: 'tdCell', alignment: 'center',
-          fillColor: i % 2 === 0 ? '#ffffff' : '#f8fafc' },
-        { text: String(item.cantidad), style: 'tdCell', alignment: 'center',
-          fillColor: i % 2 === 0 ? '#ffffff' : '#f8fafc' },
-        { text: `S/ ${Number(item.precio_unitario).toFixed(2)}`, style: 'tdCell',
-          alignment: 'right', fillColor: i % 2 === 0 ? '#ffffff' : '#f8fafc' },
-        { text: `S/ ${Number(item.subtotal).toFixed(2)}`, style: 'tdCell',
-          alignment: 'right', bold: true,
-          fillColor: i % 2 === 0 ? '#ffffff' : '#f8fafc' }
-      ])
-    ];
-
-    // ── Filas de totales ──────────────────────────────────────────────────
-    const filasTotales: any[] = [
-      [
-        { text: 'Subtotal:', colSpan: 5, alignment: 'right', bold: true, fontSize: 9,
-          border: [false, true, false, false], borderColor: ['', '#e5e7eb', '', ''],
-          margin: [0, 6, 4, 2] },
-        '', '', '', '',
-        { text: `S/ ${Number(data.subtotal).toFixed(2)}`, alignment: 'right', fontSize: 9,
-          border: [false, true, false, false], borderColor: ['', '#e5e7eb', '', ''],
-          margin: [0, 6, 0, 2] }
-      ]
-    ];
-
-    if (tieneIgv) {
-      filasTotales.push([
-        { text: 'IGV (18%):', colSpan: 5, alignment: 'right', bold: true, fontSize: 9,
-          border: [false, false, false, false], margin: [0, 2, 4, 2], color: '#6b7280' },
-        '', '', '', '',
-        { text: `S/ ${Number(data.igv).toFixed(2)}`, alignment: 'right', fontSize: 9,
-          border: [false, false, false, false], margin: [0, 2, 0, 2], color: '#6b7280' }
-      ]);
-    }
-
-    filasTotales.push([
-      { text: 'TOTAL FINAL:', colSpan: 5, alignment: 'right', bold: true, fontSize: 12,
-        border: [false, true, false, false], borderColor: ['', colorEmpresa, '', ''],
-        margin: [0, 4, 4, 4], color: colorEmpresa },
-      '', '', '', '',
-      { text: `S/ ${Number(data.total).toFixed(2)}`, alignment: 'right', bold: true,
-        fontSize: 12, color: colorEmpresa,
-        border: [false, true, false, false], borderColor: ['', colorEmpresa, '', ''],
-        margin: [0, 4, 0, 4] }
-    ]);
-
-    // ── FIX #2: columna de cuentas/contacto dinámica ──────────────────────
-    const cuentas: any[] = datosEmpresa.cuentas_bancarias || [];
-    const mostrarCuentas  = condiciones.mostrarCuentas !== false
-                            && datosEmpresa.mostrar_cuentas !== false
-                            && cuentas.length > 0;
-
-    const stackPago: any[] = [];
-
-    if (mostrarCuentas) {
-      stackPago.push({
-        text: 'CUENTAS PARA ABONO', bold: true, fontSize: 7,
-        color: colorEmpresa, margin: [0, 0, 0, 4]
-      });
-      cuentas.forEach((c: any) => {
-        stackPago.push({
-          text: `• ${c.banco} (${c.tipo}): ${c.numero}`,
-          fontSize: 7, margin: [0, 0, 0, 2]
-        });
-        if (c.cci) {
-          stackPago.push({
-            text: `  CCI: ${c.cci}`,
-            fontSize: 6.5, color: '#6b7280', margin: [0, 0, 0, 2]
-          });
-        }
-      });
-    } else if (condiciones.mostrarContacto && datosEmpresa.contacto_aprobacion) {
-      stackPago.push({
-        text: 'PARA APROBAR ESTA COTIZACIÓN', bold: true, fontSize: 7,
-        color: colorEmpresa, margin: [0, 0, 0, 5]
-      });
-      stackPago.push({
-        text: datosEmpresa.contacto_aprobacion,
-        fontSize: 7, color: '#374151', italics: true
-      });
-    } else {
-      stackPago.push({
-        text: 'Gracias por su preferencia.',
-        fontSize: 7, color: '#6b7280', italics: true
-      });
-    }
-
-    if (condiciones.mostrarValidez !== false) {
-      stackPago.push({
-        text: `• Válido por ${condiciones.diasValidez || '15'} días calendario`,
-        fontSize: 7, color: '#6b7280', margin: [0, 4, 0, 0]
-      });
-    }
-
-    // ── Bloque condiciones footer ─────────────────────────────────────────
-    const bloqueCondiciones = (currentPage: number, pageCount: number): any => {
-      if (currentPage !== pageCount) {
-        return {
-          margin: [40, 8, 40, 0],
-          text: `Página ${currentPage} de ${pageCount}`,
-          alignment: 'center', fontSize: 7, color: '#9ca3af'
-        };
-      }
+    // ── Header ─────────────────────────────────────────────────────────────
+    const headerFn = () => {
+      const logoBlock = logoConvertido
+        ? { image: logoConvertido, width: 75, margin: [0, 0, 0, 0] }
+        : { text: datosEmpresa.nombre_comercial || 'EMPRESA', color: colorEmpresa, fontSize: 18, bold: true, width: 180 };
 
       return {
-        margin: [40, 10, 40, 0],
-        stack: [
-          {
-            canvas: [{
-              type: 'line', x1: 0, y1: 0, x2: 515, y2: 0,
-              lineWidth: 0.5, lineColor: '#e5e7eb'
-            }],
-            margin: [0, 0, 0, 8]
-          },
-
-          {
-            columns: [
-              {
-                width: '65%',
-                table: {
-                  widths: ['50%', '50%'],
-                  body: [
-                    [
-                      { text: 'CONDICIONES DE ENTREGA', style: 'footerBoxHeader',
-                        border: [false, false, false, false],
-                        fillColor: '#f9fafb', margin: [6, 4, 6, 4] },
-                      { text: 'CONDICIONES DE PAGO', style: 'footerBoxHeader',
-                        border: [false, false, false, false],
-                        fillColor: '#f9fafb', margin: [6, 4, 6, 4] }
-                    ],
-                    [
-                      {
-                        stack: [
-                          { text: [{ text: 'Entrega: ', bold: true }, textoEntrega],
-                            fontSize: 7, margin: [0, 0, 0, 3] },
-                          { text: [{ text: 'Impuestos: ', bold: true },
-                            tieneIgv ? 'INCLUYEN IGV (18%)' : 'NO INCLUYEN IGV'],
-                            fontSize: 7, margin: [0, 0, 0, 3] },
-                          ...(vendedor
-                            ? [{ text: [{ text: 'Vendedor: ', bold: true }, vendedor],
-                                fontSize: 7, margin: [0, 0, 0, 3] }]
-                            : []),
-                          ...(obsFinal
-                            ? [{ text: [{ text: 'Notas: ', bold: true }, obsFinal],
-                                fontSize: 7, margin: [0, 0, 0, 0] }]
-                            : [])
-                        ],
-                        border: [false, false, false, false],
-                        margin: [6, 4, 6, 6], color: '#374151'
-                      },
-                      // ── columna dinámica de pago ──────────────────────
-                      {
-                        stack: stackPago,
-                        border: [false, false, false, false],
-                        margin: [6, 4, 6, 6], color: '#374151'
-                      }
-                    ]
-                  ]
-                },
-                layout: {
-                  hLineWidth: (i: number) => i === 1 ? 0.5 : 0,
-                  vLineWidth: (i: number) => i === 1 ? 0.5 : 0,
-                  hLineColor: () => '#e5e7eb',
-                  vLineColor: () => '#e5e7eb',
-                }
-              },
-
-              {
-                width: '35%',
-                stack: [
-                  { text: ' ', margin: [0, 0, 0, 0] },
-                  ...bloquesFirma
-                ],
-                alignment: 'center',
-                margin: [10, 0, 0, 0]
-              }
-            ]
-          },
-
-          {
-            text: `Página ${currentPage} de ${pageCount}`,
-            alignment: 'center', fontSize: 7, color: '#9ca3af', margin: [0, 6, 0, 0]
-          }
-        ]
-      };
-    };
-
-    // ── Documento ─────────────────────────────────────────────────────────
-    const docDefinition: any = {
-      pageSize: 'A4',
-      pageMargins: [40, 130, 40, 160],
-
-      header: () => ({
-        margin: [40, 18, 40, 0],
+        margin: [40, 20, 40, 0],
         stack: [
           {
             columns: [
-              logoIzquierda,
+              logoBlock,
               {
                 width: '*',
                 stack: [
-                  { text: `COTIZACIÓN N° ${data.folio}`, fontSize: 14, bold: true,
-                    color: colorEmpresa, alignment: 'right' },
-                  { text: datosEmpresa.nombre_comercial || '', bold: true,
-                    fontSize: 10, alignment: 'right', margin: [0, 2, 0, 0] },
-                  ...(datosEmpresa.razon_social
-                    ? [{ text: datosEmpresa.razon_social, fontSize: 8,
-                        alignment: 'right', color: '#6b7280' }]
-                    : []),
-                  { text: `RUC: ${datosEmpresa.ruc || '-'}`,
-                    alignment: 'right', fontSize: 8, color: '#6b7280' },
-                  { text: datosEmpresa.direccion || '',
-                    alignment: 'right', fontSize: 7, color: '#9ca3af' },
-                  { text: `Tel: ${datosEmpresa.telefonos || '-'}  |  ${datosEmpresa.correo || ''}`,
-                    alignment: 'right', fontSize: 7, color: '#9ca3af' },
-                  { text: `Fecha: ${fechaFormat}`,
-                    alignment: 'right', fontSize: 8, bold: true, margin: [0, 3, 0, 0] }
+                  { text: `COTIZACIÓN`, fontSize: 10, color: '#6b7280', alignment: 'right', margin: [0, 0, 0, 1] },
+                  { text: data.folio, fontSize: 16, bold: true, color: colorEmpresa, alignment: 'right' },
+                  { text: datosEmpresa.razon_social || datosEmpresa.nombre_comercial,
+                    fontSize: 9, color: '#374151', alignment: 'right', margin: [0, 4, 0, 0] },
+                  { text: `RUC: ${datosEmpresa.ruc || '-'}`, fontSize: 9, color: '#6b7280', alignment: 'right' },
+                  { text: datosEmpresa.direccion || '', fontSize: 7.5, color: '#9ca3af', alignment: 'right', margin: [0, 2, 0, 0] },
+                  { text: [
+                      datosEmpresa.telefonos ? `Tel: ${datosEmpresa.telefonos}` : '',
+                      datosEmpresa.telefonos && datosEmpresa.correo ? '  •  ' : '',
+                      datosEmpresa.correo || ''
+                    ].join(''),
+                    fontSize: 7.5, color: '#9ca3af', alignment: 'right' }
                 ]
               }
             ]
           },
-          {
-            canvas: [{
-              type: 'rect', x: 0, y: 8, w: 515, h: 3,
-              color: colorEmpresa, r: 1
-            }]
-          }
+          { canvas: [{ type: 'rect', x: 0, y: 10, w: 515, h: 2.5, color: colorEmpresa, r: 1 }] }
         ]
-      }),
+      };
+    };
 
-      footer: bloqueCondiciones,
+    // ── Footer (solo paginación) ──────────────────────────────────────────
+    const footerFn = (currentPage: number, pageCount: number): any => ({
+      margin: [40, 0, 40, 15],
+      columns: [
+        { text: `${datosEmpresa.nombre_comercial || ''} • ${datosEmpresa.ruc || ''}`,
+          fontSize: 7, color: '#9ca3af' },
+        { text: `Página ${currentPage} de ${pageCount}`,
+          fontSize: 7, color: '#9ca3af', alignment: 'right' }
+      ]
+    });
+
+    // ── Tabla de ítems ────────────────────────────────────────────────────
+    const anchosTabla = [24, '*', 38, 38, 62, 70];
+
+    const filasItems: any[] = [
+      [
+        { text: '#', style: 'thCell' },
+        { text: 'DESCRIPCIÓN', style: 'thCell', alignment: 'left' },
+        { text: 'UND', style: 'thCell' },
+        { text: 'CANT', style: 'thCell' },
+        { text: 'P. UNIT', style: 'thCell' },
+        { text: 'IMPORTE', style: 'thCell' }
+      ],
+      ...data.items.map((item: any, i: number) => {
+        const bg = i % 2 === 0 ? '#ffffff' : '#f9fafb';
+        return [
+          { text: (i + 1).toString(), style: 'tdCell', alignment: 'center', fillColor: bg },
+          { text: this.formatearTextoLargo(item.descripcion), style: 'tdCell', fillColor: bg },
+          { text: item.unidad || '-', style: 'tdCell', alignment: 'center', fillColor: bg },
+          { text: String(item.cantidad), style: 'tdCell', alignment: 'center', fillColor: bg },
+          { text: `S/ ${Number(item.precio_unitario).toFixed(2)}`, style: 'tdCell', alignment: 'right', fillColor: bg },
+          { text: `S/ ${Number(item.subtotal).toFixed(2)}`, style: 'tdCell', alignment: 'right', bold: true, fillColor: bg }
+        ];
+      })
+    ];
+
+    // ── Bloque de totales (inline en content, no en footer) ──────────────
+    const bloqueTotales: any[] = [];
+
+    bloqueTotales.push({
+      columns: [
+        { width: '*', text: '' },
+        {
+          width: 200,
+          table: {
+            widths: ['*', 'auto'],
+            body: [
+              [
+                { text: 'Subtotal', fontSize: 9, color: '#374151', border: [false, false, false, false], margin: [0, 4, 0, 4] },
+                { text: `S/ ${Number(data.subtotal).toFixed(2)}`, fontSize: 9, alignment: 'right', border: [false, false, false, false], margin: [0, 4, 0, 4] }
+              ],
+              ...(tieneIgv ? [[
+                { text: 'IGV (18%)', fontSize: 9, color: '#6b7280', border: [false, false, false, false], margin: [0, 2, 0, 2] },
+                { text: `S/ ${Number(data.igv).toFixed(2)}`, fontSize: 9, color: '#6b7280', alignment: 'right', border: [false, false, false, false], margin: [0, 2, 0, 2] }
+              ]] : []),
+              [
+                { text: 'TOTAL', fontSize: 13, bold: true, color: colorEmpresa, border: [false, true, false, false], borderColor: [colorEmpresa, colorEmpresa, colorEmpresa, colorEmpresa], margin: [0, 6, 0, 4] },
+                { text: `S/ ${Number(data.total).toFixed(2)}`, fontSize: 13, bold: true, color: colorEmpresa, alignment: 'right', border: [false, true, false, false], borderColor: [colorEmpresa, colorEmpresa, colorEmpresa, colorEmpresa], margin: [0, 6, 0, 4] }
+              ]
+            ]
+          },
+          layout: { hLineWidth: (i: number) => i === 0 ? 0 : 0.5, vLineWidth: () => 0, hLineColor: () => '#e5e7eb' }
+        }
+      ],
+      margin: [0, 8, 0, 0]
+    });
+
+    // ── Bloque condiciones (DENTRO del content, nunca en footer) ─────────
+    const cuentas: any[] = datosEmpresa.cuentas_bancarias || [];
+    const mostrarCuentas = condiciones.mostrarCuentas !== false
+                           && datosEmpresa.mostrar_cuentas !== false
+                           && cuentas.length > 0;
+
+    // Columna izquierda: condiciones de entrega/impuestos
+    const colCondiciones: any[] = [
+      { text: 'CONDICIONES COMERCIALES', fontSize: 8, bold: true, color: colorEmpresa, margin: [0, 0, 0, 6] },
+      { text: [{ text: '• Lugar de entrega: ', bold: true, fontSize: 7.5 }, { text: textoEntrega, fontSize: 7.5 }], margin: [0, 0, 0, 3] },
+      { text: [{ text: '• Impuestos: ', bold: true, fontSize: 7.5 }, { text: tieneIgv ? 'Los precios incluyen IGV (18%)' : 'Los precios NO incluyen IGV', fontSize: 7.5 }], margin: [0, 0, 0, 3] },
+    ];
+
+    if (condiciones.mostrarValidez !== false) {
+      colCondiciones.push(
+        { text: [{ text: '• Validez: ', bold: true, fontSize: 7.5 }, { text: `${condiciones.diasValidez || '15'} días calendario`, fontSize: 7.5 }], margin: [0, 0, 0, 3] }
+      );
+    }
+
+    if (vendedor) {
+      colCondiciones.push(
+        { text: [{ text: '• Vendedor: ', bold: true, fontSize: 7.5 }, { text: vendedor, fontSize: 7.5 }], margin: [0, 0, 0, 3] }
+      );
+    }
+
+    if (obsFinal) {
+      colCondiciones.push(
+        { text: [{ text: '• Observaciones: ', bold: true, fontSize: 7.5 }, { text: obsFinal, fontSize: 7.5 }], margin: [0, 0, 0, 3] }
+      );
+    }
+
+    // Columna derecha: cuentas bancarias o contacto
+    const colPago: any[] = [];
+
+    if (mostrarCuentas) {
+      colPago.push({ text: 'DATOS PARA PAGO', fontSize: 8, bold: true, color: colorEmpresa, margin: [0, 0, 0, 6] });
+      cuentas.forEach((c: any) => {
+        colPago.push({
+          text: `• ${c.banco} (${c.tipo_cuenta || c.tipo || 'Corriente'})`,
+          fontSize: 7.5, bold: true, margin: [0, 0, 0, 1]
+        });
+        colPago.push({
+          text: `  Nro: ${c.numero}`,
+          fontSize: 7, color: '#374151', margin: [0, 0, 0, 1]
+        });
+        if (c.cci) {
+          colPago.push({ text: `  CCI: ${c.cci}`, fontSize: 6.5, color: '#6b7280', margin: [0, 0, 0, 4] });
+        } else {
+          colPago.push({ text: '', margin: [0, 0, 0, 3] });
+        }
+      });
+    } else if (datosEmpresa.contacto_aprobacion) {
+      colPago.push({ text: 'CONTACTO DE APROBACIÓN', fontSize: 8, bold: true, color: colorEmpresa, margin: [0, 0, 0, 6] });
+      colPago.push({ text: datosEmpresa.contacto_aprobacion, fontSize: 7.5, italics: true, color: '#374151' });
+    }
+
+    // Caja de condiciones
+    const bloqueCondicionesContent: any = {
+      margin: [0, 20, 0, 0],
+      unbreakable: true,
+      table: {
+        widths: mostrarCuentas || datosEmpresa.contacto_aprobacion ? ['55%', '45%'] : ['100%'],
+        body: [
+          mostrarCuentas || datosEmpresa.contacto_aprobacion
+            ? [
+                { stack: colCondiciones, border: [false, false, false, false], margin: [10, 10, 10, 10] },
+                { stack: colPago, border: [false, false, false, false], margin: [10, 10, 10, 10] }
+              ]
+            : [
+                { stack: colCondiciones, border: [false, false, false, false], margin: [10, 10, 10, 10] }
+              ]
+        ]
+      },
+      layout: {
+        hLineWidth: () => 0.5,
+        vLineWidth: (i: number, node: any) => i === 0 || i === node.table.widths.length ? 0.5 : 0.3,
+        hLineColor: () => '#e5e7eb',
+        vLineColor: () => '#e5e7eb',
+        fillColor: () => '#fafbfc'
+      }
+    };
+
+    // ── Bloque firma ────────────────────────────────────────────────────
+    const bloqueFirma: any = firmaConvertida ? {
+      margin: [0, 24, 0, 0],
+      unbreakable: true,
+      columns: [
+        { width: '*', text: '' },
+        {
+          width: 180,
+          stack: [
+            { image: firmaConvertida, width: 110, alignment: 'center', margin: [0, 0, 0, 0] }
+          ],
+          alignment: 'center'
+        }
+      ]
+    } : { text: '', margin: [0, 0, 0, 0] };
+
+    // ── Caja del cliente (fecha incluida) ────────────────────────────────
+    const cajaCliente: any = {
+      margin: [0, 0, 0, 16],
+      table: {
+        widths: ['100%'],
+        body: [[{
+          columns: [
+            {
+              width: '60%',
+              stack: [
+                { text: 'SEÑOR(ES):', fontSize: 7, color: '#9ca3af', margin: [0, 0, 0, 3] },
+                { text: data.cliente_nombre || '—', bold: true, fontSize: 11, color: '#111827', margin: [0, 0, 0, 4] },
+                { text: [{ text: 'RUC / DNI: ', bold: true, fontSize: 8.5 }, { text: data.cliente_documento || '—', fontSize: 8.5 }], margin: [0, 0, 0, 2] },
+                ...(((data as any).cliente_direccion || (data as any).clienteDireccion)
+                  ? [{ text: [{ text: 'Dirección: ', bold: true, fontSize: 8 }, { text: (data as any).cliente_direccion || (data as any).clienteDireccion, fontSize: 8 }], margin: [0, 2, 0, 0] }]
+                  : [])
+              ]
+            },
+            {
+              width: '40%',
+              stack: [
+                { text: [{ text: 'Fecha: ', bold: true, fontSize: 8.5 }, { text: fechaFormat, fontSize: 8.5 }], alignment: 'right', margin: [0, 0, 0, 3] },
+                ...(((data as any).cliente_telefono || (data as any).clienteTelefono)
+                  ? [{ text: [{ text: 'Teléfono: ', bold: true, fontSize: 8 }, { text: (data as any).cliente_telefono || (data as any).clienteTelefono, fontSize: 8 }], alignment: 'right', margin: [0, 0, 0, 2] }]
+                  : []),
+                ...(((data as any).cliente_correo || (data as any).clienteCorreo)
+                  ? [{ text: [{ text: 'Correo: ', bold: true, fontSize: 8 }, { text: (data as any).cliente_correo || (data as any).clienteCorreo, fontSize: 8 }], alignment: 'right' }]
+                  : [])
+              ]
+            }
+          ],
+          border: [true, true, true, true],
+          borderColor: ['#e5e7eb', '#e5e7eb', '#e5e7eb', '#e5e7eb'],
+          fillColor: '#f8fafc',
+          margin: [12, 10, 12, 10]
+        }]]
+      },
+      layout: {
+        hLineWidth: () => 0.5,
+        vLineWidth: () => 0.5,
+        hLineColor: () => '#e5e7eb',
+        vLineColor: () => '#e5e7eb'
+      }
+    };
+
+    // ── Documento completo ───────────────────────────────────────────────
+    const docDefinition: any = {
+      pageSize: 'A4',
+      pageMargins: [40, 125, 40, 40],
+      header: headerFn,
+      footer: footerFn,
 
       content: [
-        // ── Caja cliente ──────────────────────────────────────────────────
-        {
-          table: {
-            widths: ['100%'],
-            body: [[{
-              columns: [
-                {
-                  width: '58%',
-                  stack: [
-                    { text: 'SEÑORES:', fontSize: 7, color: '#9ca3af', margin: [0, 0, 0, 2] },
-                    { text: data.cliente_nombre || '—', bold: true, fontSize: 11,
-                      color: '#111827', margin: [0, 0, 0, 3] },
-                    { text: [{ text: 'RUC / DNI: ', bold: true, fontSize: 8 },
-                      { text: data.cliente_documento || '—', fontSize: 8 }] },
-                    ...(((data as any).cliente_direccion || (data as any).clienteDireccion)
-                      ? [{ text: [{ text: 'Dirección: ', bold: true, fontSize: 8 },
-                          { text: (data as any).cliente_direccion || (data as any).clienteDireccion,
-                            fontSize: 8 }], margin: [0, 2, 0, 0] }]
-                      : [])
-                  ]
-                },
-                {
-                  width: '42%',
-                  stack: [
-                    ...(((data as any).cliente_telefono || (data as any).clienteTelefono)
-                      ? [{ text: [{ text: 'Teléfono: ', bold: true, fontSize: 8 },
-                          { text: (data as any).cliente_telefono || (data as any).clienteTelefono,
-                            fontSize: 8 }], margin: [0, 0, 0, 2] }]
-                      : []),
-                    ...(((data as any).cliente_correo || (data as any).clienteCorreo)
-                      ? [{ text: [{ text: 'Correo: ', bold: true, fontSize: 8 },
-                          { text: (data as any).cliente_correo || (data as any).clienteCorreo,
-                            fontSize: 8 }] }]
-                      : [])
-                  ],
-                  alignment: 'right'
-                }
-              ],
-              border: [false, false, false, false],
-              fillColor: '#f8fafc',
-              margin: [12, 10, 12, 10]
-            }]]
-          },
-          layout: { hLineWidth: () => 0, vLineWidth: () => 0 },
-          margin: [0, 0, 0, 14]
-        },
-
-        // ── Tabla de ítems ────────────────────────────────────────────────
+        cajaCliente,
         {
           table: {
             headerRows: 1,
@@ -393,38 +331,28 @@ export class PdfService {
             dontBreakRows: true
           },
           layout: {
-            hLineWidth: (i: number, node: any) =>
-              (i === 0 || i === 1 || i === node.table.body.length) ? 1.5 : 0.5,
+            hLineWidth: (i: number, node: any) => (i === 0 || i === 1 || i === node.table.body.length) ? 1.2 : 0.4,
             vLineWidth: () => 0,
-            hLineColor: (i: number, node: any) =>
-              (i === 0 || i === 1 || i === node.table.body.length)
-                ? colorEmpresa : '#e5e7eb',
+            hLineColor: (i: number, node: any) => (i === 0 || i === 1 || i === node.table.body.length) ? colorEmpresa : '#e5e7eb',
             paddingTop: () => 5,
             paddingBottom: () => 5,
             paddingLeft: () => 4,
             paddingRight: () => 4
           }
         },
-
-        // ── Totales ───────────────────────────────────────────────────────
-        {
-          table: { widths: anchosTabla, body: filasTotales },
-          layout: 'noBorders',
-          margin: [0, 0, 0, 0]
-        }
+        ...bloqueTotales,
+        bloqueCondicionesContent,
+        bloqueFirma
       ],
 
       styles: {
         thCell: {
-          bold: true, fontSize: 9, color: 'white',
+          bold: true, fontSize: 8.5, color: 'white',
           fillColor: colorEmpresa, alignment: 'center',
-          margin: [2, 5, 2, 5]
+          margin: [2, 6, 2, 6]
         },
         tdCell: {
-          fontSize: 8.5, margin: [2, 4, 2, 4], color: '#1f2937'
-        },
-        footerBoxHeader: {
-          bold: true, fontSize: 7.5, color: colorEmpresa, alignment: 'center'
+          fontSize: 8, margin: [2, 4, 2, 4], color: '#1f2937'
         }
       }
     };

@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -14,6 +14,7 @@ import { IProducto } from '../../models/producto.model';
 
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 @Component({
   selector: 'app-productos',
@@ -21,13 +22,14 @@ import { TooltipModule } from 'primeng/tooltip';
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule,
     InputTextModule, InputNumberModule, DialogModule, ToolbarModule,
-    TagModule, TooltipModule
+    TagModule, TooltipModule, ProgressSpinnerModule
   ],
   templateUrl: './productos.html'
 })
 export class ProductosComponent implements OnInit {
 
   productos: IProducto[] = [];
+  cargando = signal(true);
   productoDialog: boolean = false;
   productoActual: IProducto = this.productoVacio();
   productoOriginal: string = '';
@@ -47,12 +49,25 @@ export class ProductosComponent implements OnInit {
 
   async cargarProductos() {
     if (!this.empresaActiva?.id) return;
+    this.cargando.set(true);
     try {
       this.productos = await this.supabaseSvc.getProductos(this.empresaActiva.id) as IProducto[];
-      this.cdr.detectChanges();
     } catch (error) {
       console.error('Error al cargar productos:', error);
+    } finally {
+      this.cargando.set(false);
+      this.cdr.detectChanges();
     }
+  }
+
+  get precioPromedio(): number {
+    if (this.productos.length === 0) return 0;
+    const total = this.productos.reduce((sum, p) => sum + (p.precio_unitario_base || 0), 0);
+    return total / this.productos.length;
+  }
+
+  get unidadesUnicas(): number {
+    return new Set(this.productos.map(p => p.unidad).filter(Boolean)).size;
   }
 
   generarSkuAutomatico(): string {

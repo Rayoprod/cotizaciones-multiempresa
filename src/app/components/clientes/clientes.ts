@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -10,19 +10,24 @@ import { ToolbarModule } from 'primeng/toolbar';
 
 import { SupabaseService } from '../../services/supabase.service';
 import { ICliente } from '../../models/cliente.model';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-clientes',
   standalone: true,
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule,
-    InputTextModule, DialogModule, ToolbarModule
+    InputTextModule, DialogModule, ToolbarModule, ProgressSpinnerModule,
+    TagModule, TooltipModule
   ],
   templateUrl: './clientes.html'
 })
 export class ClientesComponent implements OnInit {
 
   clientes: ICliente[] = [];
+  cargando = signal(true);
   clienteDialog: boolean = false;
   clienteActual: ICliente = this.clienteVacio();
   clienteOriginal: string = '';
@@ -43,12 +48,23 @@ export class ClientesComponent implements OnInit {
 
   async cargarClientes() {
     if (!this.empresaActiva?.id) return;
+    this.cargando.set(true);
     try {
       this.clientes = await this.supabaseSvc.getClientes(this.empresaActiva.id) as ICliente[];
-      this.cdr.detectChanges();
     } catch (error) {
       console.error('Error al cargar clientes:', error);
+    } finally {
+      this.cargando.set(false);
+      this.cdr.detectChanges();
     }
+  }
+
+  get clientesConCorreo(): number {
+    return this.clientes.filter(c => c.correo).length;
+  }
+
+  get clientesConTelefono(): number {
+    return this.clientes.filter(c => c.telefono).length;
   }
 
   abrirNuevo() {

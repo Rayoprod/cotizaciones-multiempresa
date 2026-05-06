@@ -16,6 +16,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { CheckboxModule } from 'primeng/checkbox';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 interface Usuario {
   id: string;
   email?: string;
@@ -30,7 +31,9 @@ interface Usuario {
     CommonModule, FormsModule,
     TableModule, ButtonModule, InputTextModule, PasswordModule,
     TagModule, DialogModule, DrawerModule, SelectModule,
-    ToastModule, ConfirmDialogModule, TooltipModule, CheckboxModule  ],
+    ToastModule, ConfirmDialogModule, TooltipModule, CheckboxModule,
+    ProgressSpinnerModule
+  ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './usuarios.html',
   styleUrl: './usuarios.scss'
@@ -59,6 +62,18 @@ export class UsuariosComponent implements OnInit {
     { label: 'Vendedor', value: 'vendedor' },
     { label: 'Admin',    value: 'admin'    }
   ];
+
+  get usuariosActivos(): number {
+    return this.usuarios.filter(u => u.activo).length;
+  }
+
+  get usuariosAdmin(): number {
+    return this.usuarios.filter(u => u.rol === 'admin').length;
+  }
+
+  get usuariosVendedor(): number {
+    return this.usuarios.filter(u => u.rol === 'vendedor').length;
+  }
 
   constructor(
   private supabase: SupabaseService,
@@ -102,11 +117,26 @@ export class UsuariosComponent implements OnInit {
     }
     this.guardando = true; this.errorModal = '';
     try {
-      await this.supabase.crearUsuario(this.nuevoEmail, this.nuevoPassword);
+      // Crear usuario en Supabase Auth
+      const { data, error } = await this.supabase.crearUsuario(this.nuevoEmail, this.nuevoPassword);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      // Crear perfil en la tabla profiles
+      await this.supabase.client.from('profiles').insert({
+        id: data.user?.id,
+        email: this.nuevoEmail,
+        rol: this.nuevoRol,
+        activo: true
+      });
+      
       this.msg.add({ severity: 'success', summary: '¡Listo!', detail: `Usuario ${this.nuevoEmail} creado` });
       this.modalVisible = false;
       await this.cargarUsuarios();
     } catch (err: any) {
+      console.error('Error creando usuario:', err);
       this.errorModal = err?.message || 'Error al crear el usuario.';
     } finally { this.guardando = false; }
   }
@@ -159,19 +189,29 @@ export class UsuariosComponent implements OnInit {
 
   // ── DRAWER EMPRESAS ───────────────────────────────
   async abrirEmpresas(usuario: Usuario) {
-  this.usuarioSeleccionado = usuario;
-  this.empresasAsignadas   = [];        // limpiar antes
-  this.drawerVisible       = true;      // abrir drawer primero
-  this.cdr.detectChanges();             // forzar render del drawer
+    // Los administradores no necesitan asignación de empresas
+    if (usuario.rol === 'admin') {
+      this.msg.add({ 
+        severity: 'info', 
+        summary: 'Acceso completo', 
+        detail: 'Los administradores tienen acceso a todas las empresas automáticamente' 
+      });
+      return;
+    }
+    
+    this.usuarioSeleccionado = usuario;
+    this.empresasAsignadas   = [];        // limpiar antes
+    this.drawerVisible       = true;      // abrir drawer primero
+    this.cdr.detectChanges();             // forzar render del drawer
 
-  try {
-    this.empresasAsignadas = await this.supabase.getEmpresasDeUsuario(usuario.id);
-  } catch {
-    this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas' });
+    try {
+      this.empresasAsignadas = await this.supabase.getEmpresasDeUsuario(usuario.id);
+    } catch {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas' });
+    }
+
+    this.cdr.detectChanges();             // forzar render con los datos cargados
   }
-
-  this.cdr.detectChanges();             // forzar render con los datos cargados
-}
 
   toggleEmpresa(empresaId: string) {
     const idx = this.empresasAsignadas.indexOf(empresaId);

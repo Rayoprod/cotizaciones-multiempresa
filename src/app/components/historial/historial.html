@@ -13,121 +13,294 @@
         Consulta, cambia estados y descarga PDFs de cotizaciones anteriores
       </p>
     </div>
-    <div *ngIf="empresaActiva" class="flex align-items-center gap-2 surface-ground
-                                      border-round-xl px-3 py-2">
-      <i class="pi pi-building text-primary"></i>
-      <span class="font-semibold text-900 text-sm">{{ empresaActiva.nombre_comercial }}</span>
+    <div class="flex align-items-center gap-2">
+      <div *ngIf="empresaActiva" class="flex align-items-center gap-2 surface-ground
+                                        border-round-xl px-3 py-2">
+        <i class="pi pi-building text-primary"></i>
+        <span class="font-semibold text-900 text-sm">{{ empresaActiva.nombre_comercial }}</span>
+      </div>
     </div>
   </div>
 
-  <!-- ── Tabla ────────────────────────────────────────────────────────────── -->
-  <div class="surface-card border-round-xl shadow-1 overflow-hidden">
-    <p-table #dt [value]="cotizaciones" [rows]="15" [paginator]="true" [rowHover]="true" responsiveLayout="scroll"
-      [globalFilterFields]="['folio','cliente_nombre','cliente_documento','estado']" [sortField]="'fecha'"
-      [sortOrder]="-1" styleClass="p-datatable-sm">
+  <!-- ── LOADING STATE ────────────────────────────────────────────────────── -->
+  <ng-container *ngIf="cargando()">
+    <div class="flex flex-column align-items-center justify-content-center gap-4 py-6">
+      <p-progressSpinner strokeWidth="4" animationDuration=".8s"
+        [style]="{ width: '60px', height: '60px' }" />
+      <div class="text-center">
+        <p class="text-900 font-semibold text-lg m-0 mb-1">Cargando historial</p>
+        <p class="text-500 text-sm m-0">Obteniendo datos de cotizaciones...</p>
+      </div>
+      <!-- Skeleton cards -->
+      <div class="grid w-full mt-2">
+        <div class="col-12 md:col-3" *ngFor="let s of [1,2,3,4]">
+          <div class="surface-card border-round-xl p-4 shadow-1">
+            <div class="border-round animation-pulse mb-3" style="height:14px;width:50%;background:#e9ecef;"></div>
+            <div class="border-round animation-pulse mb-2" style="height:28px;width:70%;background:#e9ecef;"></div>
+            <div class="border-round animation-pulse" style="height:12px;width:40%;background:#e9ecef;"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Skeleton table rows -->
+      <div class="w-full surface-card border-round-xl shadow-1 p-4 hidden md:block">
+        <div *ngFor="let r of [1,2,3,4,5]" class="flex gap-4 mb-3">
+          <div class="border-round animation-pulse" style="height:16px;width:100px;background:#e9ecef;"></div>
+          <div class="border-round animation-pulse" style="height:16px;width:120px;background:#e9ecef;"></div>
+          <div class="border-round animation-pulse flex-1" style="height:16px;background:#e9ecef;"></div>
+          <div class="border-round animation-pulse" style="height:16px;width:80px;background:#e9ecef;"></div>
+          <div class="border-round animation-pulse" style="height:16px;width:100px;background:#e9ecef;"></div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
 
-      <ng-template pTemplate="caption">
-        <div class="flex flex-column md:flex-row align-items-start md:align-items-center
-                    justify-content-between gap-3 p-2">
-          <span class="font-bold text-900">
-            Total: <span class="text-primary">{{ cotizaciones.length }}</span> cotizaciones
-          </span>
-          <span class="p-input-icon-left w-full md:w-auto">
+  <!-- ── DATA LOADED ──────────────────────────────────────────────────────── -->
+  <ng-container *ngIf="!cargando()">
+
+    <!-- ── KPI Cards ────────────────────────────────────────────────────────── -->
+    <div class="grid mb-4">
+      <div class="col-6 md:col-3">
+        <div class="surface-card border-round-xl p-3 md:p-4 shadow-1 border-left-3 border-primary h-full">
+          <div class="flex align-items-center gap-2 mb-2">
+            <i class="pi pi-file-edit text-primary text-lg"></i>
+            <span class="text-color-secondary text-xs font-semibold uppercase">Total</span>
+          </div>
+          <p class="text-2xl md:text-3xl font-bold text-900 m-0">{{ cotizaciones.length }}</p>
+          <p class="text-xs text-500 m-0 mt-1">cotizaciones</p>
+        </div>
+      </div>
+
+      <div class="col-6 md:col-3">
+        <div class="surface-card border-round-xl p-3 md:p-4 shadow-1 border-left-3 border-green-500 h-full">
+          <div class="flex align-items-center gap-2 mb-2">
+            <i class="pi pi-dollar text-green-500 text-lg"></i>
+            <span class="text-color-secondary text-xs font-semibold uppercase">Vendido</span>
+          </div>
+          <p class="text-2xl md:text-3xl font-bold text-900 m-0">S/ {{ totalVendido | number:'1.0-0' }}</p>
+          <p class="text-xs text-green-600 m-0 mt-1">
+            <i class="pi pi-check-circle mr-1"></i>{{ cotizacionesAprobadas }} aprobadas
+          </p>
+        </div>
+      </div>
+
+      <div class="col-6 md:col-3">
+        <div class="surface-card border-round-xl p-3 md:p-4 shadow-1 border-left-3 border-orange-500 h-full">
+          <div class="flex align-items-center gap-2 mb-2">
+            <i class="pi pi-clock text-orange-500 text-lg"></i>
+            <span class="text-color-secondary text-xs font-semibold uppercase">Pendientes</span>
+          </div>
+          <p class="text-2xl md:text-3xl font-bold text-900 m-0">{{ cotizacionesPendientes }}</p>
+          <p class="text-xs text-orange-600 m-0 mt-1">
+            S/ {{ totalPendiente | number:'1.0-0' }} por aprobar
+          </p>
+        </div>
+      </div>
+
+      <div class="col-6 md:col-3">
+        <div class="surface-card border-round-xl p-3 md:p-4 shadow-1 border-left-3 border-red-500 h-full">
+          <div class="flex align-items-center gap-2 mb-2">
+            <i class="pi pi-times-circle text-red-500 text-lg"></i>
+            <span class="text-color-secondary text-xs font-semibold uppercase">Anuladas</span>
+          </div>
+          <p class="text-2xl md:text-3xl font-bold text-900 m-0">{{ cotizacionesAnuladas }}</p>
+          <p class="text-xs text-500 m-0 mt-1">
+            {{ tasaConversion | number:'1.0-0' }}% tasa de aprobación
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Filtros y Acciones ────────────────────────────────────────────────── -->
+    <div class="surface-card border-round-xl shadow-1 p-3 md:p-4 mb-4">
+      <div class="flex flex-column md:flex-row align-items-start md:align-items-center gap-3">
+        <div class="flex align-items-center gap-2 flex-1 w-full md:w-auto">
+          <span class="p-input-icon-left flex-1">
             <i class="pi pi-search"></i>
-            <input pInputText type="text" class="w-full md:w-22rem" placeholder="Buscar por folio, cliente o estado..."
-              (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
+            <input pInputText type="text" class="w-full" placeholder="Buscar folio, cliente..."
+                   [(ngModel)]="terminoBusqueda" (input)="filtrarCotizaciones(terminoBusqueda)" />
           </span>
         </div>
-      </ng-template>
 
-      <ng-template pTemplate="header">
-        <tr>
-          <th pSortableColumn="fecha" style="width:130px">
-            Fecha <p-sortIcon field="fecha" />
-          </th>
-          <th pSortableColumn="folio" style="width:150px">
-            Folio <p-sortIcon field="folio" />
-          </th>
-          <th>Cliente</th>
-          <th class="hidden md:table-cell" style="width:110px" pSortableColumn="total">
-            Total <p-sortIcon field="total" />
-          </th>
-          <th class="hidden lg:table-cell" style="width:120px">Empresa</th>
-          <th style="width:150px" class="text-center">Estado</th>
-          <th style="width:80px" class="text-center">PDF</th>
-        </tr>
-      </ng-template>
+        <div class="flex align-items-center gap-2 flex-wrap">
+          <div class="flex align-items-center gap-2">
+            <label class="text-xs font-semibold text-color-secondary white-space-nowrap">Desde:</label>
+            <input pInputText type="date" class="text-sm" style="width:140px"
+                   [ngModel]="fechaDesde" (ngModelChange)="fechaDesde = $event; aplicarFiltroFecha()" />
+          </div>
+          <div class="flex align-items-center gap-2">
+            <label class="text-xs font-semibold text-color-secondary white-space-nowrap">Hasta:</label>
+            <input pInputText type="date" class="text-sm" style="width:140px"
+                   [ngModel]="fechaHasta" (ngModelChange)="fechaHasta = $event; aplicarFiltroFecha()" />
+          </div>
+          <p-button icon="pi pi-filter-slash" [text]="true" [rounded]="true" severity="secondary"
+                    size="small" pTooltip="Limpiar filtros" (onClick)="limpiarFiltros()" />
+        </div>
 
-      <ng-template pTemplate="body" let-cot>
-        <tr>
-          <!-- Fecha -->
-          <td>
-            <span class="text-sm text-700">
-              {{ cot.fecha | date:'dd/MM/yyyy' }}
-            </span>
-          </td>
+        <div class="flex gap-2 ml-auto">
+          <p-button icon="pi pi-download" label="Exportar" severity="secondary" [outlined]="true"
+                    size="small" (onClick)="exportarCSV()" pTooltip="Descargar CSV" />
+        </div>
+      </div>
+    </div>
 
-          <!-- Folio -->
-          <td>
+    <!-- ── Charts + Insights (Desktop) ───────────────────────────────────────── -->
+    <div class="grid mb-4 hidden md:flex" *ngIf="cotizaciones.length > 0">
+      <div class="col-12 lg:col-8">
+        <div class="surface-card border-round-xl shadow-1 p-4 h-full">
+          <div class="flex align-items-center justify-content-between mb-3">
+            <span class="font-bold text-900">Ventas por Mes</span>
+            <p-tag [value]="'Últimos 6 meses'" severity="info" styleClass="text-xs" />
+          </div>
+          <p-chart type="bar" [data]="chartVentasMensuales" [options]="chartOptions" height="220px" />
+        </div>
+      </div>
+      <div class="col-12 lg:col-4">
+        <div class="surface-card border-round-xl shadow-1 p-4 h-full">
+          <span class="font-bold text-900 block mb-3">Top Clientes</span>
+          <div class="flex flex-column gap-3">
+            <div *ngFor="let cli of topClientes; let i = index" class="flex align-items-center gap-3">
+              <span class="flex align-items-center justify-content-center border-circle text-xs font-bold text-white flex-shrink-0"
+                    [style]="{'width':'28px','height':'28px','background': i === 0 ? 'var(--primary-color)' : i === 1 ? '#6366f1' : '#94a3b8' }">
+                {{ i + 1 }}
+              </span>
+              <div class="flex-1 overflow-hidden">
+                <p class="text-sm font-semibold text-900 m-0 white-space-nowrap text-overflow-ellipsis overflow-hidden">
+                  {{ cli.nombre }}
+                </p>
+                <p class="text-xs text-500 m-0">{{ cli.cantidad }} cotizaciones</p>
+              </div>
+              <span class="font-bold text-sm text-primary white-space-nowrap">
+                S/ {{ cli.total | number:'1.0-0' }}
+              </span>
+            </div>
+            <div *ngIf="topClientes.length === 0" class="text-center py-4 text-color-secondary text-sm">
+              Sin datos suficientes
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Mobile First: Cards Version ─────────────────────────────────────── -->
+    <div class="flex flex-column gap-3 mb-4 md:hidden">
+      <div *ngIf="cotizacionesFiltradas.length === 0" class="text-center py-8 text-color-secondary">
+        <i class="pi pi-inbox text-5xl mb-3 opacity-40"></i>
+        <p class="font-semibold m-0">Sin cotizaciones</p>
+        <p class="text-sm m-0 mt-1">Las cotizaciones generadas aparecerán aquí</p>
+      </div>
+
+      <div *ngFor="let cot of cotizacionesFiltradas; trackBy: trackByCotizacion"
+           class="surface-card border-round-xl p-3 shadow-1 border-1 border-200">
+
+        <div class="flex justify-content-between align-items-start mb-3">
+          <div class="flex flex-column gap-1">
             <span class="font-mono text-xs font-bold text-primary border-round px-2 py-1"
-              style="background: color-mix(in srgb, var(--primary-color) 10%, white);">
+                  style="background: color-mix(in srgb, var(--primary-color) 10%, white);">
               {{ cot.folio }}
             </span>
-          </td>
+            <span class="text-sm text-700">{{ cot.fecha | date:'dd/MM/yyyy' }}</span>
+          </div>
+          <p-tag [value]="getEstadoLabel(cot.estado)" [severity]="getSeverity(cot.estado)" styleClass="text-xs" />
+        </div>
 
-          <!-- Cliente -->
-          <td>
-            <div class="flex flex-column gap-1">
-              <span class="font-semibold text-900 text-sm">{{ cot.cliente_nombre }}</span>
-              <small class="text-500 font-mono">{{ cot.cliente_documento || '—' }}</small>
-            </div>
-          </td>
+        <div class="mb-3">
+          <div class="flex align-items-center gap-2 mb-1">
+            <i class="pi pi-user text-color-secondary text-sm"></i>
+            <span class="font-semibold text-900 text-sm">{{ cot.cliente_nombre }}</span>
+          </div>
+          <div *ngIf="cot.cliente_documento" class="flex align-items-center gap-2">
+            <i class="pi pi-id-card text-color-secondary text-xs"></i>
+            <span class="text-xs text-500 font-mono">{{ cot.cliente_documento }}</span>
+          </div>
+        </div>
 
-          <!-- Total -->
-          <td class="hidden md:table-cell">
+        <div class="flex justify-content-between align-items-center mb-3">
+          <span class="font-bold text-900">S/ {{ cot.total | number:'1.2-2' }}</span>
+          <p-button icon="pi pi-file-pdf" [text]="true" [rounded]="true" severity="danger" size="small"
+                    pTooltip="Descargar PDF" [loading]="descargando() === cot.id"
+                    (click)="descargarPDF(cot)" />
+        </div>
+
+        <div class="border-top-1 border-200 pt-3">
+          <p-select [options]="opcionesEstado" [ngModel]="cot.estado" optionLabel="label" optionValue="value"
+                    styleClass="w-full text-xs" appendTo="body" (onChange)="cambiarEstado(cot, $event.value)">
+            <ng-template pTemplate="selectedItem" let-item>
+              <p-tag [value]="item?.label || getEstadoLabel(cot.estado)" [severity]="getSeverity(item?.value || cot.estado)" styleClass="text-xs" />
+            </ng-template>
+          </p-select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Desktop: Table Version ─────────────────────────────────────────── -->
+    <div class="hidden md:block surface-card border-round-xl shadow-1 overflow-hidden">
+      <p-table #dt [value]="cotizacionesFiltradas" [rows]="15" [paginator]="true" [rowHover]="true"
+        [globalFilterFields]="['folio','cliente_nombre','cliente_documento','estado']"
+        [sortField]="'fecha'" [sortOrder]="-1" styleClass="p-datatable-sm">
+
+        <ng-template pTemplate="caption">
+          <div class="flex align-items-center justify-content-between p-2">
             <span class="font-bold text-900">
-              S/ {{ cot.total | number:'1.2-2' }}
+              Mostrando <span class="text-primary">{{ cotizacionesFiltradas.length }}</span> cotizaciones
             </span>
-          </td>
+          </div>
+        </ng-template>
 
-          <!-- Empresa -->
-          <td class="hidden lg:table-cell">
-            <span class="text-xs text-600 border-round px-2 py-1" style="background:#f3f4f6;">
-              {{ getNombreEmpresa(cot.empresa_id) }}
-            </span>
-          </td>
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="fecha" style="width:120px">Fecha <p-sortIcon field="fecha" /></th>
+            <th pSortableColumn="folio" style="width:140px">Folio <p-sortIcon field="folio" /></th>
+            <th>Cliente</th>
+            <th style="width:110px" pSortableColumn="total">Total <p-sortIcon field="total" /></th>
+            <th style="width:140px" class="text-center">Estado</th>
+            <th style="width:80px" class="text-center">PDF</th>
+          </tr>
+        </ng-template>
 
-          <!-- Estado -->
-          <td class="text-center">
-            <!-- DESPUÉS -->
-            <p-select [options]="opcionesEstado" [(ngModel)]="cot.estado" optionLabel="label" optionValue="value"
-              [style]="{'width':'130px'}" styleClass="text-xs" appendTo="body" (onChange)="cambiarEstado(cot)">
-              <ng-template pTemplate="selectedItem" let-item>
-                <p-tag [value]="item.label" [severity]="getSeverity(item.value)" styleClass="text-xs" />
-              </ng-template>
-            </p-select>
-          </td>
+        <ng-template pTemplate="body" let-cot>
+          <tr>
+            <td><span class="text-sm text-700">{{ cot.fecha | date:'dd/MM/yyyy' }}</span></td>
+            <td>
+              <span class="font-mono text-xs font-bold text-primary border-round px-2 py-1"
+                style="background: color-mix(in srgb, var(--primary-color) 10%, white);">
+                {{ cot.folio }}
+              </span>
+            </td>
+            <td>
+              <div class="flex flex-column gap-1">
+                <span class="font-semibold text-900 text-sm">{{ cot.cliente_nombre }}</span>
+                <small class="text-500 font-mono">{{ cot.cliente_documento || '—' }}</small>
+              </div>
+            </td>
+            <td><span class="font-bold text-900">S/ {{ cot.total | number:'1.2-2' }}</span></td>
+            <td class="text-center">
+              <p-select [options]="opcionesEstado" [ngModel]="cot.estado" optionLabel="label" optionValue="value"
+                [style]="{'width':'130px'}" styleClass="text-xs" appendTo="body" (onChange)="cambiarEstado(cot, $event.value)">
+                <ng-template pTemplate="selectedItem" let-item>
+                  <p-tag [value]="item?.label || getEstadoLabel(cot.estado)" [severity]="getSeverity(item?.value || cot.estado)" styleClass="text-xs" />
+                </ng-template>
+              </p-select>
+            </td>
+            <td class="text-center">
+              <p-button icon="pi pi-file-pdf" [text]="true" [rounded]="true" severity="danger" size="small"
+                    pTooltip="Descargar PDF" [loading]="descargando() === cot.id" (onClick)="descargarPDF(cot)" />
+            </td>
+          </tr>
+        </ng-template>
 
-          <!-- PDF -->
-          <td class="text-center">
-            <p-button icon="pi pi-file-pdf" [text]="true" [rounded]="true" severity="danger" size="small"
-              pTooltip="Descargar PDF" [loading]="descargando === cot.id" (onClick)="descargarPDF(cot)" />
-          </td>
-        </tr>
-      </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="6">
+              <div class="flex flex-column align-items-center py-8 text-color-secondary">
+                <i class="pi pi-inbox text-5xl mb-3 opacity-40"></i>
+                <p class="font-semibold m-0">Sin cotizaciones registradas</p>
+                <p class="text-sm m-0 mt-1">Las cotizaciones generadas aparecerán aquí</p>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
 
-      <ng-template pTemplate="emptymessage">
-        <tr>
-          <td colspan="7">
-            <div class="flex flex-column align-items-center py-8 text-color-secondary">
-              <i class="pi pi-inbox text-5xl mb-3 opacity-40"></i>
-              <p class="font-semibold m-0">Sin cotizaciones registradas</p>
-              <p class="text-sm m-0 mt-1">Las cotizaciones generadas aparecerán aquí</p>
-            </div>
-          </td>
-        </tr>
-      </ng-template>
-
-    </p-table>
-  </div>
+  </ng-container>
 </div>

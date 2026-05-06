@@ -71,7 +71,7 @@ export class SupabaseService {
   // ─── EMPRESAS CRUD ────────────────────────────────────────────────────────
 
   async guardarEmpresa(empresa: IEmpresa): Promise<IEmpresa> {
-    // Verificar si ya existe
+    // Primero verificar si ya existe (para validación)
     const { data: existente } = await this.client
       .from('empresas')
       .select('id')
@@ -79,7 +79,7 @@ export class SupabaseService {
       .maybeSingle();
 
     if (existente) {
-      // UPDATE
+      // UPDATE - Solo si estamos editando explícitamente
       const { id, ...datos } = empresa as any;
       const { data, error } = await this.client
         .from('empresas')
@@ -99,6 +99,36 @@ export class SupabaseService {
       if (error) throw error;
       return data as IEmpresa;
     }
+  }
+
+  // Método para verificar si ID ya existe (usado en validación asíncrona)
+  async verificarIdExistente(id: string): Promise<boolean> {
+    const { data } = await this.client
+      .from('empresas')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+    return !!data;
+  }
+
+  // Método para verificar si prefijo ya existe (usado en validación asíncrona)
+  async verificarPrefijoExistente(prefijo: string): Promise<boolean> {
+    const { data } = await this.client
+      .from('empresas')
+      .select('prefijo')
+      .ilike('prefijo', prefijo)
+      .maybeSingle();
+    return !!data;
+  }
+
+  // Método para verificar si RUC ya existe (usado en validación asíncrona)
+  async verificarRucExistente(ruc: string): Promise<boolean> {
+    const { data } = await this.client
+      .from('empresas')
+      .select('ruc')
+      .eq('ruc', ruc)
+      .maybeSingle();
+    return !!data;
   }
 
   async actualizarEmpresa(id: string, datos: any) {
