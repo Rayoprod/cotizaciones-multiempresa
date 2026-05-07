@@ -232,7 +232,10 @@
 </div>
 
 <!-- ── DRAWER: ASIGNAR EMPRESAS ─────────────────── -->
-<p-drawer [(visible)]="drawerVisible" position="right"
+<p-drawer [(visible)]="drawerVisible"
+          position="right"
+          appendTo="body"
+          [baseZIndex]="3000"
           [style]="{'width':'100%','max-width':'420px'}">
 
   <ng-template pTemplate="header">
