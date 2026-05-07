@@ -55,8 +55,10 @@ export class LoginComponent {
 
       localStorage.setItem('usuario_rol', rol);
 
-      // ✅ Admin → panel de gestión | Vendedor → selector de empresa
+      // Admin general → panel de gestión | Admin_empresa/Vendedor → selector de empresa
       if (rol === 'admin') {
+        this.router.navigate(['/admin/empresas']);
+      } else if (rol === 'admin_empresa') {
         this.router.navigate(['/admin/empresas']);
       } else {
         this.router.navigate(['/selector']);

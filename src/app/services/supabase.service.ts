@@ -274,6 +274,63 @@ export class SupabaseService {
   return data;
 }
 
+  // ─── CUENTAS BANCARIAS (Tabla dedicada) ────────────────────────────────────
+
+  async getCuentasBancarias(empresaId: string): Promise<any[]> {
+    const { data, error } = await this.client
+      .from('cuentas_bancarias')
+      .select('*')
+      .eq('empresa_id', empresaId)
+      .order('orden', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async guardarCuentaBancaria(cuenta: any): Promise<any> {
+    const { data, error } = await this.client
+      .from('cuentas_bancarias')
+      .insert([cuenta])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  async actualizarCuentaBancaria(id: string, datos: any): Promise<any> {
+    const { data, error } = await this.client
+      .from('cuentas_bancarias')
+      .update(datos)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  async eliminarCuentaBancaria(id: string): Promise<void> {
+    const { error } = await this.client.from('cuentas_bancarias').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async sincronizarCuentasBancarias(empresaId: string, cuentas: any[]): Promise<void> {
+    await this.client.from('cuentas_bancarias').delete().eq('empresa_id', empresaId);
+    if (cuentas.length > 0) {
+      const filas = cuentas.map((c, i) => ({
+        empresa_id: empresaId,
+        banco: c.banco,
+        tipo_cuenta: c.tipo_cuenta || 'Corriente',
+        moneda: c.moneda || 'PEN',
+        numero: c.numero,
+        cci: c.cci || null,
+        titular: c.titular || null,
+        activa: c.activa ?? true,
+        orden: c.orden ?? i
+      }));
+      const { error } = await this.client.from('cuentas_bancarias').insert(filas);
+      if (error) throw error;
+    }
+  }
+
   // ─── PERFILES Y ROLES ─────────────────────────────────────────────────────
 
   async obtenerPerfil(): Promise<{ rol: string } | null> {
@@ -302,7 +359,13 @@ export class SupabaseService {
   }
 
   async crearUsuario(email: string, password: string): Promise<any> {
-    const { data, error } = await this.client.auth.signUp({ email, password });
+    const { data, error } = await this.client.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: window.location.origin + '/login'
+      }
+    });
     if (error) throw error;
     return data;
   }

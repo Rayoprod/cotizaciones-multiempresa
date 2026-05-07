@@ -252,6 +252,7 @@
             <th pSortableColumn="folio" style="width:140px">Folio <p-sortIcon field="folio" /></th>
             <th>Cliente</th>
             <th style="width:110px" pSortableColumn="total">Total <p-sortIcon field="total" /></th>
+            <th style="width:140px" class="text-center">Vendedor</th>
             <th style="width:140px" class="text-center">Estado</th>
             <th style="width:80px" class="text-center">PDF</th>
           </tr>
@@ -273,6 +274,7 @@
               </div>
             </td>
             <td><span class="font-bold text-900">S/ {{ cot.total | number:'1.2-2' }}</span></td>
+            <td class="text-center"><span class="text-sm text-700">{{ cot.vendedor || '—' }}</span></td>
             <td class="text-center">
               <p-select [options]="opcionesEstado" [ngModel]="cot.estado" optionLabel="label" optionValue="value"
                 [style]="{'width':'130px'}" styleClass="text-xs" appendTo="body" (onChange)="cambiarEstado(cot, $event.value)">
@@ -290,7 +292,7 @@
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="6">
+            <td colspan="7">
               <div class="flex flex-column align-items-center py-8 text-color-secondary">
                 <i class="pi pi-inbox text-5xl mb-3 opacity-40"></i>
                 <p class="font-semibold m-0">Sin cotizaciones registradas</p>

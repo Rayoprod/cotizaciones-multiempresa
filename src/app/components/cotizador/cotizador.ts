@@ -17,6 +17,8 @@ import { TextareaModule } from 'primeng/textarea';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { AutoCompleteModule } from 'primeng/autocomplete';
+import { DialogModule } from 'primeng/dialog';
+import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -29,7 +31,7 @@ import { MessageService } from 'primeng/api';
     TableModule, ButtonModule, CardModule,
     InputNumberModule, InputTextModule, TextareaModule,
     ToggleSwitchModule, SelectButtonModule, AutoCompleteModule,
-    TooltipModule, ToastModule
+    DialogModule, SelectModule, TooltipModule, ToastModule
   ],
   providers: [MessageService],
   templateUrl: './cotizador.html'
@@ -51,6 +53,7 @@ export class CotizadorComponent implements OnInit {
 
   // ── Datos BD ──────────────────────────────────────────────────────────────
   productosBD:               any[]    = [];
+  maquinariaBD:              any[]    = [];
   clientesBD:                any[]    = [];
   nombresClientesFiltrados:  any[]    = [];
   nombresProductosFiltrados: string[] = [];
@@ -79,6 +82,19 @@ export class CotizadorComponent implements OnInit {
   subtotalGeneral: number = 0;
   igvTotal:        number = 0;
   totalFinal:      number = 0;
+
+  // ── Selector maquinaria ───────────────────────────────────────────────────
+  modalMaquinariaVisible = false;
+  maquinaSeleccionada: any = null;
+  modalidadMaquina: string = 'alquiler_dia';
+  cantidadMaquina: number = 1;
+
+  opcionesModalidad = [
+    { label: 'Alquiler por hora', value: 'alquiler_hora' },
+    { label: 'Alquiler por día',  value: 'alquiler_dia' },
+    { label: 'Alquiler por mes',  value: 'alquiler_mes' },
+    { label: 'Venta',             value: 'venta' }
+  ];
 
   constructor(
     private cdr:            ChangeDetectorRef,
@@ -137,6 +153,13 @@ export class CotizadorComponent implements OnInit {
       if (!empresaId) return;
       this.productosBD = await this.supabaseSvc.getProductos(empresaId);
       this.clientesBD  = await this.supabaseSvc.getClientes(empresaId);
+      const { data: maq } = await this.supabaseSvc.client
+        .from('maquinaria')
+        .select('*')
+        .eq('empresa_id', empresaId)
+        .eq('activa', true)
+        .order('nombre');
+      this.maquinariaBD = maq || [];
       this.cdr.detectChanges();
     } catch (e) {
       console.error('Error cargando datos:', e);
@@ -346,7 +369,7 @@ export class CotizadorComponent implements OnInit {
   total: this.totalFinal,
   estado: 'PENDIENTE',
   items: itemsValidos,
-  vendedor: localStorage.getItem('usuarioemail'),
+  vendedor: localStorage.getItem('usuario_email'),
   lugar_entrega: this.lugarEntrega,
   observaciones: this.clienteObservaciones || null
 };
@@ -380,5 +403,50 @@ await this.pdfSvc.generarYDescargarCotizacion(
         severity: 'error', summary: 'Error', detail: 'No se pudo generar la cotización.'
       });
     }
+  }
+
+  // ── Maquinaria ────────────────────────────────────────────────────────────
+
+  abrirSelectorMaquinaria() {
+    this.maquinaSeleccionada = null;
+    this.modalidadMaquina = 'alquiler_dia';
+    this.cantidadMaquina = 1;
+    this.modalMaquinariaVisible = true;
+  }
+
+  get precioMaquinaSeleccionada(): number {
+    if (!this.maquinaSeleccionada) return 0;
+    switch (this.modalidadMaquina) {
+      case 'alquiler_hora': return this.maquinaSeleccionada.precio_hora || 0;
+      case 'alquiler_dia':  return this.maquinaSeleccionada.precio_dia || 0;
+      case 'alquiler_mes':  return this.maquinaSeleccionada.precio_mes || 0;
+      case 'venta':         return this.maquinaSeleccionada.precio_venta || 0;
+      default: return 0;
+    }
+  }
+
+  get labelModalidadSeleccionada(): string {
+    const opt = this.opcionesModalidad.find(o => o.value === this.modalidadMaquina);
+    return opt?.label || '';
+  }
+
+  agregarMaquinariaAlCarrito() {
+    if (!this.maquinaSeleccionada || this.precioMaquinaSeleccionada <= 0) {
+      this.messageService.add({ severity: 'warn', summary: 'Selecciona una máquina', detail: 'Elige un equipo con precio definido' });
+      return;
+    }
+    const m = this.maquinaSeleccionada;
+    const descripcion = `${this.labelModalidadSeleccionada}: ${m.nombre}${m.marca ? ' ' + m.marca : ''}${m.modelo ? ' ' + m.modelo : ''}`.substring(0, 100);
+    this.carrito = [...this.carrito, {
+      sku: 'MAQ-' + Math.floor(1000 + Math.random() * 9000),
+      descripcion,
+      unidad: 'und',
+      cantidad: this.cantidadMaquina,
+      precio_unitario: this.precioMaquinaSeleccionada,
+      subtotal: this.cantidadMaquina * this.precioMaquinaSeleccionada
+    }];
+    this.modalMaquinariaVisible = false;
+    this.recalcularTodo();
+    this.messageService.add({ severity: 'success', summary: 'Agregado', detail: descripcion });
   }
 }

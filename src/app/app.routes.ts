@@ -3,6 +3,7 @@ import { LoginComponent } from './components/login/login';
 import { SelectorComponent } from './components/selector-empresa/selector-empresa';
 import { authGuard } from './guards/auth-guard';
 import { adminGuard } from './guards/admin-guard';
+import { adminGeneralGuard } from './guards/admin-general-guard';
 
 export const routes: Routes = [
 
@@ -33,6 +34,7 @@ export const routes: Routes = [
       },
       {
         path: 'usuarios',
+        canActivate: [adminGeneralGuard],
         loadComponent: () =>
           import('./components/usuarios/usuarios')
             .then(m => m.UsuariosComponent)
@@ -76,6 +78,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/clientes/clientes')
             .then(m => m.ClientesComponent)
+      },
+      {
+        path: 'maquinaria',
+        loadComponent: () =>
+          import('./components/maquinaria/maquinaria')
+            .then(m => m.MaquinariaComponent)
       }
     ]
   },

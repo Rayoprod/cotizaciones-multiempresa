@@ -102,6 +102,11 @@
                   class="p-button-outlined p-button-primary p-button-sm"
                   (click)="agregarFila()">
           </button>
+          <button pButton icon="pi pi-wrench" label="Agregar maquinaria"
+                  class="p-button-outlined p-button-warning p-button-sm"
+                  (click)="abrirSelectorMaquinaria()"
+                  [disabled]="maquinariaBD.length === 0">
+          </button>
         </div>
 
         <!-- TABLA DESKTOP -->
@@ -389,4 +394,33 @@
 
     </div>
   </div>
+    <p-dialog [(visible)]="modalMaquinariaVisible" header="Agregar maquinaria"
+    [modal]="true" [style]="{ width: '90vw', maxWidth: '420px' }" [draggable]="false">
+    <div class="flex flex-column gap-3 pt-2">
+      <div class="flex flex-column gap-1">
+        <label class="text-xs font-semibold text-700">Equipo</label>
+        <p-select [options]="maquinariaBD" [(ngModel)]="maquinaSeleccionada"
+          optionLabel="nombre" placeholder="Selecciona un equipo..." styleClass="w-full" />
+      </div>
+      <div class="flex flex-column gap-1">
+        <label class="text-xs font-semibold text-700">Modalidad</label>
+        <p-selectButton [options]="opcionesModalidad" [(ngModel)]="modalidadMaquina"
+          optionLabel="label" optionValue="value" styleClass="w-full text-sm flex-wrap" />
+      </div>
+      <div class="grid">
+        <div class="col-12 md:col-6 flex flex-column gap-1">
+          <label class="text-xs font-semibold text-700">Cantidad</label>
+          <p-inputNumber [(ngModel)]="cantidadMaquina" [min]="1" styleClass="w-full" />
+        </div>
+        <div class="col-12 md:col-6 flex flex-column gap-1">
+          <label class="text-xs font-semibold text-700">Precio unitario</label>
+          <span class="font-bold text-lg text-primary">S/ {{ precioMaquinaSeleccionada | number:'1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+    <ng-template pTemplate="footer">
+      <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="modalMaquinariaVisible = false" />
+      <p-button label="Agregar" icon="pi pi-check" severity="primary" (onClick)="agregarMaquinariaAlCarrito()" />
+    </ng-template>
+  </p-dialog>
 </div>  

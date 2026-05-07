@@ -31,8 +31,7 @@ export class EmpresaService {
     this.loadingSubject.next(true);
     this.limpiarErrores();
     
-    return from(this.supabase.getEmpresas()).pipe(
-      map(empresas => this.normalizarEmpresas(empresas as any[])),
+    return from(this.cargarEmpresasConCuentas()).pipe(
       tap(empresas => {
         this.empresasSubject.next(empresas);
         this.loadingSubject.next(false);
@@ -47,6 +46,37 @@ export class EmpresaService {
         return throwError(() => error);
       })
     );
+  }
+
+  private async cargarEmpresasConCuentas(): Promise<IEmpresa[]> {
+    const empresas = await this.supabase.getEmpresas();
+    const normalizadas = this.normalizarEmpresas(empresas as any[]);
+
+    const conCuentas = await Promise.all(
+      normalizadas.map(async (empresa) => {
+        try {
+          const cuentasDB = await this.supabase.getCuentasBancarias(empresa.id);
+          if (cuentasDB.length > 0) {
+            return {
+              ...empresa,
+              cuentas_bancarias: cuentasDB.map((c: any) => ({
+                banco: c.banco,
+                tipo_cuenta: c.tipo_cuenta,
+                moneda: c.moneda,
+                numero: c.numero,
+                cci: c.cci || '',
+                titular: c.titular || '',
+                activa: c.activa,
+                orden: c.orden
+              }))
+            };
+          }
+        } catch {}
+        return empresa;
+      })
+    );
+
+    return conCuentas;
   }
   
   private normalizarEmpresas(empresas: any[]): IEmpresa[] {
@@ -74,6 +104,13 @@ export class EmpresaService {
     const empresaParaGuardar = this.prepararDatosParaGuardar(formData);
     
     return from(this.supabase.guardarEmpresa(empresaParaGuardar as IEmpresa)).pipe(
+      switchMap(async () => {
+        await this.supabase.sincronizarCuentasBancarias(
+          empresaParaGuardar.id!,
+          empresaParaGuardar.cuentas_bancarias || []
+        );
+        return this.cargarEmpresas().toPromise();
+      }),
       switchMap(() => this.cargarEmpresas()),
       map(() => empresaParaGuardar as IEmpresa),
       catchError(error => {

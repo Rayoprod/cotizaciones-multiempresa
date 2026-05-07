@@ -52,6 +52,12 @@
            (click)="cerrarMenu()">
           <i class="pi pi-users"></i><span>Directorio clientes</span>
         </a>
+
+        <a routerLink="/maquinaria" routerLinkActive="bg-primary text-white font-bold shadow-2" [routerLinkActiveOptions]="{ exact: false }"
+           class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
+           (click)="cerrarMenu()">
+          <i class="pi pi-wrench"></i><span>Maquinaria</span>
+        </a>
         
         <p-divider *ngIf="esAdmin" styleClass="border-white-alpha-20"></p-divider>
         <button *ngIf="esAdmin" pButton type="button" icon="pi pi-arrow-left" label="Panel Admin" severity="secondary" class="w-full text-left" (click)="volverAlAdmin()"></button>

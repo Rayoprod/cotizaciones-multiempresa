@@ -29,7 +29,7 @@
       </div>
       <div class="flex flex-column gap-2">
         <!-- El color azul para indicar actividad en modo admin es bg-blue-500 -->
-        <a *ngFor="let item of navItems" [routerLink]="item.path"
+        <a *ngFor="let item of navItemsFiltrados" [routerLink]="item.path"
            routerLinkActive="bg-blue-500 text-white font-bold shadow-2" [routerLinkActiveOptions]="{ exact: false }"
            class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
            (click)="cerrarMenu()">

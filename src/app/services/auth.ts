@@ -31,11 +31,17 @@ export class AuthService {
   }
 
   async isAdmin(): Promise<boolean> {
-    // Primero intenta desde localStorage (ya validado en el login)
+    const rolLocal = localStorage.getItem('usuario_rol');
+    if (rolLocal) return rolLocal === 'admin' || rolLocal === 'admin_empresa';
+
+    const perfil = await this.supabase.obtenerPerfil();
+    return perfil?.rol === 'admin' || perfil?.rol === 'admin_empresa';
+  }
+
+  async isAdminGeneral(): Promise<boolean> {
     const rolLocal = localStorage.getItem('usuario_rol');
     if (rolLocal) return rolLocal === 'admin';
 
-    // Fallback: consulta la BD
     const perfil = await this.supabase.obtenerPerfil();
     return perfil?.rol === 'admin';
   }

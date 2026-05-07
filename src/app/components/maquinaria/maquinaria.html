@@ -1,0 +1,103 @@
+<div class="p-3 md:p-4">
+  <p-toast position="top-right" />
+  <p-confirmDialog />
+
+  <div class="flex flex-column md:flex-row justify-content-between align-items-start md:align-items-center gap-3 mb-4">
+    <div>
+      <h2 class="text-2xl font-bold text-900 m-0">Maquinaria</h2>
+      <p class="text-sm text-500 m-0 mt-1">Catalogo de equipos y maquinaria</p>
+    </div>
+    <p-button icon="pi pi-plus" label="Nuevo equipo" severity="primary" (onClick)="abrirNuevo()" />
+  </div>
+
+  <div *ngIf="cargando()" class="flex justify-content-center py-6">
+    <p-progressSpinner strokeWidth="4" [style]="{ width: '50px', height: '50px' }" />
+  </div>
+
+  <div *ngIf="!cargando() && items.length === 0" class="surface-card border-round-xl shadow-1 p-6 text-center">
+    <i class="pi pi-wrench text-5xl text-300 mb-3"></i>
+    <p class="font-semibold text-900 m-0">Sin equipos registrados</p>
+    <p class="text-sm text-500 m-0 mt-1">Agrega maquinaria para incluir en tus cotizaciones</p>
+  </div>
+
+  <div *ngIf="!cargando() && items.length > 0" class="grid">
+    <div class="col-12 md:col-6 lg:col-4" *ngFor="let m of items">
+      <div class="surface-card border-round-xl shadow-1 p-4 h-full flex flex-column">
+        <div class="flex justify-content-between align-items-start mb-3">
+          <div>
+            <span class="font-bold text-900 text-lg">{{ m.nombre }}</span>
+            <p class="text-xs text-500 m-0 mt-1">{{ m.tipo || 'Sin tipo' }} &​middot; {{ m.marca || 'Sin marca' }}</p>
+          </div>
+          <p-tag [value]="m.activa ? 'Activo' : 'Inactivo'" [severity]="m.activa ? 'success' : 'danger'" styleClass="text-xs" />
+        </div>
+        <p class="text-sm text-700 mb-3 flex-1" *ngIf="m.descripcion">{{ m.descripcion }}</p>
+        <div class="border-top-1 border-200 pt-3 mb-3">
+          <div class="grid text-xs">
+            <div class="col-6" *ngIf="m.precio_hora"><span class="text-500">Hora: </span><span class="font-bold text-900">S/ {{ m.precio_hora | number:'1.2-2' }}</span></div>
+            <div class="col-6" *ngIf="m.precio_dia"><span class="text-500">Dia: </span><span class="font-bold text-900">S/ {{ m.precio_dia | number:'1.2-2' }}</span></div>
+            <div class="col-6" *ngIf="m.precio_mes"><span class="text-500">Mes: </span><span class="font-bold text-900">S/ {{ m.precio_mes | number:'1.2-2' }}</span></div>
+            <div class="col-6" *ngIf="m.precio_venta"><span class="text-500">Venta: </span><span class="font-bold text-primary">S/ {{ m.precio_venta | number:'1.2-2' }}</span></div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" size="small" pTooltip="Editar" (onClick)="editar(m)" />
+          <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" size="small" pTooltip="Eliminar" (onClick)="confirmarEliminar(m)" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p-dialog [(visible)]="modalVisible" [header]="esEdicion ? 'Editar equipo' : 'Nuevo equipo'"
+    [modal]="true" [style]="{ width: '520px' }" [draggable]="false" (onHide)="resetForm()">
+    <div class="flex flex-column gap-3 pt-2">
+      <div class="flex flex-column gap-1">
+        <label class="text-xs font-semibold text-700">Nombre *</label>
+        <input pInputText [(ngModel)]="form.nombre" class="w-full" placeholder="Ej: Excavadora CAT 320" />
+      </div>
+      <div class="grid">
+        <div class="col-6 flex flex-column gap-1">
+          <label class="text-xs font-semibold text-700">Tipo</label>
+          <input pInputText [(ngModel)]="form.tipo" placeholder="Ej: Excavadora" />
+        </div>
+        <div class="col-6 flex flex-column gap-1">
+          <label class="text-xs font-semibold text-700">Marca</label>
+          <input pInputText [(ngModel)]="form.marca" placeholder="Ej: Caterpillar" />
+        </div>
+      </div>
+      <div class="flex flex-column gap-1">
+        <label class="text-xs font-semibold text-700">Modelo</label>
+        <input pInputText [(ngModel)]="form.modelo" placeholder="Ej: 320D" />
+      </div>
+      <div class="flex flex-column gap-1">
+        <label class="text-xs font-semibold text-700">Descripcion</label>
+        <textarea pInputTextarea [(ngModel)]="form.descripcion" rows="2" placeholder="Detalles del equipo..."></textarea>
+      </div>
+      <div class="grid">
+        <div class="col-6 flex flex-column gap-1">
+          <label class="text-xs font-semibold text-700">Precio por hora</label>
+          <p-inputNumber [(ngModel)]="form.precio_hora" mode="decimal" [minFractionDigits]="2" styleClass="w-full" />
+        </div>
+        <div class="col-6 flex flex-column gap-1">
+          <label class="text-xs font-semibold text-700">Precio por dia</label>
+          <p-inputNumber [(ngModel)]="form.precio_dia" mode="decimal" [minFractionDigits]="2" styleClass="w-full" />
+        </div>
+        <div class="col-6 flex flex-column gap-1">
+          <label class="text-xs font-semibold text-700">Precio por mes</label>
+          <p-inputNumber [(ngModel)]="form.precio_mes" mode="decimal" [minFractionDigits]="2" styleClass="w-full" />
+        </div>
+        <div class="col-6 flex flex-column gap-1">
+          <label class="text-xs font-semibold text-700">Precio de venta</label>
+          <p-inputNumber [(ngModel)]="form.precio_venta" mode="decimal" [minFractionDigits]="2" styleClass="w-full" />
+        </div>
+      </div>
+      <div class="flex align-items-center gap-2">
+        <p-checkbox [(ngModel)]="form.activa" [binary]="true" inputId="activa" />
+        <label for="activa" class="text-sm text-700">Equipo activo</label>
+      </div>
+    </div>
+    <ng-template pTemplate="footer">
+      <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="modalVisible = false" />
+      <p-button label="Guardar" icon="pi pi-check" severity="primary" [loading]="guardando" (onClick)="guardar()" />
+    </ng-template>
+  </p-dialog>
+</div>

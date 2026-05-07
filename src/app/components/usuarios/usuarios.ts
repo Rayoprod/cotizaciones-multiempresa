@@ -20,7 +20,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 interface Usuario {
   id: string;
   email?: string;
-  rol: 'admin' | 'vendedor';
+  rol: 'admin' | 'admin_empresa' | 'vendedor';
   activo: boolean;
 }
 
@@ -60,7 +60,8 @@ export class UsuariosComponent implements OnInit {
 
   rolesOpciones = [
     { label: 'Vendedor', value: 'vendedor' },
-    { label: 'Admin',    value: 'admin'    }
+    { label: 'Admin Empresa', value: 'admin_empresa' },
+    { label: 'Admin General', value: 'admin' }
   ];
 
   get usuariosActivos(): number {
@@ -145,7 +146,7 @@ export class UsuariosComponent implements OnInit {
   async cambiarRol(usuario: Usuario, nuevoRol: string) {
     try {
       await this.supabase.actualizarRolUsuario(usuario.id, nuevoRol);
-      usuario.rol = nuevoRol as 'admin' | 'vendedor';
+      usuario.rol = nuevoRol as 'admin' | 'admin_empresa' | 'vendedor';
       this.msg.add({ severity: 'success', summary: 'Rol actualizado', detail: nuevoRol });
     } catch {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cambiar el rol' });
@@ -189,12 +190,12 @@ export class UsuariosComponent implements OnInit {
 
   // ── DRAWER EMPRESAS ───────────────────────────────
   async abrirEmpresas(usuario: Usuario) {
-    // Los administradores no necesitan asignación de empresas
+    // Solo admin general tiene acceso a todas las empresas sin asignación
     if (usuario.rol === 'admin') {
       this.msg.add({ 
         severity: 'info', 
         summary: 'Acceso completo', 
-        detail: 'Los administradores tienen acceso a todas las empresas automáticamente' 
+        detail: 'Los administradores generales tienen acceso a todas las empresas automáticamente' 
       });
       return;
     }

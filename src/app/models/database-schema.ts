@@ -39,7 +39,7 @@ export interface EmpresaTable {
 
 export interface ProfileTable {
   id: string;                    // Primary Key - UUID (FK a auth.users)
-  rol?: 'admin' | 'vendedor';
+  rol?: 'admin' | 'admin_empresa' | 'vendedor';
   created_at?: string;
   activo?: boolean;
   email?: string;

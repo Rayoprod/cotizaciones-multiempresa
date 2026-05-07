@@ -138,15 +138,46 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   async cargarEmpresas() {
     try {
       console.log('🔄 Cargando empresas...');
-      const data = await this.supabase.getEmpresas();
+      const rol = localStorage.getItem('usuario_rol');
+      let data: any[];
+
+      if (rol === 'admin_empresa') {
+        data = await this.supabase.getEmpresasDelUsuario();
+      } else {
+        data = await this.supabase.getEmpresas();
+      }
       console.log('✅ Empresas cargadas:', data);
       
-      this.empresas = data.map(empresa => ({
-        ...empresa,
-        cuentas_bancarias: Array.isArray(empresa.cuentas_bancarias) ? empresa.cuentas_bancarias : [],
-        mostrar_cuentas: empresa.mostrar_cuentas ?? true,
-        activa: empresa.activa ?? true
-      }));
+      const empresasConCuentas = await Promise.all(
+        data.map(async (empresa: any) => {
+          try {
+            const cuentasDB = await this.supabase.getCuentasBancarias(empresa.id);
+            if (cuentasDB.length > 0) {
+              return {
+                ...empresa,
+                cuentas_bancarias: cuentasDB.map((c: any) => ({
+                  banco: c.banco,
+                  tipo_cuenta: c.tipo_cuenta,
+                  moneda: c.moneda,
+                  numero: c.numero,
+                  cci: c.cci || '',
+                  titular: c.titular || '',
+                  activa: c.activa,
+                  orden: c.orden
+                }))
+              };
+            }
+          } catch {}
+          return {
+            ...empresa,
+            cuentas_bancarias: Array.isArray(empresa.cuentas_bancarias) ? empresa.cuentas_bancarias : [],
+            mostrar_cuentas: empresa.mostrar_cuentas ?? true,
+            activa: empresa.activa ?? true
+          };
+        })
+      );
+      
+      this.empresas = empresasConCuentas;
       
       this.cdr.detectChanges();
       
@@ -612,6 +643,11 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     }
 
     await this.supabase.guardarEmpresa(formData);
+
+    await this.supabase.sincronizarCuentasBancarias(
+      formData.id,
+      (formData.cuentas_bancarias || []).filter((c: any) => c.banco?.trim() && c.numero?.trim())
+    );
 
     this.msg.add({
       severity: 'success',

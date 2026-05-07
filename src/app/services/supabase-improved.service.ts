@@ -31,7 +31,13 @@ export class SupabaseImprovedService {
   }
 
   async crearUsuario(email: string, password: string) {
-    const { data, error } = await this.client.auth.signUp({ email, password });
+    const { data, error } = await this.client.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: window.location.origin + '/login'
+      }
+    });
     if (error) throw error;
     return data;
   }

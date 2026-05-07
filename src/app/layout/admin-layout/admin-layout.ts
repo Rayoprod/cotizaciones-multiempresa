@@ -32,17 +32,25 @@ export class AdminLayoutComponent {
 
   sidebarAbierto = false;
   usuarioNombre = '';
+  esAdminGeneral = false;
 
   readonly navItems: NavItem[] = [
     { label: 'Empresas', icon: 'pi pi-building', path: '/admin/empresas' },
     { label: 'Usuarios', icon: 'pi pi-user-edit', path: '/admin/usuarios' }
   ];
 
+  get navItemsFiltrados(): NavItem[] {
+    if (this.esAdminGeneral) return this.navItems;
+    return this.navItems.filter(item => item.path !== '/admin/usuarios');
+  }
+
   constructor() {
     this.auth.obtenerSesion().then(res => {
       const user = res?.data?.session?.user;
       this.usuarioNombre = user?.email ?? 'Admin';
-      this.cdr.detectChanges(); // Forzamos actualización al cargar el usuario
+      const rol = localStorage.getItem('usuario_rol');
+      this.esAdminGeneral = rol === 'admin';
+      this.cdr.detectChanges();
     });
 
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
