@@ -294,74 +294,83 @@
     </div>
 
     <!-- ── Sección: Cuentas Bancarias ───────────────────────────────────────────── -->
-    <div class="form-section">
-      <div class="section-header">
-        <h3 class="section-title">
-          <i class="pi pi-credit-card"></i>
-          Cuentas Bancarias
-        </h3>
-        <p-button icon="pi pi-plus" label="Agregar Cuenta" class="btn-add-account" [outlined]="true"
-                  (click)="agregarCuenta()" />
-      </div>
-      
-      <div class="accounts-container" *ngIf="tieneCuentas">
-        <div *ngFor="let cuenta of cuentasBancarias.controls; let i = index" [formGroupName]="i.toString()" 
-             class="account-card">
-          
-          <div class="account-header">
-            <span class="account-title">Cuenta Bancaria {{ i + 1 }}</span>
-            <p-button icon="pi pi-times" class="btn-remove-account" severity="danger" [text]="true" size="small"
-                      (click)="eliminarCuenta(i)" />
+<div class="form-section">
+  <div class="section-header">
+    <h3 class="section-title">
+      <i class="pi pi-credit-card"></i>
+      Cuentas Bancarias
+    </h3>
+    <p-button icon="pi pi-plus" label="Agregar Cuenta" class="btn-add-account" [outlined]="true"
+              (click)="agregarCuenta()" />
+  </div>
+
+  <div class="accounts-container" formArrayName="cuentas_bancarias">
+
+    <ng-container *ngIf="tieneCuentas">
+      <div *ngFor="let cuenta of cuentasBancarias.controls; let i = index"
+           [formGroupName]="i"
+           class="account-card">
+
+        <div class="account-header">
+          <span class="account-title">Cuenta Bancaria {{ i + 1 }}</span>
+          <p-button icon="pi pi-times" class="btn-remove-account" severity="danger" [text]="true" size="small"
+                    (click)="eliminarCuenta(i)" />
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Banco <span class="required">*</span></label>
+            <input pInputText type="text" formControlName="banco" class="form-input"
+                   placeholder="Nombre del banco">
+            <small class="form-error"
+                   *ngIf="cuentasBancarias.at(i).get('banco')?.invalid && cuentasBancarias.at(i).get('banco')?.dirty">
+              {{ getCuentaErrorMensaje(i, 'banco', 'required') }}
+            </small>
           </div>
 
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">Banco <span class="required">*</span></label>
-              <input pInputText type="text" formControlName="banco" class="form-input"
-                     placeholder="Nombre del banco">
-              <small class="form-error" *ngIf="cuentasBancarias.at(i).get('banco')?.invalid && cuentasBancarias.at(i).get('banco')?.dirty">
-                {{ getCuentaErrorMensaje(i, 'banco', 'required') }}
-              </small>
-            </div>
+          <div class="form-group">
+            <label class="form-label">Tipo de Cuenta <span class="required">*</span></label>
+            <input pInputText type="text" formControlName="tipo_cuenta" class="form-input"
+                   placeholder="Corriente/Ahorros">
+            <small class="form-error"
+                   *ngIf="cuentasBancarias.at(i).get('tipo_cuenta')?.invalid && cuentasBancarias.at(i).get('tipo_cuenta')?.dirty">
+              {{ getCuentaErrorMensaje(i, 'tipo_cuenta', 'required') }}
+            </small>
+          </div>
 
-            <div class="form-group">
-              <label class="form-label">Tipo de Cuenta <span class="required">*</span></label>
-              <input pInputText type="text" formControlName="tipo_cuenta" class="form-input"
-                     placeholder="Corriente/Ahorros">
-              <small class="form-error" *ngIf="cuentasBancarias.at(i).get('tipo_cuenta')?.invalid && cuentasBancarias.at(i).get('tipo_cuenta')?.dirty">
-                {{ getCuentaErrorMensaje(i, 'tipo_cuenta', 'required') }}
-              </small>
-            </div>
+          <div class="form-group">
+            <label class="form-label">Número de Cuenta <span class="required">*</span></label>
+            <input pInputText type="text" formControlName="numero" class="form-input"
+                   placeholder="Número de cuenta">
+            <small class="form-error"
+                   *ngIf="cuentasBancarias.at(i).get('numero')?.invalid && cuentasBancarias.at(i).get('numero')?.dirty">
+              {{ getCuentaErrorMensaje(i, 'numero', 'required') || getCuentaErrorMensaje(i, 'numero', 'minlength') }}
+            </small>
+          </div>
 
-            <div class="form-group">
-              <label class="form-label">Número de Cuenta <span class="required">*</span></label>
-              <input pInputText type="text" formControlName="numero" class="form-input"
-                     placeholder="Número de cuenta">
-              <small class="form-error" *ngIf="cuentasBancarias.at(i).get('numero')?.invalid && cuentasBancarias.at(i).get('numero')?.dirty">
-                {{ getCuentaErrorMensaje(i, 'numero', 'required') || getCuentaErrorMensaje(i, 'numero', 'pattern') }}
-              </small>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">CCI</label>
-              <input pInputText type="text" formControlName="cci" class="form-input"
-                     placeholder="Código Interbancario">
-              <small class="form-error" *ngIf="cuentasBancarias.at(i).get('cci')?.invalid && cuentasBancarias.at(i).get('cci')?.dirty">
-                {{ getCuentaErrorMensaje(i, 'cci', 'pattern') }}
-              </small>
-            </div>
+          <div class="form-group">
+            <label class="form-label">CCI</label>
+            <input pInputText type="text" formControlName="cci" class="form-input"
+                   placeholder="Código Interbancario (20 dígitos)">
+            <small class="form-error"
+                   *ngIf="cuentasBancarias.at(i).get('cci')?.invalid && cuentasBancarias.at(i).get('cci')?.dirty">
+              {{ getCuentaErrorMensaje(i, 'cci', 'minlength') }}
+            </small>
           </div>
         </div>
-      </div>
 
-      <div class="no-accounts" *ngIf="!tieneCuentas">
-        <i class="pi pi-credit-card"></i>
-        <p>No hay cuentas bancarias agregadas</p>
-        <p-button label="Agregar Primera Cuenta" icon="pi pi-plus" class="btn-add-account" [outlined]="true"
-                  (click)="agregarCuenta()" />
       </div>
+    </ng-container>
+
+    <div class="no-accounts" *ngIf="!tieneCuentas">
+      <i class="pi pi-credit-card"></i>
+      <p>No hay cuentas bancarias agregadas</p>
+      <p-button label="Agregar Primera Cuenta" icon="pi pi-plus" class="btn-add-account" [outlined]="true"
+                (click)="agregarCuenta()" />
     </div>
 
+  </div>
+</div>
     <!-- ── Sección: Configuración ───────────────────────────────────────────────── -->
     <div class="form-section">
       <div class="section-header">

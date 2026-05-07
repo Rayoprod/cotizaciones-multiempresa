@@ -283,11 +283,11 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     console.log('🧹 Cuenta limpia:', cuentaLimpia);
     
     const cuentaGroup = this.fb.group({
-      banco: [cuentaLimpia.banco, Validators.required],
-      tipo_cuenta: [cuentaLimpia.tipo_cuenta, Validators.required],
-      numero: [cuentaLimpia.numero, [Validators.required, Validators.pattern(/^[0-9]{10,20}$/)]],
-      cci: [cuentaLimpia.cci, Validators.pattern(/^[0-9]{10,20}$/)]
-    });
+  banco: [cuentaLimpia.banco, Validators.required],
+  tipo_cuenta: [cuentaLimpia.tipo_cuenta, Validators.required],
+  numero: [cuentaLimpia.numero, [Validators.required, Validators.minLength(6), Validators.maxLength(30)]],
+  cci: [cuentaLimpia.cci, [Validators.minLength(20), Validators.maxLength(20)]]  // CCI es siempre 20 dígitos o vacío
+});
     
     try {
       this.cuentasFormArray.push(cuentaGroup);
@@ -327,16 +327,18 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   }
   
   getCuentaErrorMensaje(index: number, controlName: string, errorName: string): string {
-    const control = this.cuentasFormArray.at(index).get(controlName);
-    if (!control || !control.errors) return '';
-    
-    const errors = control.errors;
-    switch (errorName) {
-      case 'required': return 'Este campo es obligatorio';
-      case 'pattern': return 'Formato inválido';
-      default: return 'Error de validación';
-    }
+  const control = this.cuentasFormArray.at(index).get(controlName);
+  if (!control || !control.errors) return '';
+  
+  const errors = control.errors;
+  switch (errorName) {
+    case 'required': return 'Este campo es obligatorio';
+    case 'pattern': return 'Solo se permiten números';
+    case 'minlength': return `Mínimo ${errors['minlength'].requiredLength} caracteres`;
+    case 'maxlength': return `Máximo ${errors['maxlength'].requiredLength} caracteres`;
+    default: return 'Error de validación';
   }
+}
   
   // ── API PERU ─────────────────────────────────────────────────────────
   
@@ -516,113 +518,121 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   // ── GUARDADO ─────────────────────────────────────────────────────────
   
   async guardarEmpresa() {
-    console.log('🔍 Validando formulario...');
-    console.log('📋 Formulario válido:', this.empresaForm.valid);
-    console.log('📋 Formulario completo:', this.empresaForm.value);
-    
-    if (this.empresaForm.invalid) {
-      console.log('❌ Formulario inválido - errores:', this.empresaForm.errors);
-      this.msg.add({
-        severity: 'warn',
-        summary: 'Formulario inválido',
-        detail: 'Por favor completa todos los campos requeridos'
-      });
-      return;
-    }
-    
-    this.enviando = true;
-    
-    try {
-      // Obtener el valor del ID del formulario, considerando si está deshabilitado
-      const idControl = this.empresaForm.get('id');
-      const idValue = idControl?.disabled ? idControl?.value : this.empresaForm.value.id;
-      
-      console.log('📝 ID del control:', idControl?.value);
-      console.log('📝 ID del formulario:', this.empresaForm.value.id);
-      console.log('📝 ID final a usar:', idValue);
-      
-      // Crear formData con el ID correcto
-      const formData = {
-        ...this.empresaForm.value,
-        id: idValue
-      };
-      
-      console.log('📝 Datos a guardar:', formData);
-      console.log('📝 Es edición:', this.esEdicion);
-      
-      // Asegurar que el ID no sea null y No se pierda al actualizar fotos
-      if (!idValue || idValue.trim() === '') {
-        console.error('❌ ID es nulo o vacío');
-        this.msg.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'El ID de la empresa es requerido'
-        });
-        return;
-      }
-      
-      console.log('🔍 Verificando integridad del formulario...');
-      console.log('📋 ID final:', formData.id);
-      console.log('📋 Nombre comercial:', formData.nombre_comercial);
-      console.log('📋 RUC:', formData.ruc);
-      
-      // Validación adicional para asegurar datos mínimos
-      if (!formData.nombre_comercial || formData.nombre_comercial.trim() === '') {
-        console.error('❌ Nombre comercial está vacío');
-        this.msg.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'El nombre comercial es requerido'
-        });
-        return;
-      }
-      
-      // Verificar si existe el ID/RUC antes de guardar
-      if (!this.esEdicion) {
-        const idExiste = await this.supabase.verificarIdExistente(formData.id);
-        if (idExiste) {
-          this.msg.add({
-            severity: 'error',
-            summary: 'ID duplicado',
-            detail: 'El ID ya existe en la base de datos'
-          });
-          return;
-        }
-        
-        const rucExiste = await this.supabase.verificarRucExistente(formData.ruc);
-        if (rucExiste) {
-          this.msg.add({
-            severity: 'error',
-            summary: 'RUC duplicado',
-            detail: 'El RUC ya existe en la base de datos'
-          });
-          return;
-        }
-      }
-      
-      await this.supabase.guardarEmpresa(formData);
-      
-      this.msg.add({
-        severity: 'success',
-        summary: 'Empresa guardada',
-        detail: this.esEdicion ? 'Empresa actualizada correctamente' : 'Empresa creada correctamente'
-      });
-      
-      this.cerrarModal();
-      await this.cargarEmpresas();
-      
-    } catch (error: any) {
-      console.error('Error guardando empresa:', error);
+  console.log('🔍 Validando formulario...');
+
+  // Marcar todos los campos para mostrar errores visualmente
+  this.empresaForm.markAllAsTouched();
+
+  // Validar solo los campos principales (sin contar el FormArray en la validación raíz)
+  const camposPrincipales = ['nombre_comercial', 'ruc', 'color', 'prefijo'];
+  const hayErrorEnPrincipales = camposPrincipales.some(campo => {
+    const ctrl = this.empresaForm.get(campo);
+    return ctrl?.invalid && ctrl?.errors;
+  });
+
+  console.log('📋 Formulario válido:', this.empresaForm.valid);
+  console.log('📋 Formulario completo:', this.empresaForm.value);
+
+  if (hayErrorEnPrincipales) {
+    console.log('❌ Formulario inválido - errores en campos principales');
+    this.msg.add({
+      severity: 'warn',
+      summary: 'Formulario inválido',
+      detail: 'Por favor completa todos los campos requeridos'
+    });
+    return;
+  }
+
+  // Validar que las cuentas que existan sean válidas
+  if (this.cuentasFormArray.length > 0 && this.cuentasFormArray.invalid) {
+    console.log('❌ Hay cuentas bancarias con datos incompletos');
+    this.msg.add({
+      severity: 'warn',
+      summary: 'Cuentas incompletas',
+      detail: 'Completa o elimina las cuentas bancarias con datos faltantes'
+    });
+    return;
+  }
+
+  this.enviando = true;
+
+  try {
+    // Obtener el valor del ID considerando si está deshabilitado
+    const idControl = this.empresaForm.get('id');
+    const idValue = idControl?.disabled ? idControl?.value : this.empresaForm.value.id;
+
+    console.log('📝 ID final a usar:', idValue);
+
+    const formData = {
+      ...this.empresaForm.value,
+      id: idValue
+    };
+
+    console.log('📝 Datos a guardar:', formData);
+    console.log('📝 Es edición:', this.esEdicion);
+
+    if (!idValue || idValue.trim() === '') {
       this.msg.add({
         severity: 'error',
         summary: 'Error',
-        detail: 'No se pudo guardar la empresa: ' + error.message
+        detail: 'El ID de la empresa es requerido'
       });
-    } finally {
-      this.enviando = false;
+      return;
     }
+
+    if (!formData.nombre_comercial || formData.nombre_comercial.trim() === '') {
+      this.msg.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'El nombre comercial es requerido'
+      });
+      return;
+    }
+
+    if (!this.esEdicion) {
+      const idExiste = await this.supabase.verificarIdExistente(formData.id);
+      if (idExiste) {
+        this.msg.add({
+          severity: 'error',
+          summary: 'ID duplicado',
+          detail: 'El ID ya existe en la base de datos'
+        });
+        return;
+      }
+
+      const rucExiste = await this.supabase.verificarRucExistente(formData.ruc);
+      if (rucExiste) {
+        this.msg.add({
+          severity: 'error',
+          summary: 'RUC duplicado',
+          detail: 'El RUC ya existe en la base de datos'
+        });
+        return;
+      }
+    }
+
+    await this.supabase.guardarEmpresa(formData);
+
+    this.msg.add({
+      severity: 'success',
+      summary: 'Empresa guardada',
+      detail: this.esEdicion ? 'Empresa actualizada correctamente' : 'Empresa creada correctamente'
+    });
+
+    this.cerrarModal();
+    await this.cargarEmpresas();
+
+  } catch (error: any) {
+    console.error('Error guardando empresa:', error);
+    this.msg.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'No se pudo guardar la empresa: ' + error.message
+    });
+  } finally {
+    this.enviando = false;
   }
-  
+}
   // ── ELIMINACIÓN ───────────────────────────────────────────────────────
   
   async eliminarEmpresa(id: string) {
