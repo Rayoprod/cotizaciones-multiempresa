@@ -48,8 +48,7 @@ export class AdminLayoutComponent {
     this.auth.obtenerSesion().then(res => {
       const user = res?.data?.session?.user;
       this.usuarioNombre = user?.email ?? 'Admin';
-      const rol = localStorage.getItem('usuario_rol');
-      this.esAdminGeneral = rol === 'admin';
+const rol = sessionStorage.getItem('usuario_rol');      this.esAdminGeneral = rol === 'admin';
       this.cdr.detectChanges();
     });
 

@@ -13,6 +13,9 @@ import { ICliente } from '../../models/cliente.model';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
+
 
 @Component({
   selector: 'app-clientes',
@@ -20,8 +23,10 @@ import { TooltipModule } from 'primeng/tooltip';
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule,
     InputTextModule, DialogModule, ToolbarModule, ProgressSpinnerModule,
-    TagModule, TooltipModule
+    TagModule, TooltipModule, ToastModule
   ],
+  providers: [MessageService],
+
   templateUrl: './clientes.html'
 })
 export class ClientesComponent implements OnInit {
@@ -37,7 +42,8 @@ export class ClientesComponent implements OnInit {
 
   constructor(
     private supabaseSvc: SupabaseService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private messageService: MessageService
   ) {}
 
   async ngOnInit() {
@@ -84,7 +90,11 @@ export class ClientesComponent implements OnInit {
     const doc = String(this.clienteActual.documento_identidad || '').trim();
 
     if (!doc) {
-      alert('Escribe un DNI o RUC');
+      this.messageService.add({
+  severity: 'warn',
+  summary: 'Campo vacío',
+  detail: 'Escribe un DNI o RUC'
+});
       return;
     }
 
@@ -102,8 +112,11 @@ export class ClientesComponent implements OnInit {
     }
 
     if (doc.length !== 8 && doc.length !== 11) {
-      alert('El DNI debe tener 8 dígitos y el RUC 11.');
-      return;
+this.messageService.add({
+  severity: 'warn',
+  summary: 'Formato inválido',
+  detail: 'El DNI debe tener 8 dígitos y el RUC 11.'
+});      return;
     }
 
     this.buscandoApi = true;
@@ -117,7 +130,11 @@ export class ClientesComponent implements OnInit {
       const datosCrudos = await respuesta.json();
 
       if (!respuesta.ok || !datosCrudos) {
-        alert('El documento no existe en SUNAT/RENIEC.');
+        this.messageService.add({
+  severity: 'error',
+  summary: 'No encontrado',
+  detail: 'El documento no existe en SUNAT/RENIEC.'
+});
         return;
       }
 
@@ -150,7 +167,11 @@ export class ClientesComponent implements OnInit {
 
     } catch (e) {
       console.error('Error de red:', e);
-      alert('Fallo al conectar con la API.');
+      this.messageService.add({
+  severity: 'error',
+  summary: 'Error de conexión',
+  detail: 'Fallo al conectar con la API.'
+});
     } finally {
       this.buscandoApi = false;
     }
@@ -158,7 +179,11 @@ export class ClientesComponent implements OnInit {
 
   async guardarCliente() {
     if (!this.clienteActual.documento_identidad || !this.clienteActual.nombre_razon_social) {
-      alert('El DNI/RUC y el Nombre/Razón Social son obligatorios.');
+      this.messageService.add({
+  severity: 'warn',
+  summary: 'Campos obligatorios',
+  detail: 'El DNI/RUC y el Nombre/Razón Social son obligatorios.'
+});
       return;
     }
 
@@ -167,7 +192,11 @@ export class ClientesComponent implements OnInit {
     );
 
     if (docDuplicado) {
-      alert(`El cliente con documento ${this.clienteActual.documento_identidad} ya está registrado.`);
+      this.messageService.add({
+  severity: 'warn',
+  summary: 'Documento duplicado',
+  detail: `El cliente con documento ${this.clienteActual.documento_identidad} ya está registrado.`
+});
       return;
     }
 
@@ -184,7 +213,11 @@ export class ClientesComponent implements OnInit {
       await this.cargarClientes();
     } catch (error) {
       console.error('Error al guardar:', error);
-      alert('Hubo un error al guardar el cliente.');
+      this.messageService.add({
+  severity: 'error',
+  summary: 'Error al guardar',
+  detail: 'Hubo un error al guardar el cliente.'
+});
     } finally {
       this.enviando = false;
     }
@@ -199,7 +232,11 @@ export class ClientesComponent implements OnInit {
         }
       } catch (error) {
         console.error('Error al eliminar:', error);
-        alert('Hubo un error al eliminar. Revisa que el cliente no tenga cotizaciones vinculadas.');
+        this.messageService.add({
+  severity: 'error',
+  summary: 'Error al eliminar',
+  detail: 'Hubo un error al eliminar. Revisa que el cliente no tenga cotizaciones vinculadas.'
+});
       }
     }
   }

@@ -31,8 +31,8 @@ export class LayoutComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.usuarioActivo = sessionStorage.getItem('usuario_email') || localStorage.getItem('usuario_email') || 'Usuario';
-    const rol = sessionStorage.getItem('usuario_rol') || localStorage.getItem('usuario_rol');
+this.usuarioActivo = sessionStorage.getItem('usuario_email') || 'Usuario';    
+const rol = sessionStorage.getItem('usuario_rol');
     this.esAdmin = rol === 'admin' || rol === 'admin_empresa';
     const datosEmpresa = sessionStorage.getItem('empresa_activa') || localStorage.getItem('empresa_activa');
     this.empresaActiva = datosEmpresa ? JSON.parse(datosEmpresa) : null;

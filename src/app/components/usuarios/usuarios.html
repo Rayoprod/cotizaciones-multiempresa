@@ -299,7 +299,7 @@
 <!-- ── MODAL NUEVO USUARIO ─────────────────────── -->
 <p-dialog header="Nuevo Usuario" [(visible)]="modalVisible"
           [modal]="true" [style]="{'width':'95vw','max-width':'440px'}"
-          [closable]="!guardando" [draggable]="false">
+          [closable]="!guardando" [draggable]="false" appendTo="body">   >
 
   <div class="flex flex-column gap-4 pt-2">
     <div class="flex flex-column gap-2">

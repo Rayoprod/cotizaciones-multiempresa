@@ -381,7 +381,7 @@ borradorFolioPadre: string | null = null;
         total: this.totalFinal,
         estado: 'PENDIENTE',
         items: itemsValidos,
-        vendedor: localStorage.getItem('usuario_email'),
+vendedor: sessionStorage.getItem('usuario_email'),
         lugar_entrega: this.lugarEntrega,
         observaciones: this.clienteObservaciones || null
       };

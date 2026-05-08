@@ -2,53 +2,122 @@
   <p-toast position="top-right" />
   <p-confirmDialog />
 
+  <!-- Header -->
   <div class="flex flex-column md:flex-row justify-content-between align-items-start md:align-items-center gap-3 mb-4">
     <div>
       <h2 class="text-2xl font-bold text-900 m-0">Maquinaria</h2>
-      <p class="text-sm text-500 m-0 mt-1">Catalogo de equipos y maquinaria</p>
+      <p class="text-sm text-500 m-0 mt-1">Catálogo de equipos y control de horómetros</p>
     </div>
     <p-button icon="pi pi-plus" label="Nuevo equipo" severity="primary" (onClick)="abrirNuevo()" />
   </div>
 
+  <!-- KPIs -->
+  <ng-container *ngIf="!cargando()">
+    <div class="grid mb-4">
+      <div class="col-6 md:col-3">
+        <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-primary h-full">
+          <div class="flex align-items-center gap-2 mb-1">
+            <i class="pi pi-wrench text-primary"></i>
+            <span class="text-xs text-color-secondary uppercase">Total flota</span>
+          </div>
+          <p class="text-2xl font-bold m-0">{{ totalFlota }}</p>
+        </div>
+      </div>
+      <div class="col-6 md:col-3">
+        <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-green-500 h-full">
+          <div class="flex align-items-center gap-2 mb-1">
+            <i class="pi pi-check-circle text-green-500"></i>
+            <span class="text-xs text-color-secondary uppercase">Operativas</span>
+          </div>
+          <p class="text-2xl font-bold m-0">{{ operativas }}</p>
+        </div>
+      </div>
+      <div class="col-6 md:col-3">
+        <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-orange-500 h-full">
+          <div class="flex align-items-center gap-2 mb-1">
+            <i class="pi pi-exclamation-triangle text-orange-500"></i>
+            <span class="text-xs text-color-secondary uppercase">Próximas mant.</span>
+          </div>
+          <p class="text-2xl font-bold m-0">{{ proximasMantenimiento }}</p>
+        </div>
+      </div>
+      <div class="col-6 md:col-3">
+        <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-red-500 h-full">
+          <div class="flex align-items-center gap-2 mb-1">
+            <i class="pi pi-times-circle text-red-500"></i>
+            <span class="text-xs text-color-secondary uppercase">Vencidas</span>
+          </div>
+          <p class="text-2xl font-bold m-0">{{ vencidasMantenimiento }}</p>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Spinner -->
   <div *ngIf="cargando()" class="flex justify-content-center py-6">
     <p-progressSpinner strokeWidth="4" [style]="{ width: '50px', height: '50px' }" />
   </div>
 
-  <div *ngIf="!cargando() && items.length === 0" class="surface-card border-round-xl shadow-1 p-6 text-center">
-    <i class="pi pi-wrench text-5xl text-300 mb-3"></i>
-    <p class="font-semibold text-900 m-0">Sin equipos registrados</p>
-    <p class="text-sm text-500 m-0 mt-1">Agrega maquinaria para incluir en tus cotizaciones</p>
-  </div>
-
-  <div *ngIf="!cargando() && items.length > 0" class="grid">
+  <!-- Grid de máquinas -->
+  <div class="grid" *ngIf="!cargando()">
     <div class="col-12 md:col-6 lg:col-4" *ngFor="let m of items">
       <div class="surface-card border-round-xl shadow-1 p-4 h-full flex flex-column">
-        <div class="flex justify-content-between align-items-start mb-3">
+        <!-- Título y estado operativo -->
+        <div class="flex justify-content-between align-items-start mb-2">
           <div>
             <span class="font-bold text-900 text-lg">{{ m.nombre }}</span>
-            <p class="text-xs text-500 m-0 mt-1">{{ m.tipo || 'Sin tipo' }} &​middot; {{ m.marca || 'Sin marca' }}</p>
+            <p class="text-xs text-500 m-0 mt-1">{{ m.tipo || 'Sin tipo' }} · {{ m.marca || 'Sin marca' }}</p>
           </div>
-          <p-tag [value]="m.activa ? 'Activo' : 'Inactivo'" [severity]="m.activa ? 'success' : 'danger'" styleClass="text-xs" />
+          <p-tag [value]="m.activa ? 'Activo' : 'Inactivo'"
+                 [severity]="m.activa ? 'success' : 'danger'"
+                 styleClass="text-xs" />
         </div>
+
+        <!-- Descripción -->
         <p class="text-sm text-700 mb-3 flex-1" *ngIf="m.descripcion">{{ m.descripcion }}</p>
-        <div class="border-top-1 border-200 pt-3 mb-3">
+
+        <!-- Precios -->
+        <div class="border-top-1 border-200 pt-2 mb-3">
           <div class="grid text-xs">
-            <div class="col-6" *ngIf="m.precio_hora"><span class="text-500">Hora: </span><span class="font-bold text-900">S/ {{ m.precio_hora | number:'1.2-2' }}</span></div>
-            <div class="col-6" *ngIf="m.precio_dia"><span class="text-500">Dia: </span><span class="font-bold text-900">S/ {{ m.precio_dia | number:'1.2-2' }}</span></div>
-            <div class="col-6" *ngIf="m.precio_mes"><span class="text-500">Mes: </span><span class="font-bold text-900">S/ {{ m.precio_mes | number:'1.2-2' }}</span></div>
+            <div class="col-6" *ngIf="m.precio_hora"><span class="text-500">Hora: </span><span class="font-bold">S/ {{ m.precio_hora | number:'1.2-2' }}</span></div>
+            <div class="col-6" *ngIf="m.precio_dia"><span class="text-500">Día: </span><span class="font-bold">S/ {{ m.precio_dia | number:'1.2-2' }}</span></div>
+            <div class="col-6" *ngIf="m.precio_mes"><span class="text-500">Mes: </span><span class="font-bold">S/ {{ m.precio_mes | number:'1.2-2' }}</span></div>
             <div class="col-6" *ngIf="m.precio_venta"><span class="text-500">Venta: </span><span class="font-bold text-primary">S/ {{ m.precio_venta | number:'1.2-2' }}</span></div>
           </div>
         </div>
-        <div class="flex gap-2">
-          <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" size="small" pTooltip="Editar" (onClick)="editar(m)" />
-          <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" size="small" pTooltip="Eliminar" (onClick)="confirmarEliminar(m)" />
+
+        <!-- Indicador de mantenimiento -->
+        <div *ngIf="m.intervalo_mantenimiento" class="mb-3">
+          <div class="flex justify-content-between align-items-center mb-1">
+            <span class="text-xs text-500">Horómetro: {{ m.horometro_actual || 0 }} h</span>
+            <p-tag [value]="getEtiquetaEstadoMantenimiento(m.estado_mantenimiento!)"
+                   [severity]="getColorEstadoMantenimiento(m.estado_mantenimiento!)"
+                   styleClass="text-xs" />
+          </div>
+          <p-progressBar [value]="(m.porcentaje_progreso! > 100 ? 100 : m.porcentaje_progreso!) || 0"
+                         [color]="(m.porcentaje_progreso! > 100 ? '#ef4444' : m.porcentaje_progreso! > 85 ? '#f59e0b' : '#22c55e')"
+                         [style]="{ height: '6px' }" />
+          <p class="text-xs text-500 m-0 mt-1">
+            {{ (m.horas_restantes! > 0) ? (m.horas_restantes! + ' h restantes') : 'Vencido por ' + (-m.horas_restantes!) + ' h' }}
+          </p>
+        </div>
+
+        <!-- Acciones -->
+        <div class="flex gap-2 mt-auto">
+          <p-button icon="pi pi-clock" label="Lecturas" severity="info" size="small"
+                    (onClick)="abrirLecturas(m)" [outlined]="true" styleClass="flex-1" />
+          <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" size="small"
+                    pTooltip="Editar" (onClick)="editar(m)" />
+          <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" size="small"
+                    pTooltip="Eliminar" (onClick)="confirmarEliminar(m)" />
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Diálogo CRUD (Nuevo/Editar) -->
   <p-dialog [(visible)]="modalVisible" [header]="esEdicion ? 'Editar equipo' : 'Nuevo equipo'"
-    [modal]="true" [style]="{ width: '520px' }" [draggable]="false" (onHide)="resetForm()">
+    [modal]="true" [style]="{ width: '520px' }" [draggable]="false" appendTo="body" (onHide)="resetForm()">
     <div class="flex flex-column gap-3 pt-2">
       <div class="flex flex-column gap-1">
         <label class="text-xs font-semibold text-700">Nombre *</label>
@@ -69,7 +138,7 @@
         <input pInputText [(ngModel)]="form.modelo" placeholder="Ej: 320D" />
       </div>
       <div class="flex flex-column gap-1">
-        <label class="text-xs font-semibold text-700">Descripcion</label>
+        <label class="text-xs font-semibold text-700">Descripción</label>
         <textarea pInputTextarea [(ngModel)]="form.descripcion" rows="2" placeholder="Detalles del equipo..."></textarea>
       </div>
       <div class="grid">
@@ -78,7 +147,7 @@
           <p-inputNumber [(ngModel)]="form.precio_hora" mode="decimal" [minFractionDigits]="2" styleClass="w-full" />
         </div>
         <div class="col-6 flex flex-column gap-1">
-          <label class="text-xs font-semibold text-700">Precio por dia</label>
+          <label class="text-xs font-semibold text-700">Precio por día</label>
           <p-inputNumber [(ngModel)]="form.precio_dia" mode="decimal" [minFractionDigits]="2" styleClass="w-full" />
         </div>
         <div class="col-6 flex flex-column gap-1">
@@ -90,7 +159,17 @@
           <p-inputNumber [(ngModel)]="form.precio_venta" mode="decimal" [minFractionDigits]="2" styleClass="w-full" />
         </div>
       </div>
-      <div class="flex align-items-center gap-2">
+      <div class="grid">
+        <div class="col-6 flex flex-column gap-1">
+          <label class="text-xs font-semibold text-700">Horómetro inicial</label>
+          <p-inputNumber [(ngModel)]="form.horometro_inicial" mode="decimal" styleClass="w-full" />
+        </div>
+        <div class="col-6 flex flex-column gap-1">
+          <label class="text-xs font-semibold text-700">Intervalo mant. (h)</label>
+          <p-inputNumber [(ngModel)]="form.intervalo_mantenimiento" mode="decimal" styleClass="w-full" />
+        </div>
+      </div>
+      <div class="flex align-items-center gap-3">
         <p-checkbox [(ngModel)]="form.activa" [binary]="true" inputId="activa" />
         <label for="activa" class="text-sm text-700">Equipo activo</label>
       </div>
@@ -100,4 +179,67 @@
       <p-button label="Guardar" icon="pi pi-check" severity="primary" [loading]="guardando" (onClick)="guardar()" />
     </ng-template>
   </p-dialog>
+
+  <!-- Drawer de lecturas de horómetro -->
+  <p-drawer [(visible)]="drawerLecturasVisible" position="right" appendTo="body"
+            [style]="{ width: '100%', 'max-width': '480px' }">
+    <ng-template pTemplate="header">
+      <div class="flex flex-column gap-1">
+        <span class="font-bold text-900">Lecturas de horómetro</span>
+        <span class="text-sm text-500">{{ maquinaSeleccionada?.nombre }}</span>
+      </div>
+    </ng-template>
+
+    <div class="flex flex-column gap-4 py-2">
+      <!-- Formulario de nueva lectura -->
+      <div class="surface-ground border-round-lg p-3">
+        <p class="font-semibold text-900 m-0 mb-3">Registrar lectura</p>
+        <div class="flex flex-column gap-3">
+          <div class="flex flex-column gap-1">
+            <label class="text-xs font-semibold text-700">Horómetro actual</label>
+            <p-inputNumber [(ngModel)]="nuevaLectura.horometro" mode="decimal" styleClass="w-full" />
+          </div>
+          <div class="flex flex-column gap-1">
+            <label class="text-xs font-semibold text-700">Fecha</label>
+            <p-datepicker [(ngModel)]="nuevaLectura.fecha_lectura" 
+                          [showIcon]="true" styleClass="w-full" />
+          </div>
+          <div class="flex flex-column gap-1">
+            <label class="text-xs font-semibold text-700">Tipo de evento</label>
+            <p-select [options]="[
+              { label: 'Lectura', value: 'lectura' },
+              { label: 'Mantenimiento', value: 'mantenimiento' },
+              { label: 'Reparación', value: 'reparacion' }
+            ]" [(ngModel)]="nuevaLectura.tipo_evento" optionLabel="label" optionValue="value" styleClass="w-full" />
+          </div>
+          <div class="flex flex-column gap-1">
+            <label class="text-xs font-semibold text-700">Operador</label>
+            <input pInputText [(ngModel)]="nuevaLectura.operador" placeholder="Nombre del operador" class="w-full" />
+          </div>
+          <div class="flex flex-column gap-1">
+            <label class="text-xs font-semibold text-700">Observaciones</label>
+            <textarea pInputTextarea [(ngModel)]="nuevaLectura.observaciones" rows="2" class="w-full"></textarea>
+          </div>
+        </div>
+        <p-button label="Guardar lectura" icon="pi pi-check" severity="primary"
+                  [loading]="guardandoLectura" (onClick)="guardarLectura()" styleClass="w-full mt-3" />
+      </div>
+
+      <!-- Historial de lecturas -->
+      <div>
+        <p class="font-semibold text-900 mb-2">Últimas lecturas</p>
+        <p-progressSpinner *ngIf="cargandoLecturas" styleClass="w-2rem h-2rem" strokeWidth="4" />
+        <div *ngIf="!cargandoLecturas">
+          <div *ngFor="let l of lecturas" class="flex justify-content-between align-items-center p-2 border-bottom-1 border-200">
+            <div>
+              <p class="text-sm font-bold m-0">{{ l.horometro }} h</p>
+              <p class="text-xs text-500 m-0">{{ l.fecha_lectura | date:'dd/MM/yyyy' }} · {{ l.tipo_evento }}</p>
+            </div>
+            <p-tag [value]="l.tipo_evento" severity="info" styleClass="text-xs" />
+          </div>
+          <p *ngIf="lecturas.length === 0" class="text-xs text-500">Sin lecturas registradas</p>
+        </div>
+      </div>
+    </div>
+  </p-drawer>
 </div>

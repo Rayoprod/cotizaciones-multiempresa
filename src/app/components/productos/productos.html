@@ -1,3 +1,4 @@
+<p-toast />
 <div class="p-3 md:p-5">
 
   <!-- Header -->
@@ -141,7 +142,7 @@
   </ng-container>
 </div>
 
-<p-dialog [(visible)]="productoDialog" [style]="{width: '450px', maxWidth: '90vw'}" header="Detalles del Producto" [modal]="true" styleClass="p-fluid">
+<p-dialog [(visible)]="productoDialog" [style]="{width: '450px', maxWidth: '90vw'}" header="Detalles del Producto" [modal]="true" appendTo="body"  styleClass="p-fluid">
     
     <ng-template pTemplate="content">
         <div class="flex flex-column gap-4 mt-2">

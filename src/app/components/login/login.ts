@@ -45,7 +45,7 @@ export class LoginComponent {
         return;
       }
 
-      localStorage.setItem('usuario_email', data.user?.email || '');
+sessionStorage.setItem('usuario_email', data.user?.email || '');
 
       // Pequeña pausa para que Supabase confirme la sesión antes de consultarla
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -53,7 +53,7 @@ export class LoginComponent {
       const perfil = await this.supabaseSvc.obtenerPerfil();
       const rol = perfil?.rol || 'vendedor';
 
-      localStorage.setItem('usuario_rol', rol);
+sessionStorage.setItem('usuario_rol', rol);
 
       // Admin general → panel de gestión | Admin_empresa/Vendedor → selector de empresa
       if (rol === 'admin') {

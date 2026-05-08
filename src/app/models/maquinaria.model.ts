@@ -13,15 +13,31 @@ export interface IMaquinaria {
   unidad_medida?: string;
   activa?: boolean;
   created_at?: string;
+
+  // Campos de mantenimiento (desde BD)
+  codigo?: string;
+  numero_serie?: string;
+  placa?: string;
+  anio_fabricacion?: number;
+  estado?: 'operativa' | 'mantenimiento' | 'baja';
+  horometro_inicial?: number;
+  horometro_actual?: number;
+  intervalo_mantenimiento?: number;
+  ultimo_mantenimiento?: number; // horómetro al último mantenimiento
+
+  // Campos calculados en el frontend
+  horas_desde_mantenimiento?: number;
+  horas_restantes?: number;
+  porcentaje_progreso?: number;   // 0-100+ (100 = justo en el límite)
+  estado_mantenimiento?: 'al_dia' | 'proximo' | 'vencido';
 }
 
-export interface MaquinariaItem {
+export interface LecturaHorometro {
   id?: string;
-  maquinaria_id: string;
-  nombre: string;
-  tipo?: string;
-  cantidad: number;
-  modalidad: 'alquiler_hora' | 'alquiler_dia' | 'alquiler_mes' | 'venta';
-  precio_unitario: number;
-  subtotal: number;
+  maquina_id: string;
+  horometro: number;
+  fecha_lectura: string;  // 'YYYY-MM-DD'
+  tipo_evento: 'lectura' | 'mantenimiento' | 'reparacion';
+  operador?: string;
+  observaciones?: string;
 }

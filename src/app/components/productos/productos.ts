@@ -15,15 +15,17 @@ import { IProducto } from '../../models/producto.model';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
 @Component({
   selector: 'app-productos',
   standalone: true,
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule,
     InputTextModule, InputNumberModule, DialogModule, ToolbarModule,
-    TagModule, TooltipModule, ProgressSpinnerModule
+    TagModule, TooltipModule, ProgressSpinnerModule, ToastModule
   ],
+  providers: [MessageService],
   templateUrl: './productos.html'
 })
 export class ProductosComponent implements OnInit {
@@ -38,7 +40,8 @@ export class ProductosComponent implements OnInit {
 
   constructor(
     private supabaseSvc: SupabaseService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private messageService: MessageService
   ) {}
 
   async ngOnInit() {
@@ -100,14 +103,22 @@ export class ProductosComponent implements OnInit {
         }
       } catch (error) {
         console.error('Error al eliminar:', error);
-        alert('Hubo un error al eliminar el producto.');
+        this.messageService.add({
+  severity: 'error',
+  summary: 'Error al eliminar',
+  detail: 'Hubo un error al eliminar el producto.'
+}); 
       }
     }
   }
 
   async guardarProducto() {
     if (!this.productoActual.descripcion || this.productoActual.precio_unitario_base === null) {
-      alert('La descripción y el precio son obligatorios.');
+      this.messageService.add({
+  severity: 'warn',
+  summary: 'Campos obligatorios',
+  detail: 'La descripción y el precio son obligatorios.'
+});
       return;
     }
 
@@ -116,7 +127,11 @@ export class ProductosComponent implements OnInit {
     );
 
     if (skuDuplicado) {
-      alert(`El código SKU "${this.productoActual.codigo_sku}" ya existe.`);
+      this.messageService.add({
+  severity: 'warn',
+  summary: 'SKU duplicado',
+  detail: `El código SKU "${this.productoActual.codigo_sku}" ya existe.`
+});
       return;
     }
 
@@ -133,7 +148,11 @@ export class ProductosComponent implements OnInit {
       await this.cargarProductos();
     } catch (error) {
       console.error('Error al guardar:', error);
-      alert('Hubo un error al comunicarse con la base de datos.');
+      this.messageService.add({
+  severity: 'error',
+  summary: 'Error al guardar',
+  detail: 'Hubo un error al comunicarse con la base de datos.'
+});
     } finally {
       this.enviando = false;
     }

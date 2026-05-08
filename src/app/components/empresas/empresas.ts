@@ -138,8 +138,7 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   async cargarEmpresas() {
     try {
       console.log('🔄 Cargando empresas...');
-      const rol = localStorage.getItem('usuario_rol');
-      let data: any[];
+const rol = sessionStorage.getItem('usuario_rol');      let data: any[];
 
       if (rol === 'admin_empresa') {
         data = await this.supabase.getEmpresasDelUsuario();

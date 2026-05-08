@@ -31,7 +31,7 @@ export class SelectorComponent implements OnInit {
 
   async ngOnInit() {
     const usuario = await this.supabaseSvc.obtenerUsuarioActual();
-    const email = usuario?.email || localStorage.getItem('usuario_email') || '';
+const email = usuario?.email || sessionStorage.getItem('usuario_email') || '';
     this.nombreUsuario = email.split('@')[0];
 
     try {
