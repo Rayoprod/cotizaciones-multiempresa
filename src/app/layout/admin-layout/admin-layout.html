@@ -1,14 +1,12 @@
 <div class="flex h-screen overflow-hidden relative">
 
   <!-- ================= OVERLAY OSCURO PARA MÓVIL ================= -->
-  <!-- Solo se muestra en celular cuando el menú está abierto -->
   <div *ngIf="sidebarAbierto"
        class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-50 z-4"
        (click)="cerrarMenu()">
   </div>
 
   <!-- ================= EL ÚNICO MENÚ ADMIN (RESPONSIVE) ================= -->
-  <!-- En móvil: Flotante, escondido a la izq. En PC: Estático, siempre visible. -->
   <aside class="fixed md:static top-0 left-0 z-5 h-full shadow-2 flex flex-column transition-transform transition-duration-300"
          style="width: 18rem; background: #1f2937; color: white;"
          [ngClass]="sidebarAbierto ? 'translate-x-0' : '-translate-x-100 md:translate-x-0'">
@@ -22,13 +20,12 @@
       </div>
     </div>
 
-    <!-- Botones de Navegación (Iterando la lista del .ts) -->
+    <!-- Botones de Navegación -->
     <div class="flex-1 overflow-y-auto p-3">
       <div class="mb-3" style="color: rgba(255,255,255,.6); font-size: .75rem; font-weight: 700; text-transform: uppercase;">
         Gestión
       </div>
       <div class="flex flex-column gap-2">
-        <!-- El color azul para indicar actividad en modo admin es bg-blue-500 -->
         <a *ngFor="let item of navItemsFiltrados" [routerLink]="item.path"
            routerLinkActive="bg-blue-500 text-white font-bold shadow-2" [routerLinkActiveOptions]="{ exact: false }"
            class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
@@ -65,7 +62,12 @@
     </div>
     
     <main class="flex-1 overflow-auto p-2 md:p-4" style="background: #f8fafc;">
-      <router-outlet></router-outlet>
+      <!-- Spinner mientras carga el contenido inicial -->
+      <div *ngIf="cargandoAdmin()" class="flex justify-content-center align-items-center h-full">
+        <p-progressSpinner strokeWidth="4" [style]="{ width: '60px', height: '60px' }"></p-progressSpinner>
+      </div>
+      <!-- Contenido real una vez que la sesión está lista -->
+      <router-outlet *ngIf="!cargandoAdmin()"></router-outlet>
     </main>
 
   </div>

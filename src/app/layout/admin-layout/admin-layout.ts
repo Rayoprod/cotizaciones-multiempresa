@@ -1,4 +1,4 @@
-import { Component, inject, HostListener, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, HostListener, ChangeDetectorRef, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -6,8 +6,7 @@ import { filter } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
 import { DividerModule } from 'primeng/divider';
-// Eliminamos DrawerModule ya que no usaremos el componente forzado
-
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { AuthService } from '../../services/auth';
 
 interface NavItem {
@@ -21,18 +20,19 @@ interface NavItem {
   standalone: true,
   imports: [
     CommonModule, RouterOutlet, RouterLink, RouterLinkActive,
-    ButtonModule, AvatarModule, DividerModule
+    ButtonModule, AvatarModule, DividerModule, ProgressSpinnerModule
   ],
   templateUrl: './admin-layout.html'
 })
 export class AdminLayoutComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
-  private cdr = inject(ChangeDetectorRef); // Inyectamos el detector de cambios
+  private cdr = inject(ChangeDetectorRef);
 
   sidebarAbierto = false;
   usuarioNombre = '';
   esAdminGeneral = false;
+  cargandoAdmin = signal(true);
 
   readonly navItems: NavItem[] = [
     { label: 'Empresas', icon: 'pi pi-building', path: '/admin/empresas' },
@@ -48,20 +48,27 @@ export class AdminLayoutComponent {
     this.auth.obtenerSesion().then(res => {
       const user = res?.data?.session?.user;
       this.usuarioNombre = user?.email ?? 'Admin';
-const rol = sessionStorage.getItem('usuario_rol');      this.esAdminGeneral = rol === 'admin';
+      this.refrescarRol();
       this.cdr.detectChanges();
     });
 
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
+      this.refrescarInfoSesion();
       this.cerrarMenu();
     });
+
+    // Pequeño retardo para que el router outlet cargue y luego ocultar spinner
+    setTimeout(() => {
+      this.cargandoAdmin.set(false);
+      this.cdr.detectChanges();
+    }, 400);
   }
 
   @HostListener('window:resize')
   onResize() {
     if (window.innerWidth >= 768 && this.sidebarAbierto) {
       this.sidebarAbierto = false;
-      this.cdr.detectChanges(); // Evita congelamientos al rotar pantalla
+      this.cdr.detectChanges();
     }
   }
 
@@ -82,5 +89,17 @@ const rol = sessionStorage.getItem('usuario_rol');      this.esAdminGeneral = ro
 
   logout() {
     this.auth.logout();
+  }
+
+  private refrescarRol() {
+    const rol = sessionStorage.getItem('usuario_rol');
+    this.esAdminGeneral = rol === 'admin';
+  }
+
+  private refrescarInfoSesion() {
+    this.refrescarRol();
+    const email = sessionStorage.getItem('usuario_email');
+    if (email) this.usuarioNombre = email;
+    this.cdr.detectChanges();
   }
 }
