@@ -38,8 +38,9 @@ export class LayoutComponent implements OnInit {
     this.empresaActiva = datosEmpresa ? JSON.parse(datosEmpresa) : null;
 
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
-      this.cerrarMenu();
-    });
+  this.refrescarInfoSesion();  // ← AGREGAR ESTA LÍNEA
+  this.cerrarMenu();
+});
   }
 
   @HostListener('window:resize')
@@ -59,6 +60,20 @@ export class LayoutComponent implements OnInit {
     this.menuAbierto = false;
     this.cdr.detectChanges();
   }
+
+  private refrescarInfoSesion() {
+  this.usuarioActivo = sessionStorage.getItem('usuario_email') 
+                       || localStorage.getItem('usuario_email') 
+                       || 'Usuario';
+  const rol = sessionStorage.getItem('usuario_rol') 
+              || localStorage.getItem('usuario_rol');
+  this.esAdmin = rol === 'admin' || rol === 'admin_empresa';
+
+  const datosEmpresa = sessionStorage.getItem('empresa_activa') 
+                       || localStorage.getItem('empresa_activa');
+  this.empresaActiva = datosEmpresa ? JSON.parse(datosEmpresa) : null;
+  this.cdr.detectChanges();
+}
 
   volverAlAdmin() {
     this.cerrarMenu();

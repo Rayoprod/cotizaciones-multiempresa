@@ -1,0 +1,1096 @@
+{
+	"clientes": [
+		{
+			"id": "2482f00a-a98b-42b7-b8da-bd45c9b8a045",
+			"correo": "Ryanrodribarri@gmail.com",
+			"telefono": "937022985",
+			"direccion": "Ica",
+			"created_at": "2026-04-09T23:39:14.743215+00:00",
+			"empresa_id": "WM",
+			"documento_identidad": "60268828",
+			"nombre_razon_social": "Ryan Rodriguez"
+		},
+		{
+			"id": "da7fdfcc-6a2b-4b9f-a6ab-12483d11bd13",
+			"correo": null,
+			"telefono": null,
+			"direccion": "Jr. Coronel Camilo Carrillo Nro. 225 Dpto. 304",
+			"created_at": "2026-04-10T18:14:40.322038+00:00",
+			"empresa_id": "WM",
+			"documento_identidad": "20601451795",
+			"nombre_razon_social": "MINERA ROBINHO S.A.C."
+		},
+		{
+			"id": "7e760428-b34c-4c11-8e75-d0ea2de58e10",
+			"correo": null,
+			"telefono": null,
+			"direccion": "CAL. CALLE LOS SAUCES MZA. 20 LOTE 1A OTR. CALLE LOS SAUCES ",
+			"created_at": "2026-04-11T04:54:15.104541+00:00",
+			"empresa_id": "WM",
+			"documento_identidad": "20608657364",
+			"nombre_razon_social": "ELECTRO FERRETERO W&M EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA"
+		},
+		{
+			"id": "71db32d8-e4a3-4f2d-aad0-09a261b02744",
+			"correo": null,
+			"telefono": "912020819",
+			"direccion": "Calle los Sauces Mz.A Lote 1B",
+			"created_at": "2026-04-11T04:58:18.565816+00:00",
+			"empresa_id": "WM",
+			"documento_identidad": "10215770635",
+			"nombre_razon_social": "MITMA TORRES MARIA LUZ"
+		},
+		{
+			"id": "a89ab83d-56e6-492a-8840-7c8a0fb334a0",
+			"correo": null,
+			"telefono": "914828235",
+			"direccion": null,
+			"created_at": "2026-04-20T18:55:49.740599+00:00",
+			"empresa_id": "WM",
+			"documento_identidad": "76744923",
+			"nombre_razon_social": "Wantuil junior "
+		},
+		{
+			"id": "21a386e0-274a-4334-b135-c92eabbde026",
+			"correo": null,
+			"telefono": null,
+			"direccion": "MZA. F LOTE 19 URB. MARIANO BUSTAMANTE ",
+			"created_at": "2026-04-27T13:19:16.019846+00:00",
+			"empresa_id": "WM",
+			"documento_identidad": "20600678605",
+			"nombre_razon_social": "PALKIA EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA - PALKIA E.I.R.L."
+		},
+		{
+			"id": "93cd5d15-1058-400c-9b2d-796183e5629d",
+			"correo": "ryanrodribarri@gmail.com",
+			"telefono": "937022985",
+			"direccion": "Calle los Sauces Mz.A Lote 1B",
+			"created_at": "2026-05-05T03:49:38.788745+00:00",
+			"empresa_id": "RAYO",
+			"documento_identidad": "60268828",
+			"nombre_razon_social": "Ryan Wantuil Rodriguez Barrientos"
+		},
+		{
+			"id": "310fccc9-9510-4d9a-9ef4-b4f504dd85ea",
+			"correo": "roniwantuil@gmail.com",
+			"telefono": "992955124",
+			"direccion": "Pasaje los Grimaldos E-30",
+			"created_at": "2026-05-05T04:47:04.152937+00:00",
+			"empresa_id": "BLOQUETERA_VDC",
+			"documento_identidad": "72148183",
+			"nombre_razon_social": "Roni Wantuil Rodriguez Mitma"
+		},
+		{
+			"id": "f2b591ec-f2b9-4e40-9911-12e21ee17bef",
+			"correo": "asdasd@asdad.com",
+			"telefono": "920207010",
+			"direccion": "asd wqe",
+			"created_at": "2026-05-05T20:41:23.559985+00:00",
+			"empresa_id": "RAYO",
+			"documento_identidad": "71809281",
+			"nombre_razon_social": "LOZANO GARCIA ALVARO ANTONIO JESUS"
+		},
+		{
+			"id": "af79c03a-89b8-45c2-a2a6-91ebc025d318",
+			"correo": null,
+			"telefono": null,
+			"direccion": "MZA. F LOTE 19 URB. MARIANO BUSTAMANTE ",
+			"created_at": "2026-05-07T13:47:08.781787+00:00",
+			"empresa_id": "VDC",
+			"documento_identidad": "20600678605",
+			"nombre_razon_social": "PALKIA EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA - PALKIA E.I.R.L."
+		},
+		{
+			"id": "a8fe4a7e-7466-444f-ae07-49bc41d5d836",
+			"correo": "u20202647@utp.edu.pe",
+			"telefono": "937022985",
+			"direccion": "calle los sauces m1",
+			"created_at": "2026-05-07T18:50:02.725034+00:00",
+			"empresa_id": "ONETWO",
+			"documento_identidad": "60268828",
+			"nombre_razon_social": "ryan"
+		},
+		{
+			"id": "7cf877cf-0435-4aed-81ba-127c0855153c",
+			"correo": null,
+			"telefono": null,
+			"direccion": null,
+			"created_at": "2026-05-07T21:17:39.998972+00:00",
+			"empresa_id": "VDC",
+			"documento_identidad": "60268828",
+			"nombre_razon_social": "Ryan"
+		},
+		{
+			"id": "35d1b003-a51b-4faa-8baa-a89656b3d7e6",
+			"correo": null,
+			"telefono": null,
+			"direccion": "AV. PASEO DE LA REPUBLICA NRO 5655 DEP. 504 URB. MIRAFLORES ",
+			"created_at": "2026-05-07T21:25:51.750396+00:00",
+			"empresa_id": "VDC",
+			"documento_identidad": "20614306182",
+			"nombre_razon_social": "AUREVIA S.A.C."
+		},
+		{
+			"id": "2090a534-6894-4dbe-87cf-9c19bf348b15",
+			"correo": "u20202647@utp.edu.pe",
+			"telefono": "937022985",
+			"direccion": "calle los sauces m1",
+			"created_at": "2026-05-08T01:23:36.078583+00:00",
+			"empresa_id": "WM",
+			"documento_identidad": "12312312",
+			"nombre_razon_social": "prueba"
+		}
+	],
+	"empresas": [
+		{
+			"id": "BLOQUETERA_VDC",
+			"ruc": "13121231231",
+			"color": "01696f",
+			"icono": null,
+			"activa": false,
+			"correo": "",
+			"prefijo": "WQE",
+			"bg_class": null,
+			"direccion": "",
+			"ruta_logo": "",
+			"telefonos": "",
+			"ruta_firma": "",
+			"text_class": null,
+			"border_hover": null,
+			"razon_social": "sdsdfds",
+			"mostrar_cuentas": true,
+			"nombre_comercial": "ASDKASJDAKDJ",
+			"cuentas_bancarias": [],
+			"contacto_aprobacion": ""
+		},
+		{
+			"id": "RAYO",
+			"ruc": "12121212121",
+			"color": "#4249d4",
+			"icono": "pi pi-building",
+			"activa": false,
+			"correo": "ryanrodribarri@gmail.com",
+			"prefijo": "EMP",
+			"bg_class": "bg-gray-50",
+			"direccion": "ICA",
+			"ruta_logo": "[BASE64_OMITIDO]",
+			"telefonos": "937022985",
+			"ruta_firma": "https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg",
+			"text_class": "text-gray-800",
+			"border_hover": "hover:border-gray-500",
+			"razon_social": "RAYO S.A.C.",
+			"mostrar_cuentas": true,
+			"nombre_comercial": "RAYO S.A.C.",
+			"cuentas_bancarias": [],
+			"contacto_aprobacion": ""
+		},
+		{
+			"id": "VDC",
+			"ruc": "10215770635",
+			"color": "#1e40af",
+			"icono": "pi pi-star-fill",
+			"activa": true,
+			"correo": "wantuilrodriguez123@gmail.com",
+			"prefijo": "VDC",
+			"bg_class": "bg-indigo-50",
+			"direccion": "CALLE LOS SAUCES MZA. 20 LOTE 1A\\nCHALA - CARAVELI - AREQUIPA",
+			"ruta_logo": "https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/logovdc.jpeg",
+			"telefonos": "959098427 - 914828235",
+			"ruta_firma": "https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_MARIALUZ.png",
+			"text_class": "text-indigo-800",
+			"border_hover": "hover:border-indigo-500",
+			"razon_social": "MITMA TORRES MARIA LUZ",
+			"mostrar_cuentas": true,
+			"nombre_comercial": "ELECTROFERR. VIRGEN DEL CARMEN",
+			"cuentas_bancarias": [
+				{
+					"cci": "00219412058787903595",
+					"banco": "Banco de Crédito del Perú",
+					"numero": "19420587879035",
+					"tipo_cuenta": "Corriente"
+				},
+				{
+					"cci": "",
+					"banco": "Banco de la Nación",
+					"numero": "00615009040",
+					"tipo_cuenta": "Detracción"
+				}
+			],
+			"contacto_aprobacion": "Wantuil Junior Rodriguez Mitma"
+		},
+		{
+			"id": "WM",
+			"ruc": "20608657364",
+			"color": "#2563eb",
+			"icono": "pi pi-bolt",
+			"activa": true,
+			"correo": "wymvdc1509@gmail.com",
+			"prefijo": "WM",
+			"bg_class": "bg-blue-50",
+			"direccion": "CALLE LOS SAUCES MZA. 20 LOTE 1A\\nCHALA - CARAVELI - AREQUIPA",
+			"ruta_logo": "https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/LOGO%20WYM.jpeg",
+			"telefonos": "959098427 - 914828235",
+			"ruta_firma": "https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg",
+			"text_class": "text-blue-800",
+			"border_hover": "hover:border-blue-500",
+			"razon_social": "W&M E.I.R.L.",
+			"mostrar_cuentas": true,
+			"nombre_comercial": "W&M E.I.R.L.",
+			"cuentas_bancarias": [
+				{
+					"cci": "80306400350213500158",
+					"banco": "Caja Arequipa",
+					"numero": "00350213502100001001",
+					"tipo_cuenta": "Corriente"
+				},
+				{
+					"cci": "",
+					"banco": "Banco de la nación",
+					"numero": "00615-014494",
+					"tipo_cuenta": "Detracciones"
+				}
+			],
+			"contacto_aprobacion": ""
+		},
+		{
+			"id": "ONETWO",
+			"ruc": "20000000000",
+			"color": "#10b9a0",
+			"icono": "pi pi-star-fill",
+			"activa": true,
+			"correo": "ventasonetwo@gmail.com",
+			"prefijo": "OT",
+			"bg_class": "bg-teal-50",
+			"direccion": "CALLE LOS SAUCES MZA. 20 LOTE 1A\\nCHALA - CARAVELI - AREQUIPA",
+			"ruta_logo": "https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/LOGO_ONETWO.jpg",
+			"telefonos": "937022985",
+			"ruta_firma": "https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/FIRMA_WANTUIL.jpeg",
+			"text_class": "text-teal-800",
+			"border_hover": "hover:border-teal-500",
+			"razon_social": "ONETWO SERVICIOS GENERALES S.A.C.",
+			"mostrar_cuentas": true,
+			"nombre_comercial": "ONETWO SERVICIOS GENERALES S.A.C.",
+			"cuentas_bancarias": [],
+			"contacto_aprobacion": "Ryan Rodriguez"
+		}
+	],
+	"profiles": [
+		{
+			"id": "06db480f-1b48-4de5-9160-4561748ad3be",
+			"rol": "vendedor",
+			"email": "invitado@invitado.com",
+			"activo": true,
+			"created_at": "2026-05-04T20:03:20.41404+00:00"
+		},
+		{
+			"id": "33b6d86f-9ee0-49f8-bd54-e0614aed77d0",
+			"rol": "vendedor",
+			"email": "wantuil@admin.com",
+			"activo": true,
+			"created_at": "2026-05-04T20:03:20.41404+00:00"
+		},
+		{
+			"id": "fae65c55-7e7c-4a2c-941d-9fd92881b2a0",
+			"rol": "admin",
+			"email": "ryan@admin.com",
+			"activo": true,
+			"created_at": "2026-05-04T20:03:20.41404+00:00"
+		},
+		{
+			"id": "f7ef0c2f-4042-4c84-94bd-05170042cbd6",
+			"rol": "vendedor",
+			"email": "roniwantuil@gmail.com",
+			"activo": true,
+			"created_at": "2026-05-05T03:34:22.996815+00:00"
+		},
+		{
+			"id": "b739a10d-443e-4527-bb7b-85bf07aabca6",
+			"rol": "vendedor",
+			"email": "maria@admin.com",
+			"activo": true,
+			"created_at": "2026-05-04T20:03:20.41404+00:00"
+		},
+		{
+			"id": "df64cbe7-e773-4a62-b965-e56a3fc4a58b",
+			"rol": "vendedor",
+			"email": "ryanrodribarri@gmail.com",
+			"activo": true,
+			"created_at": "2026-05-07T18:31:16.958524+00:00"
+		},
+		{
+			"id": "2523c5b8-87c5-42ce-a017-742de8f192a7",
+			"rol": "vendedor",
+			"email": "alvaro@user.com",
+			"activo": true,
+			"created_at": "2026-05-05T20:36:50.864002+00:00"
+		},
+		{
+			"id": "e446b1e1-7f95-4a70-a7b5-34463f7241e6",
+			"rol": "admin_empresa",
+			"email": "mate@user.com",
+			"activo": true,
+			"created_at": "2026-05-05T03:05:59.987571+00:00"
+		},
+		{
+			"id": "03e07483-171a-41f7-8570-6f3299f61650",
+			"rol": "admin_empresa",
+			"email": "roni@user.com",
+			"activo": true,
+			"created_at": "2026-05-05T03:08:55.847567+00:00"
+		}
+	],
+	"productos": [
+		{
+			"id": "0f0241ad-9890-4136-bd08-d9f7794e2eb4",
+			"unidad": "m3",
+			"codigo_sku": "000001",
+			"created_at": "2026-04-08T23:43:12.046204+00:00",
+			"empresa_id": "WM",
+			"descripcion": "Piedra chancada 1/2\"",
+			"precio_unitario_base": 80
+		},
+		{
+			"id": "f44fe499-0714-42ee-b9bf-de251f06b98e",
+			"unidad": "m3",
+			"codigo_sku": "000002",
+			"created_at": "2026-04-08T23:43:12.046204+00:00",
+			"empresa_id": "WM",
+			"descripcion": "Hormigón",
+			"precio_unitario_base": 45
+		},
+		{
+			"id": "1a25ba33-be5a-49c9-8b64-d9a9406cf719",
+			"unidad": "m3",
+			"codigo_sku": "000004",
+			"created_at": "2026-04-08T23:43:12.046204+00:00",
+			"empresa_id": "WM",
+			"descripcion": "Piedra chancada 1\"",
+			"precio_unitario_base": 80
+		},
+		{
+			"id": "4f54d9d9-e67a-442f-85c4-e53d48c9dcbe",
+			"unidad": "m3",
+			"codigo_sku": "000005",
+			"created_at": "2026-04-08T23:43:12.046204+00:00",
+			"empresa_id": "WM",
+			"descripcion": "Piedra chancada 3/4\"",
+			"precio_unitario_base": 80
+		},
+		{
+			"id": "82267f36-ebec-4f8c-8550-4613797480c9",
+			"unidad": "m3",
+			"codigo_sku": "000003",
+			"created_at": "2026-04-08T23:43:12.046204+00:00",
+			"empresa_id": "WM",
+			"descripcion": "Arena fina",
+			"precio_unitario_base": 42
+		},
+		{
+			"id": "1ca98336-a831-49fb-a895-d065c1045e14",
+			"unidad": "m3",
+			"codigo_sku": "PRD-0006",
+			"created_at": "2026-05-02T02:09:46.956824+00:00",
+			"empresa_id": "WM",
+			"descripcion": "Agua",
+			"precio_unitario_base": 15
+		},
+		{
+			"id": "443a361f-4835-4665-9561-c64aa98da204",
+			"unidad": "m3",
+			"codigo_sku": "PRD-0001",
+			"created_at": "2026-05-05T04:05:49.756552+00:00",
+			"empresa_id": "RAYO",
+			"descripcion": "Agua",
+			"precio_unitario_base": 16
+		},
+		{
+			"id": "7609e31d-6db1-42a5-ac6e-024f075c36ce",
+			"unidad": "und",
+			"codigo_sku": "PRD-0001",
+			"created_at": "2026-05-05T04:47:50.882056+00:00",
+			"empresa_id": "BLOQUETERA_VDC",
+			"descripcion": "Bloqueta",
+			"precio_unitario_base": 3.5
+		}
+	],
+	"maquinaria": [
+		{
+			"id": "dd7f8b3f-05d7-449f-a53d-22120e109f42",
+			"tipo": "Cargador Frontal",
+			"marca": "Hyundai",
+			"placa": null,
+			"activa": true,
+			"codigo": null,
+			"estado": "operativa",
+			"modelo": "-",
+			"nombre": "Cargador Frontal",
+			"created_at": "2026-05-07T20:34:15.911494+00:00",
+			"empresa_id": "WM",
+			"precio_dia": 300,
+			"precio_mes": 8000,
+			"descripcion": "-",
+			"precio_hora": 120,
+			"numero_serie": null,
+			"precio_venta": 250000,
+			"unidad_medida": "unidad",
+			"anio_fabricacion": null,
+			"horometro_actual": 0,
+			"horometro_inicial": 0,
+			"ultimo_mantenimiento": null,
+			"intervalo_mantenimiento": null
+		}
+	],
+	"cotizaciones": [
+		{
+			"id": "33e5db88-41e3-4089-b819-b0e142ac649a",
+			"igv": 929.88,
+			"fecha": "2026-05-08T01:23:36.785+00:00",
+			"folio": "WM-00000018",
+			"items": [
+				{
+					"sku": "000003",
+					"unidad": "m3",
+					"cantidad": 123,
+					"subtotal": 5166,
+					"descripcion": "Arena fina",
+					"precio_unitario": 42
+				}
+			],
+			"total": 6095.88,
+			"estado": "ANULADA",
+			"oculta": false,
+			"subtotal": 5166,
+			"vendedor": "wantuil@admin.com",
+			"cliente_id": null,
+			"empresa_id": "WM",
+			"lugar_entrega": "CANTERA",
+			"observaciones": null,
+			"cliente_correo": "u20202647@utp.edu.pe",
+			"cliente_nombre": "prueba",
+			"cliente_telefono": "937022985",
+			"cliente_direccion": "calle los sauces m1",
+			"cliente_documento": "12312312"
+		},
+		{
+			"id": "62ea66db-f3c5-417e-ad05-41ff2c131ec0",
+			"igv": 0,
+			"fecha": "2026-05-07T18:50:03.549+00:00",
+			"folio": "OT-00000005",
+			"items": [
+				{
+					"sku": "VAR-7074",
+					"unidad": "m3",
+					"cantidad": 10,
+					"subtotal": 200,
+					"descripcion": "agua",
+					"precio_unitario": 20
+				}
+			],
+			"total": 200,
+			"estado": "ANULADA",
+			"oculta": false,
+			"subtotal": 200,
+			"vendedor": "ryan@admin.com",
+			"cliente_id": null,
+			"empresa_id": "ONETWO",
+			"lugar_entrega": "CANTERA",
+			"observaciones": null,
+			"cliente_correo": "u20202647@utp.edu.pe",
+			"cliente_nombre": "ryan",
+			"cliente_telefono": "937022985",
+			"cliente_direccion": "calle los sauces m1",
+			"cliente_documento": "60268828"
+		},
+		{
+			"id": "e21bd738-3ea0-4871-be89-eec0fbbfd40c",
+			"igv": 36,
+			"fecha": "2026-05-08T03:33:58.162+00:00",
+			"folio": "EMP-00000012",
+			"items": [
+				{
+					"sku": "VAR-7074",
+					"unidad": "m3",
+					"cantidad": 10,
+					"subtotal": 200,
+					"descripcion": "agua",
+					"precio_unitario": 20
+				}
+			],
+			"total": 236,
+			"estado": "PENDIENTE",
+			"oculta": false,
+			"subtotal": 200,
+			"vendedor": "ryan@admin.com",
+			"cliente_id": null,
+			"empresa_id": "RAYO",
+			"lugar_entrega": "CANTERA",
+			"observaciones": null,
+			"cliente_correo": "u20202647@utp.edu.pe",
+			"cliente_nombre": "ryan",
+			"cliente_telefono": "937022985",
+			"cliente_direccion": "calle los sauces m1",
+			"cliente_documento": "60268828"
+		},
+		{
+			"id": "32145616-1246-483d-9bdf-60b77c1ed93d",
+			"igv": 0,
+			"fecha": "2026-04-27T13:19:15.761+00:00",
+			"folio": "COT-VDC-00001",
+			"items": [
+				{
+					"sku": "000002",
+					"unidad": "m3",
+					"cantidad": 30,
+					"subtotal": 1650,
+					"descripcion": "Hormigón",
+					"precio_unitario": 55
+				}
+			],
+			"total": 1650,
+			"estado": "APROBADA",
+			"oculta": false,
+			"subtotal": 1650,
+			"vendedor": "wantuil@admin.com",
+			"cliente_id": null,
+			"empresa_id": "VDC",
+			"lugar_entrega": null,
+			"observaciones": null,
+			"cliente_correo": null,
+			"cliente_nombre": "PALKIA EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA - PALKIA E.I.R.L.",
+			"cliente_telefono": null,
+			"cliente_direccion": null,
+			"cliente_documento": "20600678605"
+		},
+		{
+			"id": "96088a2d-87d6-4217-b8f4-bf40e30a73a1",
+			"igv": 0,
+			"fecha": "2026-05-07T21:17:40.738+00:00",
+			"folio": "VDC-00000018",
+			"items": [
+				{
+					"sku": "VAR-3822",
+					"unidad": "m3",
+					"cantidad": 20,
+					"subtotal": 400,
+					"descripcion": "agua",
+					"precio_unitario": 20
+				}
+			],
+			"total": 400,
+			"estado": "ANULADA",
+			"oculta": false,
+			"subtotal": 400,
+			"vendedor": "wantuil@admin.com",
+			"cliente_id": null,
+			"empresa_id": "VDC",
+			"lugar_entrega": "CANTERA",
+			"observaciones": null,
+			"cliente_correo": null,
+			"cliente_nombre": "Ryan",
+			"cliente_telefono": null,
+			"cliente_direccion": null,
+			"cliente_documento": "60268828"
+		},
+		{
+			"id": "50387de4-4b56-4d20-a1fd-d26a85e9f359",
+			"igv": 9306.36,
+			"fecha": "2026-05-08T01:24:48.896+00:00",
+			"folio": "VDC-00000021",
+			"items": [
+				{
+					"sku": "000003",
+					"unidad": "m3",
+					"cantidad": 1231,
+					"subtotal": 51702,
+					"descripcion": "Arena fina",
+					"precio_unitario": 42
+				}
+			],
+			"total": 61008.36,
+			"estado": "PENDIENTE",
+			"oculta": false,
+			"subtotal": 51702,
+			"vendedor": "ryan@admin.com",
+			"cliente_id": null,
+			"empresa_id": "VDC",
+			"lugar_entrega": "CANTERA",
+			"observaciones": null,
+			"cliente_correo": "u20202647@utp.edu.pe",
+			"cliente_nombre": "pruebasd",
+			"cliente_telefono": "937022985",
+			"cliente_direccion": "calle los sauces m1",
+			"cliente_documento": "60268828"
+		},
+		{
+			"id": "1f3ceca7-4acc-4e93-8881-a164d35f1869",
+			"igv": 0,
+			"fecha": "2026-05-07T14:52:03.184+00:00",
+			"folio": "EMP-00000017",
+			"items": [
+				{
+					"sku": "VAR-1279",
+					"unidad": "m3",
+					"cantidad": 11,
+					"subtotal": 935,
+					"descripcion": "Piedra chancada",
+					"precio_unitario": 85
+				},
+				{
+					"sku": "VAR-7715",
+					"unidad": "m3",
+					"cantidad": 15,
+					"subtotal": 825,
+					"descripcion": "Arena Gruesa",
+					"precio_unitario": 55
+				}
+			],
+			"total": 1760,
+			"estado": "PENDIENTE",
+			"oculta": false,
+			"subtotal": 1760,
+			"vendedor": null,
+			"cliente_id": null,
+			"empresa_id": "VDC",
+			"lugar_entrega": "CANTERA",
+			"observaciones": null,
+			"cliente_correo": null,
+			"cliente_nombre": "PALKIA EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA - PALKIA E.I.R.L.",
+			"cliente_telefono": null,
+			"cliente_direccion": "MZA. F LOTE 19 URB. MARIANO BUSTAMANTE ",
+			"cliente_documento": "20600678605"
+		},
+		{
+			"id": "3b66fc19-2033-4633-b9a7-5aa42a266c72",
+			"igv": 0,
+			"fecha": "2026-05-07T21:25:52.073+00:00",
+			"folio": "VDC-00000019",
+			"items": [
+				{
+					"sku": "VAR-3157",
+					"unidad": "",
+					"cantidad": 120,
+					"subtotal": 18240,
+					"descripcion": "Piedra chancada 1/2",
+					"precio_unitario": 152
+				},
+				{
+					"sku": "VAR-7395",
+					"unidad": "",
+					"cantidad": 32,
+					"subtotal": 4240,
+					"descripcion": "Arena fina ",
+					"precio_unitario": 132.5
+				},
+				{
+					"sku": "VAR-3074",
+					"unidad": "",
+					"cantidad": 20,
+					"subtotal": 3100,
+					"descripcion": "Arena gruesa ",
+					"precio_unitario": 155
+				}
+			],
+			"total": 25580,
+			"estado": "PENDIENTE",
+			"oculta": false,
+			"subtotal": 25580,
+			"vendedor": null,
+			"cliente_id": null,
+			"empresa_id": "VDC",
+			"lugar_entrega": "OBRA",
+			"observaciones": null,
+			"cliente_correo": null,
+			"cliente_nombre": "AUREVIA S.A.C.",
+			"cliente_telefono": null,
+			"cliente_direccion": "AV. PASEO DE LA REPUBLICA NRO 5655 DEP. 504 URB. MIRAFLORES ",
+			"cliente_documento": "20614306182"
+		},
+		{
+			"id": "006c548b-d176-4754-a91d-2b257e517460",
+			"igv": 83.16,
+			"fecha": "2026-05-08T01:26:16.146+00:00",
+			"folio": "WM-00000019",
+			"items": [
+				{
+					"sku": "000003",
+					"unidad": "m3",
+					"cantidad": 11,
+					"subtotal": 462,
+					"descripcion": "Arena fina",
+					"precio_unitario": 42
+				}
+			],
+			"total": 545.16,
+			"estado": "PENDIENTE",
+			"oculta": false,
+			"subtotal": 462,
+			"vendedor": "ryan@admin.com",
+			"cliente_id": null,
+			"empresa_id": "WM",
+			"lugar_entrega": "CANTERA",
+			"observaciones": null,
+			"cliente_correo": "u20202647@utp.edu.pe",
+			"cliente_nombre": "prue1",
+			"cliente_telefono": "937022985",
+			"cliente_direccion": "calle los sauces m1",
+			"cliente_documento": "60268828"
+		},
+		{
+			"id": "175e28e1-d7ff-43a3-9ae8-a0e9f82d7d32",
+			"igv": 0,
+			"fecha": "2026-05-07T22:37:40.554+00:00",
+			"folio": "VDC-00000020",
+			"items": [
+				{
+					"sku": "VAR-2675",
+					"unidad": "",
+					"cantidad": 135,
+					"subtotal": 20520,
+					"descripcion": "Piedra chancada 1/2",
+					"precio_unitario": 152
+				},
+				{
+					"sku": "VAR-4297",
+					"unidad": "",
+					"cantidad": 32,
+					"subtotal": 4240,
+					"descripcion": "Arena fina ",
+					"precio_unitario": 132.5
+				},
+				{
+					"sku": "VAR-6254",
+					"unidad": "",
+					"cantidad": 35,
+					"subtotal": 4935,
+					"descripcion": "Arena gruesa ",
+					"precio_unitario": 141
+				}
+			],
+			"total": 29695,
+			"estado": "PENDIENTE",
+			"oculta": false,
+			"subtotal": 29695,
+			"vendedor": "wantuil@admin.com",
+			"cliente_id": null,
+			"empresa_id": "VDC",
+			"lugar_entrega": "OBRA",
+			"observaciones": null,
+			"cliente_correo": null,
+			"cliente_nombre": "AUREVIA S.A.C.",
+			"cliente_telefono": null,
+			"cliente_direccion": "AV. PASEO DE LA REPUBLICA NRO 5655 DEP. 504 URB. MIRAFLORES ",
+			"cliente_documento": "20614306182"
+		},
+		{
+			"id": "64b9b597-2bfa-4497-814b-33c3188d3cbe",
+			"igv": 90.72,
+			"fecha": "2026-05-08T01:32:43.64+00:00",
+			"folio": "WM-00000020",
+			"items": [
+				{
+					"sku": "000003",
+					"unidad": "m3",
+					"cantidad": 12,
+					"subtotal": 504,
+					"descripcion": "Arena fina",
+					"precio_unitario": 42
+				}
+			],
+			"total": 594.72,
+			"estado": "ANULADA",
+			"oculta": false,
+			"subtotal": 504,
+			"vendedor": "ryan@admin.com",
+			"cliente_id": null,
+			"empresa_id": "WM",
+			"lugar_entrega": "CANTERA",
+			"observaciones": null,
+			"cliente_correo": "u20202647@utp.edu.pe",
+			"cliente_nombre": "prueba",
+			"cliente_telefono": "937022985",
+			"cliente_direccion": "calle los sauces m1",
+			"cliente_documento": "12312312"
+		},
+		{
+			"id": "2d5a2959-0bc7-4536-aa1d-dee038bb4bf0",
+			"igv": 0,
+			"fecha": "2026-04-24T20:29:06.13+00:00",
+			"folio": "COT-20260424-1529",
+			"items": [
+				{
+					"sku": "000001",
+					"unidad": "m3",
+					"cantidad": 200,
+					"subtotal": 24400,
+					"descripcion": "Piedra chancada 1/2\"",
+					"precio_unitario": 122
+				}
+			],
+			"total": 24400,
+			"estado": "PENDIENTE",
+			"oculta": false,
+			"subtotal": 24400,
+			"vendedor": "Ryan@admin.com",
+			"cliente_id": null,
+			"empresa_id": "WM",
+			"lugar_entrega": null,
+			"observaciones": null,
+			"cliente_correo": null,
+			"cliente_nombre": "Minera Orion",
+			"cliente_telefono": null,
+			"cliente_direccion": null,
+			"cliente_documento": ""
+		}
+	],
+	"folios_empresas": [
+		{
+			"secuencia": 5,
+			"empresa_codigo": "ONETWO"
+		},
+		{
+			"secuencia": 21,
+			"empresa_codigo": "VDC"
+		},
+		{
+			"secuencia": 20,
+			"empresa_codigo": "WM"
+		},
+		{
+			"secuencia": 12,
+			"empresa_codigo": "RAYO"
+		},
+		{
+			"secuencia": 1,
+			"empresa_codigo": "bloquetera-virgen-del-carmen"
+		},
+		{
+			"secuencia": 8,
+			"empresa_codigo": "BLOQUETERA_VDC"
+		}
+	],
+	"usuario_empresa": [
+		{
+			"id": "c66547bf-f5da-4157-a2e6-6ed77eb0309e",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-04T19:16:05.23719+00:00",
+			"empresa_id": "WM",
+			"usuario_id": "b739a10d-443e-4527-bb7b-85bf07aabca6"
+		},
+		{
+			"id": "9c019a4a-3a6d-4e5c-a53b-91c8fcd490cc",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-04T19:16:05.23719+00:00",
+			"empresa_id": "VDC",
+			"usuario_id": "b739a10d-443e-4527-bb7b-85bf07aabca6"
+		},
+		{
+			"id": "6cbd6081-af5f-4373-a0b1-e02b0299afa7",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-04T19:16:05.23719+00:00",
+			"empresa_id": "ONETWO",
+			"usuario_id": "b739a10d-443e-4527-bb7b-85bf07aabca6"
+		},
+		{
+			"id": "bd8e3570-07fd-4220-ab0c-b96c372dd443",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-04T19:16:05.23719+00:00",
+			"empresa_id": "ONETWO",
+			"usuario_id": "7bbb2deb-e1d9-4426-842f-3fbec7a9af34"
+		},
+		{
+			"id": "86144353-af97-4b51-b298-402a78b20800",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-04T19:16:05.23719+00:00",
+			"empresa_id": "WM",
+			"usuario_id": "33b6d86f-9ee0-49f8-bd54-e0614aed77d0"
+		},
+		{
+			"id": "aec8b0b4-f33b-43f2-a351-f7ff4ca2ac9c",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-04T19:16:05.23719+00:00",
+			"empresa_id": "VDC",
+			"usuario_id": "33b6d86f-9ee0-49f8-bd54-e0614aed77d0"
+		},
+		{
+			"id": "978c4e66-2777-465c-b008-9c6d7c95e2c4",
+			"rol": "vendedor",
+			"activo": false,
+			"created_at": "2026-05-04T19:16:05.23719+00:00",
+			"empresa_id": "WM",
+			"usuario_id": "06db480f-1b48-4de5-9160-4561748ad3be"
+		},
+		{
+			"id": "802b97e1-04f8-4b7b-aee5-88cf87aa60f1",
+			"rol": "vendedor",
+			"activo": false,
+			"created_at": "2026-05-04T19:16:05.23719+00:00",
+			"empresa_id": "VDC",
+			"usuario_id": "06db480f-1b48-4de5-9160-4561748ad3be"
+		},
+		{
+			"id": "541cd361-82fd-45a7-bf0b-6f0de95236d1",
+			"rol": "vendedor",
+			"activo": false,
+			"created_at": "2026-05-04T19:16:05.23719+00:00",
+			"empresa_id": "ONETWO",
+			"usuario_id": "06db480f-1b48-4de5-9160-4561748ad3be"
+		},
+		{
+			"id": "7233a163-88eb-443a-9202-f95c4dbf7c72",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-04T19:16:05.23719+00:00",
+			"empresa_id": "RAYO",
+			"usuario_id": "06db480f-1b48-4de5-9160-4561748ad3be"
+		},
+		{
+			"id": "877859a3-971a-4bb2-b686-7bcf1b6e1ac1",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-05T03:06:23.246073+00:00",
+			"empresa_id": "ONETWO",
+			"usuario_id": "e446b1e1-7f95-4a70-a7b5-34463f7241e6"
+		},
+		{
+			"id": "d49d185e-b16a-4bd5-8dbb-772ab515ca07",
+			"rol": "admin",
+			"activo": true,
+			"created_at": "2026-05-04T19:12:28.136867+00:00",
+			"empresa_id": "WM",
+			"usuario_id": "fae65c55-7e7c-4a2c-941d-9fd92881b2a0"
+		},
+		{
+			"id": "ca9d82ab-4d74-4404-bf8d-1bec683e8ecf",
+			"rol": "admin",
+			"activo": true,
+			"created_at": "2026-05-04T19:12:28.136867+00:00",
+			"empresa_id": "VDC",
+			"usuario_id": "fae65c55-7e7c-4a2c-941d-9fd92881b2a0"
+		},
+		{
+			"id": "f52c0188-c42e-4755-8759-8e26e1988a4a",
+			"rol": "admin",
+			"activo": true,
+			"created_at": "2026-05-04T19:12:28.136867+00:00",
+			"empresa_id": "ONETWO",
+			"usuario_id": "fae65c55-7e7c-4a2c-941d-9fd92881b2a0"
+		},
+		{
+			"id": "24abe9c2-310a-427c-9719-94fc0c9308a6",
+			"rol": "admin",
+			"activo": true,
+			"created_at": "2026-05-04T19:12:28.136867+00:00",
+			"empresa_id": "RAYO",
+			"usuario_id": "fae65c55-7e7c-4a2c-941d-9fd92881b2a0"
+		},
+		{
+			"id": "7eaacb08-3b80-42f5-b453-f4fc433d6332",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-05T04:44:26.511696+00:00",
+			"empresa_id": "BLOQUETERA_VDC",
+			"usuario_id": "fae65c55-7e7c-4a2c-941d-9fd92881b2a0"
+		},
+		{
+			"id": "5ac29bec-8a6f-4dc9-b6cc-7ede950a4484",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-05T20:37:33.596204+00:00",
+			"empresa_id": "RAYO",
+			"usuario_id": "2523c5b8-87c5-42ce-a017-742de8f192a7"
+		},
+		{
+			"id": "d7d40162-844a-4d12-bd84-ac38f861f280",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-05T20:37:33.596204+00:00",
+			"empresa_id": "BLOQUETERA_VDC",
+			"usuario_id": "2523c5b8-87c5-42ce-a017-742de8f192a7"
+		},
+		{
+			"id": "db8beb14-6bae-49a0-b0c1-b02b80f00389",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-05T03:51:19.347828+00:00",
+			"empresa_id": "RAYO",
+			"usuario_id": "03e07483-171a-41f7-8570-6f3299f61650"
+		},
+		{
+			"id": "80a75f97-7c56-4b03-9822-4dfa3a227239",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-05T04:26:47.238328+00:00",
+			"empresa_id": "ONETWO",
+			"usuario_id": "03e07483-171a-41f7-8570-6f3299f61650"
+		},
+		{
+			"id": "04232f68-4a88-4799-aef7-8273a67ff460",
+			"rol": "vendedor",
+			"activo": true,
+			"created_at": "2026-05-07T20:41:25.219853+00:00",
+			"empresa_id": "BLOQUETERA_VDC",
+			"usuario_id": "03e07483-171a-41f7-8570-6f3299f61650"
+		}
+	],
+	"cuentas_bancarias": [
+		{
+			"id": "5e7560c9-da6a-453c-936a-01ff373055eb",
+			"cci": "00219412058787903595",
+			"banco": "Banco de Crédito del Perú",
+			"orden": 0,
+			"activa": true,
+			"moneda": "PEN",
+			"numero": "19420587879035",
+			"titular": null,
+			"created_at": "2026-05-07T20:02:27.847548+00:00",
+			"empresa_id": "VDC",
+			"tipo_cuenta": "Corriente"
+		},
+		{
+			"id": "f9bedc17-43e2-4fd6-8947-130e58f5e508",
+			"cci": null,
+			"banco": "Banco de la Nación",
+			"orden": 1,
+			"activa": true,
+			"moneda": "PEN",
+			"numero": "00615009040",
+			"titular": null,
+			"created_at": "2026-05-07T20:02:27.847548+00:00",
+			"empresa_id": "VDC",
+			"tipo_cuenta": "Detracción"
+		},
+		{
+			"id": "4c87452b-7629-4f5a-a937-585bd2e8e096",
+			"cci": "80306400350213500158",
+			"banco": "Caja Arequipa",
+			"orden": 0,
+			"activa": true,
+			"moneda": "PEN",
+			"numero": "00350213502100001001",
+			"titular": null,
+			"created_at": "2026-05-07T20:02:28.41744+00:00",
+			"empresa_id": "WM",
+			"tipo_cuenta": "Corriente"
+		},
+		{
+			"id": "7557c8df-c9ea-4ab0-8182-16bf2a8a2b3e",
+			"cci": null,
+			"banco": "Banco de la nación",
+			"orden": 1,
+			"activa": true,
+			"moneda": "PEN",
+			"numero": "00615-014494",
+			"titular": null,
+			"created_at": "2026-05-07T20:02:28.41744+00:00",
+			"empresa_id": "WM",
+			"tipo_cuenta": "Detracciones"
+		}
+	],
+	"lecturas_horometro": null
+}

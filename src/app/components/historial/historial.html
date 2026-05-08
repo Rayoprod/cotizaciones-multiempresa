@@ -1,308 +1,374 @@
 <p-toast />
+<p-confirmDialog />
 
-<div class="p-3 md:p-5">
+<div class="p-3 md:p-4">
 
-  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <!-- ─── Header ─────────────────────────────────────────────────────── -->
   <div class="flex flex-column md:flex-row align-items-start md:align-items-center
               justify-content-between gap-3 mb-4">
     <div>
-      <h2 class="text-xl md:text-3xl font-bold text-900 m-0">
+      <h2 class="text-xl font-bold text-900 m-0">
         <i class="pi pi-history text-primary mr-2"></i>Historial de Cotizaciones
       </h2>
-      <p class="text-color-secondary mt-1 mb-0 text-sm">
-        Consulta, cambia estados y descarga PDFs de cotizaciones anteriores
+      <p class="text-color-secondary text-sm mt-1 mb-0">
+        {{ empresaActiva?.nombre_comercial }}
       </p>
     </div>
-    <div class="flex align-items-center gap-2">
-      <div *ngIf="empresaActiva" class="flex align-items-center gap-2 surface-ground
-                                        border-round-xl px-3 py-2">
-        <i class="pi pi-building text-primary"></i>
-        <span class="font-semibold text-900 text-sm">{{ empresaActiva.nombre_comercial }}</span>
+
+    <div class="flex align-items-center gap-3 flex-wrap">
+      <div class="flex align-items-center gap-2">
+        <p-toggleswitch
+          [(ngModel)]="mostrarOcultas"
+          (onChange)="onToggleOcultas()"
+          inputId="toggleOcultas">
+        </p-toggleswitch>
+        <label for="toggleOcultas" class="text-sm cursor-pointer select-none">
+          <i class="pi pi-eye-slash mr-1 text-color-secondary"></i>
+          Mostrar ocultas
+        </label>
       </div>
+
+      <p-button label="Exportar CSV" icon="pi pi-download"
+                severity="secondary" outlined
+                (onClick)="exportarCSV()">
+      </p-button>
     </div>
   </div>
 
-  <!-- ── LOADING STATE ────────────────────────────────────────────────────── -->
-  <ng-container *ngIf="cargando()">
-    <div class="flex flex-column align-items-center justify-content-center gap-4 py-6">
-      <p-progressSpinner strokeWidth="4" animationDuration=".8s"
-        [style]="{ width: '60px', height: '60px' }" />
-      <div class="text-center">
-        <p class="text-900 font-semibold text-lg m-0 mb-1">Cargando historial</p>
-        <p class="text-500 text-sm m-0">Obteniendo datos de cotizaciones...</p>
-      </div>
-      <!-- Skeleton cards -->
-      <div class="grid w-full mt-2">
-        <div class="col-12 md:col-3" *ngFor="let s of [1,2,3,4]">
-          <div class="surface-card border-round-xl p-4 shadow-1">
-            <div class="border-round animation-pulse mb-3" style="height:14px;width:50%;background:#e9ecef;"></div>
-            <div class="border-round animation-pulse mb-2" style="height:28px;width:70%;background:#e9ecef;"></div>
-            <div class="border-round animation-pulse" style="height:12px;width:40%;background:#e9ecef;"></div>
-          </div>
-        </div>
-      </div>
-      <!-- Skeleton table rows -->
-      <div class="w-full surface-card border-round-xl shadow-1 p-4 hidden md:block">
-        <div *ngFor="let r of [1,2,3,4,5]" class="flex gap-4 mb-3">
-          <div class="border-round animation-pulse" style="height:16px;width:100px;background:#e9ecef;"></div>
-          <div class="border-round animation-pulse" style="height:16px;width:120px;background:#e9ecef;"></div>
-          <div class="border-round animation-pulse flex-1" style="height:16px;background:#e9ecef;"></div>
-          <div class="border-round animation-pulse" style="height:16px;width:80px;background:#e9ecef;"></div>
-          <div class="border-round animation-pulse" style="height:16px;width:100px;background:#e9ecef;"></div>
-        </div>
-      </div>
-    </div>
-  </ng-container>
-
-  <!-- ── DATA LOADED ──────────────────────────────────────────────────────── -->
+  <!-- ─── KPIs ────────────────────────────────────────────────────────── -->
   <ng-container *ngIf="!cargando()">
-
-    <!-- ── KPI Cards ────────────────────────────────────────────────────────── -->
     <div class="grid mb-4">
-      <div class="col-6 md:col-3">
-        <div class="surface-card border-round-xl p-3 md:p-4 shadow-1 border-left-3 border-primary h-full">
-          <div class="flex align-items-center gap-2 mb-2">
-            <i class="pi pi-file-edit text-primary text-lg"></i>
-            <span class="text-color-secondary text-xs font-semibold uppercase">Total</span>
-          </div>
-          <p class="text-2xl md:text-3xl font-bold text-900 m-0">{{ cotizaciones.length }}</p>
-          <p class="text-xs text-500 m-0 mt-1">cotizaciones</p>
-        </div>
-      </div>
-
-      <div class="col-6 md:col-3">
-        <div class="surface-card border-round-xl p-3 md:p-4 shadow-1 border-left-3 border-green-500 h-full">
-          <div class="flex align-items-center gap-2 mb-2">
-            <i class="pi pi-dollar text-green-500 text-lg"></i>
-            <span class="text-color-secondary text-xs font-semibold uppercase">Vendido</span>
-          </div>
-          <p class="text-2xl md:text-3xl font-bold text-900 m-0">S/ {{ totalVendido | number:'1.0-0' }}</p>
-          <p class="text-xs text-green-600 m-0 mt-1">
-            <i class="pi pi-check-circle mr-1"></i>{{ cotizacionesAprobadas }} aprobadas
+      <div class="col-6 lg:col-3">
+        <div class="surface-card border-round-xl p-3 shadow-1 h-full">
+          <span class="text-xs text-color-secondary uppercase font-semibold">Vendido</span>
+          <p class="text-xl font-bold text-green-600 m-0 mt-1">
+            S/ {{ totalVendido | number:'1.2-2' }}
           </p>
+          <p class="text-xs text-color-secondary m-0">{{ cotizacionesAprobadas }} aprobadas</p>
         </div>
       </div>
-
-      <div class="col-6 md:col-3">
-        <div class="surface-card border-round-xl p-3 md:p-4 shadow-1 border-left-3 border-orange-500 h-full">
-          <div class="flex align-items-center gap-2 mb-2">
-            <i class="pi pi-clock text-orange-500 text-lg"></i>
-            <span class="text-color-secondary text-xs font-semibold uppercase">Pendientes</span>
-          </div>
-          <p class="text-2xl md:text-3xl font-bold text-900 m-0">{{ cotizacionesPendientes }}</p>
-          <p class="text-xs text-orange-600 m-0 mt-1">
-            S/ {{ totalPendiente | number:'1.0-0' }} por aprobar
+      <div class="col-6 lg:col-3">
+        <div class="surface-card border-round-xl p-3 shadow-1 h-full">
+          <span class="text-xs text-color-secondary uppercase font-semibold">Por cobrar</span>
+          <p class="text-xl font-bold text-orange-500 m-0 mt-1">
+            S/ {{ totalPendiente | number:'1.2-2' }}
           </p>
+          <p class="text-xs text-color-secondary m-0">{{ cotizacionesPendientes }} pendientes</p>
         </div>
       </div>
-
-      <div class="col-6 md:col-3">
-        <div class="surface-card border-round-xl p-3 md:p-4 shadow-1 border-left-3 border-red-500 h-full">
-          <div class="flex align-items-center gap-2 mb-2">
-            <i class="pi pi-times-circle text-red-500 text-lg"></i>
-            <span class="text-color-secondary text-xs font-semibold uppercase">Anuladas</span>
-          </div>
-          <p class="text-2xl md:text-3xl font-bold text-900 m-0">{{ cotizacionesAnuladas }}</p>
-          <p class="text-xs text-500 m-0 mt-1">
-            {{ tasaConversion | number:'1.0-0' }}% tasa de aprobación
+      <div class="col-6 lg:col-3">
+        <div class="surface-card border-round-xl p-3 shadow-1 h-full">
+          <span class="text-xs text-color-secondary uppercase font-semibold">Tasa conversión</span>
+          <p class="text-xl font-bold text-primary m-0 mt-1">
+            {{ tasaConversion | number:'1.0-0' }}%
           </p>
+          <p class="text-xs text-color-secondary m-0">Aprobadas / No anuladas</p>
+        </div>
+      </div>
+      <div class="col-6 lg:col-3">
+        <div class="surface-card border-round-xl p-3 shadow-1 h-full">
+          <span class="text-xs text-color-secondary uppercase font-semibold">Anuladas</span>
+          <p class="text-xl font-bold text-color-secondary m-0 mt-1">{{ cotizacionesAnuladas }}</p>
+          <p class="text-xs text-color-secondary m-0">{{ cotizacionesFiltradas.length }} total</p>
         </div>
       </div>
     </div>
 
-    <!-- ── Filtros y Acciones ────────────────────────────────────────────────── -->
-    <div class="surface-card border-round-xl shadow-1 p-3 md:p-4 mb-4">
-      <div class="flex flex-column md:flex-row align-items-start md:align-items-center gap-3">
-        <div class="flex align-items-center gap-2 flex-1 w-full md:w-auto">
-          <span class="p-input-icon-left flex-1">
-            <i class="pi pi-search"></i>
-            <input pInputText type="text" class="w-full" placeholder="Buscar folio, cliente..."
-                   [(ngModel)]="terminoBusqueda" (input)="filtrarCotizaciones(terminoBusqueda)" />
-          </span>
+    <!-- ─── Filtros ──────────────────────────────────────────────────── -->
+    <div class="surface-card border-round-xl p-3 mb-3 shadow-1">
+      <div class="grid align-items-end">
+        <div class="col-12 md:col-5 flex flex-column gap-1">
+          <label class="text-xs font-semibold text-color-secondary">Buscar</label>
+          <input pInputText
+                 [(ngModel)]="terminoBusqueda"
+                 (ngModelChange)="filtrarCotizaciones($event)"
+                 placeholder="Folio, cliente, RUC/DNI..."
+                 class="w-full" />
         </div>
-
-        <div class="flex align-items-center gap-2 flex-wrap">
-          <div class="flex align-items-center gap-2">
-            <label class="text-xs font-semibold text-color-secondary white-space-nowrap">Desde:</label>
-            <input pInputText type="date" class="text-sm" style="width:140px"
-                   [ngModel]="fechaDesde" (ngModelChange)="fechaDesde = $event; aplicarFiltroFecha()" />
-          </div>
-          <div class="flex align-items-center gap-2">
-            <label class="text-xs font-semibold text-color-secondary white-space-nowrap">Hasta:</label>
-            <input pInputText type="date" class="text-sm" style="width:140px"
-                   [ngModel]="fechaHasta" (ngModelChange)="fechaHasta = $event; aplicarFiltroFecha()" />
-          </div>
-          <p-button icon="pi pi-filter-slash" [text]="true" [rounded]="true" severity="secondary"
-                    size="small" pTooltip="Limpiar filtros" (onClick)="limpiarFiltros()" />
+        <div class="col-6 md:col-2 flex flex-column gap-1">
+          <label class="text-xs font-semibold text-color-secondary">Desde</label>
+          <input pInputText type="date"
+                 [(ngModel)]="fechaDesde"
+                 (change)="aplicarFiltroFecha()"
+                 class="w-full" />
         </div>
-
-        <div class="flex gap-2 ml-auto">
-          <p-button icon="pi pi-download" label="Exportar" severity="secondary" [outlined]="true"
-                    size="small" (onClick)="exportarCSV()" pTooltip="Descargar CSV" />
+        <div class="col-6 md:col-2 flex flex-column gap-1">
+          <label class="text-xs font-semibold text-color-secondary">Hasta</label>
+          <input pInputText type="date"
+                 [(ngModel)]="fechaHasta"
+                 (change)="aplicarFiltroFecha()"
+                 class="w-full" />
         </div>
-      </div>
-    </div>
-
-    <!-- ── Charts + Insights (Desktop) ───────────────────────────────────────── -->
-    <div class="grid mb-4 hidden md:flex" *ngIf="cotizaciones.length > 0">
-      <div class="col-12 lg:col-8">
-        <div class="surface-card border-round-xl shadow-1 p-4 h-full">
-          <div class="flex align-items-center justify-content-between mb-3">
-            <span class="font-bold text-900">Ventas por Mes</span>
-            <p-tag [value]="'Últimos 6 meses'" severity="info" styleClass="text-xs" />
-          </div>
-          <p-chart type="bar" [data]="chartVentasMensuales" [options]="chartOptions" height="220px" />
-        </div>
-      </div>
-      <div class="col-12 lg:col-4">
-        <div class="surface-card border-round-xl shadow-1 p-4 h-full">
-          <span class="font-bold text-900 block mb-3">Top Clientes</span>
-          <div class="flex flex-column gap-3">
-            <div *ngFor="let cli of topClientes; let i = index" class="flex align-items-center gap-3">
-              <span class="flex align-items-center justify-content-center border-circle text-xs font-bold text-white flex-shrink-0"
-                    [style]="{'width':'28px','height':'28px','background': i === 0 ? 'var(--primary-color)' : i === 1 ? '#6366f1' : '#94a3b8' }">
-                {{ i + 1 }}
-              </span>
-              <div class="flex-1 overflow-hidden">
-                <p class="text-sm font-semibold text-900 m-0 white-space-nowrap text-overflow-ellipsis overflow-hidden">
-                  {{ cli.nombre }}
-                </p>
-                <p class="text-xs text-500 m-0">{{ cli.cantidad }} cotizaciones</p>
-              </div>
-              <span class="font-bold text-sm text-primary white-space-nowrap">
-                S/ {{ cli.total | number:'1.0-0' }}
-              </span>
-            </div>
-            <div *ngIf="topClientes.length === 0" class="text-center py-4 text-color-secondary text-sm">
-              Sin datos suficientes
-            </div>
-          </div>
+        <div class="col-12 md:col-3 flex gap-2">
+          <p-button label="Limpiar" icon="pi pi-times"
+                    severity="secondary" outlined styleClass="w-full"
+                    (onClick)="limpiarFiltros()">
+          </p-button>
         </div>
       </div>
     </div>
 
-    <!-- ── Mobile First: Cards Version ─────────────────────────────────────── -->
-    <div class="flex flex-column gap-3 mb-4 md:hidden">
-      <div *ngIf="cotizacionesFiltradas.length === 0" class="text-center py-8 text-color-secondary">
-        <i class="pi pi-inbox text-5xl mb-3 opacity-40"></i>
-        <p class="font-semibold m-0">Sin cotizaciones</p>
-        <p class="text-sm m-0 mt-1">Las cotizaciones generadas aparecerán aquí</p>
-      </div>
-
-      <div *ngFor="let cot of cotizacionesFiltradas; trackBy: trackByCotizacion"
-           class="surface-card border-round-xl p-3 shadow-1 border-1 border-200">
-
-        <div class="flex justify-content-between align-items-start mb-3">
-          <div class="flex flex-column gap-1">
-            <span class="font-mono text-xs font-bold text-primary border-round px-2 py-1"
-                  style="background: color-mix(in srgb, var(--primary-color) 10%, white);">
-              {{ cot.folio }}
-            </span>
-            <span class="text-sm text-700">{{ cot.fecha | date:'dd/MM/yyyy' }}</span>
-          </div>
-          <p-tag [value]="getEstadoLabel(cot.estado)" [severity]="getSeverity(cot.estado)" styleClass="text-xs" />
-        </div>
-
-        <div class="mb-3">
-          <div class="flex align-items-center gap-2 mb-1">
-            <i class="pi pi-user text-color-secondary text-sm"></i>
-            <span class="font-semibold text-900 text-sm">{{ cot.cliente_nombre }}</span>
-          </div>
-          <div *ngIf="cot.cliente_documento" class="flex align-items-center gap-2">
-            <i class="pi pi-id-card text-color-secondary text-xs"></i>
-            <span class="text-xs text-500 font-mono">{{ cot.cliente_documento }}</span>
-          </div>
-        </div>
-
-        <div class="flex justify-content-between align-items-center mb-3">
-          <span class="font-bold text-900">S/ {{ cot.total | number:'1.2-2' }}</span>
-          <p-button icon="pi pi-file-pdf" [text]="true" [rounded]="true" severity="danger" size="small"
-                    pTooltip="Descargar PDF" [loading]="descargando() === cot.id"
-                    (click)="descargarPDF(cot)" />
-        </div>
-
-        <div class="border-top-1 border-200 pt-3">
-          <p-select [options]="opcionesEstado" [ngModel]="cot.estado" optionLabel="label" optionValue="value"
-                    styleClass="w-full text-xs" appendTo="body" (onChange)="cambiarEstado(cot, $event.value)">
-            <ng-template pTemplate="selectedItem" let-item>
-              <p-tag [value]="item?.label || getEstadoLabel(cot.estado)" [severity]="getSeverity(item?.value || cot.estado)" styleClass="text-xs" />
-            </ng-template>
-          </p-select>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Desktop: Table Version ─────────────────────────────────────────── -->
-    <div class="hidden md:block surface-card border-round-xl shadow-1 overflow-hidden">
-      <p-table #dt [value]="cotizacionesFiltradas" [rows]="15" [paginator]="true" [rowHover]="true"
-        [globalFilterFields]="['folio','cliente_nombre','cliente_documento','estado']"
-        [sortField]="'fecha'" [sortOrder]="-1" styleClass="p-datatable-sm">
-
-        <ng-template pTemplate="caption">
-          <div class="flex align-items-center justify-content-between p-2">
-            <span class="font-bold text-900">
-              Mostrando <span class="text-primary">{{ cotizacionesFiltradas.length }}</span> cotizaciones
-            </span>
-          </div>
-        </ng-template>
+    <!-- ─── Tabla ────────────────────────────────────────────────────── -->
+    <div class="surface-card border-round-xl shadow-1 overflow-hidden">
+      <p-table
+        [value]="cotizacionesFiltradas"
+        [paginator]="true"
+        [rows]="15"
+        [rowsPerPageOptions]="[10, 15, 30, 50]"
+        styleClass="p-datatable-sm"
+        responsiveLayout="stack"
+        breakpoint="768px">
 
         <ng-template pTemplate="header">
           <tr>
-            <th pSortableColumn="fecha" style="width:120px">Fecha <p-sortIcon field="fecha" /></th>
-            <th pSortableColumn="folio" style="width:140px">Folio <p-sortIcon field="folio" /></th>
-            <th>Cliente</th>
-            <th style="width:110px" pSortableColumn="total">Total <p-sortIcon field="total" /></th>
-            <th style="width:140px" class="text-center">Vendedor</th>
-            <th style="width:140px" class="text-center">Estado</th>
-            <th style="width:80px" class="text-center">PDF</th>
+            <th pSortableColumn="folio">Folio</th>
+            <th pSortableColumn="fecha">Fecha</th>
+            <th pSortableColumn="cliente_nombre">Cliente</th>
+            <th class="text-right">Total</th>
+            <th>Estado</th>
+            <th class="text-center" style="width:160px">Acciones</th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-cot>
-          <tr>
-            <td><span class="text-sm text-700">{{ cot.fecha | date:'dd/MM/yyyy' }}</span></td>
+          <tr [class.opacity-50]="cot.oculta">
             <td>
-              <span class="font-mono text-xs font-bold text-primary border-round px-2 py-1"
-                style="background: color-mix(in srgb, var(--primary-color) 10%, white);">
-                {{ cot.folio }}
+              <div class="flex align-items-center gap-2">
+                <span class="font-mono font-semibold text-sm text-900">{{ cot.folio }}</span>
+                <i *ngIf="cot.oculta"
+                   class="pi pi-eye-slash text-color-secondary text-xs"
+                   pTooltip="Cotización oculta"></i>
+              </div>
+            </td>
+            <td>
+              <span class="text-sm">
+                {{ formatearFecha(cot.fecha) }}
               </span>
             </td>
             <td>
-              <div class="flex flex-column gap-1">
-                <span class="font-semibold text-900 text-sm">{{ cot.cliente_nombre }}</span>
-                <small class="text-500 font-mono">{{ cot.cliente_documento || '—' }}</small>
-              </div>
+              <p class="font-semibold text-900 text-sm m-0">{{ cot.cliente_nombre }}</p>
+              <p class="text-xs text-color-secondary m-0">{{ cot.cliente_documento }}</p>
             </td>
-            <td><span class="font-bold text-900">S/ {{ cot.total | number:'1.2-2' }}</span></td>
-            <td class="text-center"><span class="text-sm text-700">{{ cot.vendedor || '—' }}</span></td>
-            <td class="text-center">
-              <p-select [options]="opcionesEstado" [ngModel]="cot.estado" optionLabel="label" optionValue="value"
-                [style]="{'width':'130px'}" styleClass="text-xs" appendTo="body" (onChange)="cambiarEstado(cot, $event.value)">
-                <ng-template pTemplate="selectedItem" let-item>
-                  <p-tag [value]="item?.label || getEstadoLabel(cot.estado)" [severity]="getSeverity(item?.value || cot.estado)" styleClass="text-xs" />
-                </ng-template>
+            <td class="text-right font-bold text-900">
+              S/ {{ cot.total | number:'1.2-2' }}
+            </td>
+            <td>
+              <p-select
+                [options]="opcionesEstado"
+                [(ngModel)]="cot.estado"
+                (onChange)="cambiarEstado(cot, cot.estado)"
+                optionLabel="label"
+                optionValue="value"
+                styleClass="p-inputtext-sm w-full"
+                appendTo="body">
               </p-select>
             </td>
             <td class="text-center">
-              <p-button icon="pi pi-file-pdf" [text]="true" [rounded]="true" severity="danger" size="small"
-                    pTooltip="Descargar PDF" [loading]="descargando() === cot.id" (onClick)="descargarPDF(cot)" />
+              <div class="flex justify-content-center gap-1">
+                <p-button icon="pi pi-file-pdf" severity="danger"
+                          styleClass="p-button-text p-button-sm"
+                          pTooltip="Descargar PDF"
+                          [loading]="descargando() === cot.id"
+                          (onClick)="descargarPDF(cot)">
+                </p-button>
+                <p-button icon="pi pi-pencil"
+                          styleClass="p-button-text p-button-sm"
+                          pTooltip="Editar / Revisar"
+                          (onClick)="abrirModalEditar(cot)">
+                </p-button>
+                <p-button [icon]="cot.oculta ? 'pi pi-eye' : 'pi pi-eye-slash'"
+                          severity="secondary"
+                          styleClass="p-button-text p-button-sm"
+                          [pTooltip]="cot.oculta ? 'Mostrar cotización' : 'Ocultar cotización'"
+                          (onClick)="ocultarCotizacion(cot)">
+                </p-button>
+              </div>
             </td>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="7">
-              <div class="flex flex-column align-items-center py-8 text-color-secondary">
-                <i class="pi pi-inbox text-5xl mb-3 opacity-40"></i>
-                <p class="font-semibold m-0">Sin cotizaciones registradas</p>
-                <p class="text-sm m-0 mt-1">Las cotizaciones generadas aparecerán aquí</p>
-              </div>
+            <td colspan="6" class="text-center py-6 text-color-secondary">
+              <i class="pi pi-inbox text-4xl mb-2 block"></i>
+              No hay cotizaciones que coincidan con los filtros.
             </td>
           </tr>
         </ng-template>
       </p-table>
     </div>
-
   </ng-container>
-</div>
+
+  <!-- Spinner ───────────────────────────────────────────────────────────── -->
+  <div *ngIf="cargando()"
+       class="flex justify-content-center align-items-center"
+       style="min-height:300px">
+    <p-progressSpinner strokeWidth="3"></p-progressSpinner>
+  </div>
+
+</div><!-- /p-3 -->
+
+
+<!-- ═══ MODAL EDITAR ════════════════════════════════════════════════════════ -->
+<p-dialog
+  [visible]="modalEditarVisible()"
+  (visibleChange)="modalEditarVisible.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '34rem' }"
+  appendTo="body">
+
+  <ng-template pTemplate="header">
+    <div>
+      <p class="font-bold text-900 m-0">✏️ Editar cotización</p>
+      <p class="text-xs text-color-secondary m-0 mt-1">
+        {{ cotizacionParaEditar?.folio }} · {{ cotizacionParaEditar?.cliente_nombre }}
+      </p>
+    </div>
+  </ng-template>
+
+  <div class="flex flex-column gap-5 pt-2 pb-1" *ngIf="cotizacionParaEditar">
+
+    <!-- Empresa -->
+    <div>
+      <p class="text-sm font-bold text-900 mb-3 m-0 flex align-items-center gap-2">
+        <i class="pi pi-building text-primary"></i>
+        ¿Con qué empresa continuar?
+      </p>
+      <div class="flex flex-column gap-2">
+
+        <!-- Misma empresa -->
+        <div class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer
+                    transition-all transition-duration-150"
+             [class.surface-100]="opcionEditar.empresaOrigen === 'misma'"
+             [style.border]="opcionEditar.empresaOrigen === 'misma'
+               ? '2px solid var(--primary-color)' : '2px solid transparent'"
+             (click)="opcionEditar.empresaOrigen = 'misma'; onEmpresaOrigenChange()">
+          <p-radioButton name="empresaOrigen" value="misma"
+                         [(ngModel)]="opcionEditar.empresaOrigen"
+                         (onClick)="onEmpresaOrigenChange()"
+                         inputId="opMisma">
+          </p-radioButton>
+          <div>
+            <label for="opMisma" class="font-semibold text-sm cursor-pointer">
+              Misma empresa
+            </label>
+            <p class="text-xs text-color-secondary m-0">{{ empresaActiva?.nombre_comercial }}</p>
+          </div>
+        </div>
+
+        <!-- Otra empresa -->
+        <div class="flex flex-column gap-2 p-3 border-round-lg cursor-pointer
+                    transition-all transition-duration-150"
+             [class.surface-100]="opcionEditar.empresaOrigen === 'otra'"
+             [style.border]="opcionEditar.empresaOrigen === 'otra'
+               ? '2px solid var(--primary-color)' : '2px solid transparent'">
+
+          <div class="flex align-items-center gap-3"
+               (click)="opcionEditar.empresaOrigen = 'otra'; onEmpresaOrigenChange()">
+            <p-radioButton name="empresaOrigen" value="otra"
+                           [(ngModel)]="opcionEditar.empresaOrigen"
+                           (onClick)="onEmpresaOrigenChange()"
+                           inputId="opOtra">
+            </p-radioButton>
+            <label for="opOtra" class="font-semibold text-sm cursor-pointer">
+              Cambiar de empresa
+            </label>
+          </div>
+
+          <div *ngIf="opcionEditar.empresaOrigen === 'otra'" class="pl-5 flex flex-column gap-2">
+            <p-progressSpinner *ngIf="cargandoEmpresas()"
+                               styleClass="w-2rem h-2rem" strokeWidth="4">
+            </p-progressSpinner>
+            <ng-container *ngIf="!cargandoEmpresas()">
+              <div *ngFor="let emp of empresasDisponibles"
+                   class="flex align-items-center gap-2 p-2 border-round cursor-pointer
+                          hover:surface-200 transition-duration-150"
+                   [class.surface-200]="opcionEditar.empresaSeleccionadaId === emp.id"
+                   (click)="opcionEditar.empresaSeleccionadaId = emp.id; $event.stopPropagation()">
+                <p-radioButton name="empresaSeleccionada" [value]="emp.id"
+                               [(ngModel)]="opcionEditar.empresaSeleccionadaId"
+                               [inputId]="'emp_' + emp.id">
+                </p-radioButton>
+                <label [for]="'emp_' + emp.id" class="text-sm cursor-pointer">
+                  {{ emp.nombre_comercial }}
+                </label>
+              </div>
+              <p *ngIf="empresasDisponibles.length === 0"
+                 class="text-xs text-color-secondary">
+                No tienes otras empresas asignadas.
+              </p>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p-divider styleClass="m-0"></p-divider>
+
+    <!-- Acción sobre original -->
+    <div>
+      <p class="text-sm font-bold text-900 mb-3 m-0 flex align-items-center gap-2">
+        <i class="pi pi-question-circle text-orange-500"></i>
+        ¿Qué hacemos con la cotización original?
+      </p>
+      <div class="flex flex-column gap-2">
+
+        <div class="flex align-items-start gap-3 p-3 border-round-lg cursor-pointer"
+             [class.surface-100]="opcionEditar.accionOriginal === 'anular'"
+             [style.border]="opcionEditar.accionOriginal === 'anular'
+               ? '2px solid var(--orange-400)' : '2px solid transparent'"
+             (click)="opcionEditar.accionOriginal = 'anular'">
+          <p-radioButton name="accionOriginal" value="anular"
+                         [(ngModel)]="opcionEditar.accionOriginal"
+                         inputId="opAnular">
+          </p-radioButton>
+          <div>
+            <label for="opAnular" class="font-semibold text-sm cursor-pointer">
+              Marcar como ANULADA
+              <p-tag value="Recomendado" severity="warn" styleClass="ml-2 text-xs"></p-tag>
+            </label>
+            <p class="text-xs text-color-secondary m-0 mt-1">
+              La original queda como historial. Se abre el cotizador con los datos precargados.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex align-items-start gap-3 p-3 border-round-lg cursor-pointer"
+             [class.surface-100]="opcionEditar.accionOriginal === 'mantener'"
+             [style.border]="opcionEditar.accionOriginal === 'mantener'
+               ? '2px solid var(--primary-color)' : '2px solid transparent'"
+             (click)="opcionEditar.accionOriginal = 'mantener'">
+          <p-radioButton name="accionOriginal" value="mantener"
+                         [(ngModel)]="opcionEditar.accionOriginal"
+                         inputId="opMantener">
+          </p-radioButton>
+          <div>
+            <label for="opMantener" class="font-semibold text-sm cursor-pointer">
+              Dejar como está
+            </label>
+            <p class="text-xs text-color-secondary m-0 mt-1">
+              La cotización original no cambia de estado.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex gap-2 justify-content-end">
+      <p-button label="Cancelar" severity="secondary" outlined
+                (onClick)="modalEditarVisible.set(false)"
+                [disabled]="procesandoEdicion()">
+      </p-button>
+      <p-button label="Continuar al cotizador"
+                icon="pi pi-arrow-right" iconPos="right"
+                [loading]="procesandoEdicion()"
+                (onClick)="confirmarEdicion()">
+      </p-button>
+    </div>
+  </ng-template>
+</p-dialog>

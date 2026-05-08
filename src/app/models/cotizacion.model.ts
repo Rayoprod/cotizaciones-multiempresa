@@ -16,6 +16,7 @@ export interface ICotizacion {
   vendedor?: string;
   lugar_entrega?: string;
   observaciones?: string;
+   oculta?: boolean;
 }
 
 export interface ICotizacionDetalle {
