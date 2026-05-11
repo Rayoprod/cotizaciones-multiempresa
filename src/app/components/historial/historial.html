@@ -172,10 +172,11 @@
                           (onClick)="descargarPDF(cot)">
                 </p-button>
                 <p-button icon="pi pi-pencil"
-                          styleClass="p-button-text p-button-sm"
-                          pTooltip="Editar / Revisar"
-                          (onClick)="abrirModalEditar(cot)">
-                </p-button>
+          styleClass="p-button-text p-button-sm"
+          pTooltip="Editar / Revisar"
+          [loading]="cotizacionCargandoModal() === cot.id"
+          (onClick)="abrirModalEditar(cot)">
+</p-button>
                 <p-button [icon]="cot.oculta ? 'pi pi-eye' : 'pi pi-eye-slash'"
                           severity="secondary"
                           styleClass="p-button-text p-button-sm"
@@ -282,7 +283,7 @@
                                styleClass="w-2rem h-2rem" strokeWidth="4">
             </p-progressSpinner>
             <ng-container *ngIf="!cargandoEmpresas()">
-              <div *ngFor="let emp of empresasDisponibles"
+              <div *ngFor="let emp of empresasDisponibles()"
                    class="flex align-items-center gap-2 p-2 border-round cursor-pointer
                           hover:surface-200 transition-duration-150"
                    [class.surface-200]="opcionEditar.empresaSeleccionadaId === emp.id"
@@ -295,7 +296,7 @@
                   {{ emp.nombre_comercial }}
                 </label>
               </div>
-              <p *ngIf="empresasDisponibles.length === 0"
+              <p *ngIf="empresasDisponibles().length === 0"
                  class="text-xs text-color-secondary">
                 No tienes otras empresas asignadas.
               </p>

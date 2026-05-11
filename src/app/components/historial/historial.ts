@@ -70,10 +70,16 @@ export class HistorialComponent implements OnInit {
   cotizaciones: ICotizacion[] = [];
   cotizacionesFiltradas: ICotizacion[] = [];
   empresaActiva: any = null;
-  empresasDisponibles: any[] = [];
 
+  // Señales para estado reactivo
+  empresasDisponibles = signal<any[]>([]);           // ← ahora es signal
   descargando = signal<string | null>(null);
   cargando = signal(true);
+  modalEditarVisible = signal(false);
+  cotizacionParaEditar: ICotizacion | null = null;
+  procesandoEdicion = signal(false);
+  cargandoEmpresas = signal(false);
+cotizacionCargandoModal = signal<string | null>(null);
 
   mostrarOcultas = false;
 
@@ -97,11 +103,6 @@ export class HistorialComponent implements OnInit {
     { label: 'Aprobada',  value: 'APROBADA'  },
     { label: 'Anulada',   value: 'ANULADA'   }
   ];
-
-  modalEditarVisible = signal(false);
-  cotizacionParaEditar: ICotizacion | null = null;
-  procesandoEdicion = signal(false);
-  cargandoEmpresas = signal(false);
 
   opcionEditar: OpcionEditar = {
     empresaOrigen: 'misma',
@@ -172,7 +173,8 @@ export class HistorialComponent implements OnInit {
   }
 
   async cargarEmpresasDisponibles() {
-    if (this.empresasDisponibles.length > 0) return;
+    // Si ya hay datos, no los vuelve a cargar
+    if (this.empresasDisponibles().length > 0) return;
 
     this.cargandoEmpresas.set(true);
     try {
@@ -187,10 +189,12 @@ export class HistorialComponent implements OnInit {
 
       if (error) throw error;
 
-      this.empresasDisponibles = (data || [])
+      const lista = (data || [])
         .map((r: any) => r.empresas)
         .filter(Boolean)
         .filter((empresa: any) => empresa.id !== this.empresaActiva?.id);
+
+      this.empresasDisponibles.set(lista);                // ← actualizar señal
     } catch (e: any) {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas' });
     } finally {
@@ -433,8 +437,10 @@ export class HistorialComponent implements OnInit {
       empresaSeleccionadaId: this.empresaActiva?.id || null,
       accionOriginal: 'anular'
     };
-    await this.cargarEmpresasDisponibles();
-    this.modalEditarVisible.set(true);
+    this.cotizacionCargandoModal.set(cot.id!);    // ← activa el spinner solo en esta fila
+  await this.cargarEmpresasDisponibles();
+  this.modalEditarVisible.set(true);
+  this.cotizacionCargandoModal.set(null);  
   }
 
   onEmpresaOrigenChange() {
@@ -466,7 +472,7 @@ export class HistorialComponent implements OnInit {
 
       let empresaDestino = this.empresaActiva;
       if (this.opcionEditar.empresaOrigen === 'otra') {
-        empresaDestino = this.empresasDisponibles.find(
+        empresaDestino = this.empresasDisponibles().find(          // ← usar señal
           e => e.id === this.opcionEditar.empresaSeleccionadaId
         );
         if (!empresaDestino) throw new Error('No se encontró la empresa seleccionada');

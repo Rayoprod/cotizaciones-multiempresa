@@ -142,8 +142,14 @@
   </ng-container>
 </div>
 
-<p-dialog [(visible)]="productoDialog" [style]="{width: '450px', maxWidth: '90vw'}" header="Detalles del Producto" [modal]="true" appendTo="body"  styleClass="p-fluid">
-    
+<p-dialog [visible]="productoDialog()"
+          (visibleChange)="productoDialog.set($event)"
+          [style]="{width: '450px', maxWidth: '90vw'}"
+          header="Detalles del Producto"
+          [modal]="true"
+          appendTo="body"
+          styleClass="p-fluid">
+
     <ng-template pTemplate="content">
         <div class="flex flex-column gap-4 mt-2">
 
@@ -180,5 +186,5 @@
             <button pButton pRipple label="Guardar" icon="pi pi-check" class="p-button-primary px-4" (click)="guardarProducto()" [disabled]="enviando"></button>
         </div>
     </ng-template>
-    
+
 </p-dialog>

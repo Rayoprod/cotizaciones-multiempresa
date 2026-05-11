@@ -16,7 +16,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 
-
 @Component({
   selector: 'app-clientes',
   standalone: true,
@@ -26,14 +25,13 @@ import { ToastModule } from 'primeng/toast';
     TagModule, TooltipModule, ToastModule
   ],
   providers: [MessageService],
-
   templateUrl: './clientes.html'
 })
 export class ClientesComponent implements OnInit {
 
   clientes: ICliente[] = [];
   cargando = signal(true);
-  clienteDialog: boolean = false;
+  clienteDialog = signal(false);                 // ← ahora es signal
   clienteActual: ICliente = this.clienteVacio();
   clienteOriginal: string = '';
   enviando: boolean = false;
@@ -77,13 +75,13 @@ export class ClientesComponent implements OnInit {
     this.clienteActual = this.clienteVacio();
     this.clienteOriginal = JSON.stringify(this.clienteActual);
     this.enviando = false;
-    this.clienteDialog = true;
+    this.clienteDialog.set(true);                // ← signal
   }
 
   editarCliente(cliente: ICliente) {
     this.clienteActual = { ...cliente };
     this.clienteOriginal = JSON.stringify(this.clienteActual);
-    this.clienteDialog = true;
+    this.clienteDialog.set(true);                // ← signal
   }
 
   async buscarDocumento() {
@@ -91,10 +89,10 @@ export class ClientesComponent implements OnInit {
 
     if (!doc) {
       this.messageService.add({
-  severity: 'warn',
-  summary: 'Campo vacío',
-  detail: 'Escribe un DNI o RUC'
-});
+        severity: 'warn',
+        summary: 'Campo vacío',
+        detail: 'Escribe un DNI o RUC'
+      });
       return;
     }
 
@@ -112,11 +110,12 @@ export class ClientesComponent implements OnInit {
     }
 
     if (doc.length !== 8 && doc.length !== 11) {
-this.messageService.add({
-  severity: 'warn',
-  summary: 'Formato inválido',
-  detail: 'El DNI debe tener 8 dígitos y el RUC 11.'
-});      return;
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Formato inválido',
+        detail: 'El DNI debe tener 8 dígitos y el RUC 11.'
+      });
+      return;
     }
 
     this.buscandoApi = true;
@@ -131,10 +130,10 @@ this.messageService.add({
 
       if (!respuesta.ok || !datosCrudos) {
         this.messageService.add({
-  severity: 'error',
-  summary: 'No encontrado',
-  detail: 'El documento no existe en SUNAT/RENIEC.'
-});
+          severity: 'error',
+          summary: 'No encontrado',
+          detail: 'El documento no existe en SUNAT/RENIEC.'
+        });
         return;
       }
 
@@ -168,10 +167,10 @@ this.messageService.add({
     } catch (e) {
       console.error('Error de red:', e);
       this.messageService.add({
-  severity: 'error',
-  summary: 'Error de conexión',
-  detail: 'Fallo al conectar con la API.'
-});
+        severity: 'error',
+        summary: 'Error de conexión',
+        detail: 'Fallo al conectar con la API.'
+      });
     } finally {
       this.buscandoApi = false;
     }
@@ -180,10 +179,10 @@ this.messageService.add({
   async guardarCliente() {
     if (!this.clienteActual.documento_identidad || !this.clienteActual.nombre_razon_social) {
       this.messageService.add({
-  severity: 'warn',
-  summary: 'Campos obligatorios',
-  detail: 'El DNI/RUC y el Nombre/Razón Social son obligatorios.'
-});
+        severity: 'warn',
+        summary: 'Campos obligatorios',
+        detail: 'El DNI/RUC y el Nombre/Razón Social son obligatorios.'
+      });
       return;
     }
 
@@ -193,15 +192,15 @@ this.messageService.add({
 
     if (docDuplicado) {
       this.messageService.add({
-  severity: 'warn',
-  summary: 'Documento duplicado',
-  detail: `El cliente con documento ${this.clienteActual.documento_identidad} ya está registrado.`
-});
+        severity: 'warn',
+        summary: 'Documento duplicado',
+        detail: `El cliente con documento ${this.clienteActual.documento_identidad} ya está registrado.`
+      });
       return;
     }
 
     if (this.clienteOriginal === JSON.stringify(this.clienteActual)) {
-      this.clienteDialog = false;
+      this.clienteDialog.set(false);             // ← signal
       return;
     }
 
@@ -209,15 +208,15 @@ this.messageService.add({
     try {
       const payload = { ...this.clienteActual, empresa_id: this.empresaActiva.id };
       await this.supabaseSvc.guardarCliente(payload);
-      this.clienteDialog = false;
+      this.clienteDialog.set(false);             // ← signal
       await this.cargarClientes();
     } catch (error) {
       console.error('Error al guardar:', error);
       this.messageService.add({
-  severity: 'error',
-  summary: 'Error al guardar',
-  detail: 'Hubo un error al guardar el cliente.'
-});
+        severity: 'error',
+        summary: 'Error al guardar',
+        detail: 'Hubo un error al guardar el cliente.'
+      });
     } finally {
       this.enviando = false;
     }
@@ -233,16 +232,16 @@ this.messageService.add({
       } catch (error) {
         console.error('Error al eliminar:', error);
         this.messageService.add({
-  severity: 'error',
-  summary: 'Error al eliminar',
-  detail: 'Hubo un error al eliminar. Revisa que el cliente no tenga cotizaciones vinculadas.'
-});
+          severity: 'error',
+          summary: 'Error al eliminar',
+          detail: 'Hubo un error al eliminar. Revisa que el cliente no tenga cotizaciones vinculadas.'
+        });
       }
     }
   }
 
   ocultarDialog() {
-    this.clienteDialog = false;
+    this.clienteDialog.set(false);               // ← signal
   }
 
   private clienteVacio(): ICliente {

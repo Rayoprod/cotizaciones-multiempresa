@@ -44,7 +44,7 @@ export class MaquinariaComponent implements OnInit {
   empresaActiva: any = null;
 
   // ── CRUD ─────────────────────────────────────────────────────────────────
-  modalVisible = false;
+  modalVisible = signal(false);           // ← ahora es signal
   esEdicion = false;
   guardando = false;
   form: IMaquinaria = this.formVacio();
@@ -158,13 +158,13 @@ export class MaquinariaComponent implements OnInit {
   abrirNuevo() {
     this.esEdicion = false;
     this.form = this.formVacio();
-    this.modalVisible = true;
+    this.modalVisible.set(true);            // ← signal
   }
 
   editar(item: IMaquinaria) {
     this.esEdicion = true;
     this.form = { ...item };
-    this.modalVisible = true;
+    this.modalVisible.set(true);            // ← signal
   }
 
   resetForm() {
@@ -193,7 +193,7 @@ export class MaquinariaComponent implements OnInit {
         if (error) throw error;
         this.msg.add({ severity: 'success', summary: 'Creado', detail: 'Equipo agregado al catálogo' });
       }
-      this.modalVisible = false;
+      this.modalVisible.set(false);          // ← signal
       await this.cargar();
     } catch (e: any) {
       this.msg.add({ severity: 'error', summary: 'Error', detail: e.message });

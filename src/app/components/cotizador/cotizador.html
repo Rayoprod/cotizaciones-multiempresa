@@ -439,8 +439,13 @@
       </div>
     </div>
 
-    <p-dialog [(visible)]="modalMaquinariaVisible" header="Agregar maquinaria"
-      [modal]="true" [style]="{ width: '90vw', maxWidth: '420px' }" [draggable]="false">
+        <p-dialog [visible]="modalMaquinariaVisible()"
+              (visibleChange)="modalMaquinariaVisible.set($event)"
+              header="Agregar maquinaria"
+              [modal]="true"
+              [style]="{ width: '90vw', maxWidth: '420px' }"
+              [draggable]="false"
+              appendTo="body">
       <div class="flex flex-column gap-3 pt-2">
         <div class="flex flex-column gap-1">
           <label class="text-xs font-semibold text-700">Equipo</label>
@@ -464,7 +469,7 @@
         </div>
       </div>
       <ng-template pTemplate="footer">
-        <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="modalMaquinariaVisible = false" />
+        <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="modalMaquinariaVisible.set(false)" />
         <p-button label="Agregar" icon="pi pi-check" severity="primary" (onClick)="agregarMaquinariaAlCarrito()" />
       </ng-template>
     </p-dialog>

@@ -17,6 +17,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
+
 @Component({
   selector: 'app-productos',
   standalone: true,
@@ -32,7 +33,7 @@ export class ProductosComponent implements OnInit {
 
   productos: IProducto[] = [];
   cargando = signal(true);
-  productoDialog: boolean = false;
+  productoDialog = signal(false);               // ← ahora es signal
   productoActual: IProducto = this.productoVacio();
   productoOriginal: string = '';
   enviando: boolean = false;
@@ -85,13 +86,13 @@ export class ProductosComponent implements OnInit {
     };
     this.productoOriginal = JSON.stringify(this.productoActual);
     this.enviando = false;
-    this.productoDialog = true;
+    this.productoDialog.set(true);               // ← signal
   }
 
   editarProducto(producto: IProducto) {
     this.productoActual = { ...producto };
     this.productoOriginal = JSON.stringify(this.productoActual);
-    this.productoDialog = true;
+    this.productoDialog.set(true);               // ← signal
   }
 
   async borrarProducto(producto: IProducto) {
@@ -104,10 +105,10 @@ export class ProductosComponent implements OnInit {
       } catch (error) {
         console.error('Error al eliminar:', error);
         this.messageService.add({
-  severity: 'error',
-  summary: 'Error al eliminar',
-  detail: 'Hubo un error al eliminar el producto.'
-}); 
+          severity: 'error',
+          summary: 'Error al eliminar',
+          detail: 'Hubo un error al eliminar el producto.'
+        });
       }
     }
   }
@@ -115,10 +116,10 @@ export class ProductosComponent implements OnInit {
   async guardarProducto() {
     if (!this.productoActual.descripcion || this.productoActual.precio_unitario_base === null) {
       this.messageService.add({
-  severity: 'warn',
-  summary: 'Campos obligatorios',
-  detail: 'La descripción y el precio son obligatorios.'
-});
+        severity: 'warn',
+        summary: 'Campos obligatorios',
+        detail: 'La descripción y el precio son obligatorios.'
+      });
       return;
     }
 
@@ -128,15 +129,15 @@ export class ProductosComponent implements OnInit {
 
     if (skuDuplicado) {
       this.messageService.add({
-  severity: 'warn',
-  summary: 'SKU duplicado',
-  detail: `El código SKU "${this.productoActual.codigo_sku}" ya existe.`
-});
+        severity: 'warn',
+        summary: 'SKU duplicado',
+        detail: `El código SKU "${this.productoActual.codigo_sku}" ya existe.`
+      });
       return;
     }
 
     if (this.productoOriginal === JSON.stringify(this.productoActual)) {
-      this.productoDialog = false;
+      this.productoDialog.set(false);            // ← signal
       return;
     }
 
@@ -144,22 +145,22 @@ export class ProductosComponent implements OnInit {
     try {
       const payload = { ...this.productoActual, empresa_id: this.empresaActiva.id };
       await this.supabaseSvc.guardarProducto(payload);
-      this.productoDialog = false;
+      this.productoDialog.set(false);            // ← signal
       await this.cargarProductos();
     } catch (error) {
       console.error('Error al guardar:', error);
       this.messageService.add({
-  severity: 'error',
-  summary: 'Error al guardar',
-  detail: 'Hubo un error al comunicarse con la base de datos.'
-});
+        severity: 'error',
+        summary: 'Error al guardar',
+        detail: 'Hubo un error al comunicarse con la base de datos.'
+      });
     } finally {
       this.enviando = false;
     }
   }
 
   ocultarDialog() {
-    this.productoDialog = false;
+    this.productoDialog.set(false);              // ← signal
     this.enviando = false;
   }
 

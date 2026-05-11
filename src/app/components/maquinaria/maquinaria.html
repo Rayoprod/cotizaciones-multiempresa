@@ -103,9 +103,15 @@
     </div>
   </div>
 
-  <!-- Diálogo CRUD (Nuevo/Editar) -->
-  <p-dialog [(visible)]="modalVisible" [header]="esEdicion ? 'Editar equipo' : 'Nuevo equipo'"
-    [modal]="true" [style]="{ width: '90vw', maxWidth: '520px' }" [draggable]="false" appendTo="body" (onHide)="resetForm()">
+  <!-- Diálogo CRUD (Nuevo/Editar) con Signal -->
+  <p-dialog [visible]="modalVisible()"
+            (visibleChange)="modalVisible.set($event)"
+            [header]="esEdicion ? 'Editar equipo' : 'Nuevo equipo'"
+            [modal]="true"
+            [style]="{ width: '90vw', maxWidth: '520px' }"
+            [draggable]="false"
+            appendTo="body"
+            (onHide)="resetForm()">
     <div class="flex flex-column gap-3 pt-2">
       <div class="flex flex-column gap-1">
         <label class="text-xs font-semibold text-700">Nombre *</label>
@@ -163,12 +169,12 @@
       </div>
     </div>
     <ng-template pTemplate="footer">
-      <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="modalVisible = false" />
+      <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="modalVisible.set(false)" />
       <p-button label="Guardar" icon="pi pi-check" severity="primary" [loading]="guardando" (onClick)="guardar()" />
     </ng-template>
   </p-dialog>
 
-  <!-- Diálogo flotante de Registro de Lectura -->
+  <!-- Diálogo flotante de Registro de Lectura (ya con Signal) -->
   <p-dialog [visible]="dialogoLecturaVisible()"
             (visibleChange)="dialogoLecturaVisible.set($event)"
             [header]="'Lecturas: ' + (maquinaSeleccionada?.nombre || '')"
