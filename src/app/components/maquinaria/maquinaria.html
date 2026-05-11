@@ -5,49 +5,40 @@
   <!-- Header -->
   <div class="flex flex-column md:flex-row justify-content-between align-items-start md:align-items-center gap-3 mb-4">
     <div>
-      <h2 class="text-2xl font-bold text-900 m-0">Maquinaria</h2>
+      <h2 class="text-xl md:text-2xl font-bold text-900 m-0">Maquinaria</h2>
       <p class="text-sm text-500 m-0 mt-1">Catálogo de equipos y control de horómetros</p>
     </div>
     <p-button icon="pi pi-plus" label="Nuevo equipo" severity="primary" (onClick)="abrirNuevo()" />
   </div>
 
-  <!-- KPIs -->
+  <!-- KPIs (solo 3 accionables, responsivos) -->
   <ng-container *ngIf="!cargando()">
     <div class="grid mb-4">
-      <div class="col-6 md:col-3">
-        <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-primary h-full">
-          <div class="flex align-items-center gap-2 mb-1">
-            <i class="pi pi-wrench text-primary"></i>
-            <span class="text-xs text-color-secondary uppercase">Total flota</span>
-          </div>
-          <p class="text-2xl font-bold m-0">{{ totalFlota }}</p>
-        </div>
-      </div>
-      <div class="col-6 md:col-3">
+      <div class="col-12 sm:col-4 mb-3 sm:mb-0">
         <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-green-500 h-full">
           <div class="flex align-items-center gap-2 mb-1">
             <i class="pi pi-check-circle text-green-500"></i>
-            <span class="text-xs text-color-secondary uppercase">Operativas</span>
+            <span class="text-xs text-color-secondary font-semibold white-space-nowrap">Operativas</span>
           </div>
-          <p class="text-2xl font-bold m-0">{{ operativas }}</p>
+          <p class="text-2xl md:text-3xl font-bold m-0">{{ operativas }}</p>
         </div>
       </div>
-      <div class="col-6 md:col-3">
+      <div class="col-12 sm:col-4 mb-3 sm:mb-0">
         <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-orange-500 h-full">
           <div class="flex align-items-center gap-2 mb-1">
             <i class="pi pi-exclamation-triangle text-orange-500"></i>
-            <span class="text-xs text-color-secondary uppercase">Próximas mant.</span>
+            <span class="text-xs text-color-secondary font-semibold white-space-nowrap">Próx. mantenimiento</span>
           </div>
-          <p class="text-2xl font-bold m-0">{{ proximasMantenimiento }}</p>
+          <p class="text-2xl md:text-3xl font-bold m-0">{{ proximasMantenimiento }}</p>
         </div>
       </div>
-      <div class="col-6 md:col-3">
+      <div class="col-12 sm:col-4">
         <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-red-500 h-full">
           <div class="flex align-items-center gap-2 mb-1">
             <i class="pi pi-times-circle text-red-500"></i>
-            <span class="text-xs text-color-secondary uppercase">Vencidas</span>
+            <span class="text-xs text-color-secondary font-semibold white-space-nowrap">Vencidas</span>
           </div>
-          <p class="text-2xl font-bold m-0">{{ vencidasMantenimiento }}</p>
+          <p class="text-2xl md:text-3xl font-bold m-0">{{ vencidasMantenimiento }}</p>
         </div>
       </div>
     </div>
@@ -61,20 +52,20 @@
   <!-- Grid de máquinas -->
   <div class="grid" *ngIf="!cargando()">
     <div class="col-12 md:col-6 lg:col-4" *ngFor="let m of items">
-      <div class="surface-card border-round-xl shadow-1 p-4 h-full flex flex-column">
+      <div class="surface-card border-round-xl shadow-1 p-3 md:p-4 h-full flex flex-column">
         <!-- Título y estado operativo -->
         <div class="flex justify-content-between align-items-start mb-2">
-          <div>
-            <span class="font-bold text-900 text-lg">{{ m.nombre }}</span>
+          <div class="overflow-hidden">
+            <span class="font-bold text-900 text-base md:text-lg">{{ m.nombre }}</span>
             <p class="text-xs text-500 m-0 mt-1">{{ m.tipo || 'Sin tipo' }} · {{ m.marca || 'Sin marca' }}</p>
           </div>
           <p-tag [value]="m.activa ? 'Activo' : 'Inactivo'"
                  [severity]="m.activa ? 'success' : 'danger'"
-                 styleClass="text-xs" />
+                 styleClass="text-xs flex-shrink-0 ml-2" />
         </div>
 
         <!-- Descripción -->
-        <p class="text-sm text-700 mb-3 flex-1" *ngIf="m.descripcion">{{ m.descripcion }}</p>
+        <p class="text-xs md:text-sm text-700 mb-3 flex-1" *ngIf="m.descripcion">{{ m.descripcion }}</p>
 
         <!-- Precios -->
         <div class="border-top-1 border-200 pt-2 mb-3">
@@ -91,8 +82,7 @@
           <div class="flex justify-content-between align-items-center mb-1">
             <span class="text-xs text-500">Horómetro: {{ m.horometro_actual || 0 }} h</span>
             <p-tag [value]="getEtiquetaEstadoMantenimiento(m.estado_mantenimiento!)"
-                   [severity]="getColorEstadoMantenimiento(m.estado_mantenimiento!)"
-                   styleClass="text-xs" />
+                   [severity]="getColorEstadoMantenimiento(m.estado_mantenimiento!)" styleClass="text-xs" />
           </div>
           <p-progressBar [value]="(m.porcentaje_progreso! > 100 ? 100 : m.porcentaje_progreso!) || 0"
                          [color]="(m.porcentaje_progreso! > 100 ? '#ef4444' : m.porcentaje_progreso! > 85 ? '#f59e0b' : '#22c55e')"
@@ -105,11 +95,9 @@
         <!-- Acciones -->
         <div class="flex gap-2 mt-auto">
           <p-button icon="pi pi-clock" label="Lecturas" severity="info" size="small"
-                    (onClick)="abrirLecturas(m)" [outlined]="true" styleClass="flex-1" />
-          <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" size="small"
-                    pTooltip="Editar" (onClick)="editar(m)" />
-          <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" size="small"
-                    pTooltip="Eliminar" (onClick)="confirmarEliminar(m)" />
+                    (onClick)="abrirDialogoLecturas(m)" [outlined]="true" styleClass="w-full" />
+          <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" size="small" pTooltip="Editar" (onClick)="editar(m)" />
+          <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" size="small" pTooltip="Eliminar" (onClick)="confirmarEliminar(m)" />
         </div>
       </div>
     </div>
@@ -117,7 +105,7 @@
 
   <!-- Diálogo CRUD (Nuevo/Editar) -->
   <p-dialog [(visible)]="modalVisible" [header]="esEdicion ? 'Editar equipo' : 'Nuevo equipo'"
-    [modal]="true" [style]="{ width: '520px' }" [draggable]="false" appendTo="body" (onHide)="resetForm()">
+    [modal]="true" [style]="{ width: '90vw', maxWidth: '520px' }" [draggable]="false" appendTo="body" (onHide)="resetForm()">
     <div class="flex flex-column gap-3 pt-2">
       <div class="flex flex-column gap-1">
         <label class="text-xs font-semibold text-700">Nombre *</label>
@@ -180,17 +168,15 @@
     </ng-template>
   </p-dialog>
 
-  <!-- Drawer de lecturas de horómetro -->
-  <p-drawer [(visible)]="drawerLecturasVisible" position="right" appendTo="body"
-            [style]="{ width: '100%', 'max-width': '480px' }">
-    <ng-template pTemplate="header">
-      <div class="flex flex-column gap-1">
-        <span class="font-bold text-900">Lecturas de horómetro</span>
-        <span class="text-sm text-500">{{ maquinaSeleccionada?.nombre }}</span>
-      </div>
-    </ng-template>
-
-    <div class="flex flex-column gap-4 py-2">
+  <!-- Diálogo flotante de Registro de Lectura -->
+  <p-dialog [visible]="dialogoLecturaVisible()"
+            (visibleChange)="dialogoLecturaVisible.set($event)"
+            [header]="'Lecturas: ' + (maquinaSeleccionada?.nombre || '')"
+            [modal]="true"
+            [style]="{ width: '90vw', maxWidth: '500px' }"
+            [draggable]="false"
+            appendTo="body">
+    <div class="flex flex-column gap-4 pt-2">
       <!-- Formulario de nueva lectura -->
       <div class="surface-ground border-round-lg p-3">
         <p class="font-semibold text-900 m-0 mb-3">Registrar lectura</p>
@@ -202,7 +188,9 @@
           <div class="flex flex-column gap-1">
             <label class="text-xs font-semibold text-700">Fecha</label>
             <p-datepicker [(ngModel)]="nuevaLectura.fecha_lectura" 
-                          [showIcon]="true" styleClass="w-full" />
+                          [showIcon]="true"
+                          [baseZIndex]="5000"
+                          styleClass="w-full" />
           </div>
           <div class="flex flex-column gap-1">
             <label class="text-xs font-semibold text-700">Tipo de evento</label>
@@ -222,14 +210,14 @@
           </div>
         </div>
         <p-button label="Guardar lectura" icon="pi pi-check" severity="primary"
-                  [loading]="guardandoLectura" (onClick)="guardarLectura()" styleClass="w-full mt-3" />
+                  [loading]="guardandoLectura()" (onClick)="guardarLectura()" styleClass="w-full mt-3" />
       </div>
 
       <!-- Historial de lecturas -->
       <div>
         <p class="font-semibold text-900 mb-2">Últimas lecturas</p>
-        <p-progressSpinner *ngIf="cargandoLecturas" styleClass="w-2rem h-2rem" strokeWidth="4" />
-        <div *ngIf="!cargandoLecturas">
+        <p-progressSpinner *ngIf="cargandoLecturas()" styleClass="w-2rem h-2rem" strokeWidth="4" />
+        <div *ngIf="!cargandoLecturas()" class="max-h-15rem overflow-y-auto">
           <div *ngFor="let l of lecturas" class="flex justify-content-between align-items-center p-2 border-bottom-1 border-200">
             <div>
               <p class="text-sm font-bold m-0">{{ l.horometro }} h</p>
@@ -241,5 +229,8 @@
         </div>
       </div>
     </div>
-  </p-drawer>
+    <ng-template pTemplate="footer">
+      <p-button label="Cerrar" severity="secondary" [text]="true" (onClick)="dialogoLecturaVisible.set(false)" />
+    </ng-template>
+  </p-dialog>
 </div>

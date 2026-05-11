@@ -9,7 +9,6 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TagModule } from 'primeng/tag';
 import { DialogModule } from 'primeng/dialog';
-import { DrawerModule } from 'primeng/drawer';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -27,12 +26,17 @@ import { MessageService, ConfirmationService } from 'primeng/api';
   imports: [
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, InputNumberModule,
-    TagModule, DialogModule, DrawerModule, ToastModule, TooltipModule,
+    TagModule, DialogModule, ToastModule, TooltipModule,
     CheckboxModule, ConfirmDialogModule, ProgressBarModule, ProgressSpinnerModule,
     TableModule, SelectModule, DatePickerModule
   ],
   providers: [MessageService, ConfirmationService],
-  templateUrl: './maquinaria.html'
+  templateUrl: './maquinaria.html',
+  styles: [`
+    ::ng-deep .p-datepicker {
+      z-index: 5000 !important;
+    }
+  `]
 })
 export class MaquinariaComponent implements OnInit {
   items: IMaquinaria[] = [];
@@ -43,20 +47,19 @@ export class MaquinariaComponent implements OnInit {
   modalVisible = false;
   esEdicion = false;
   guardando = false;
-
   form: IMaquinaria = this.formVacio();
 
-  // ── KPIs ─────────────────────────────────────────────────────────────────
-  totalFlota = 0;
+  // ── KPIs (solo 3 accionables) ────────────────────────────────────────────
   operativas = 0;
   proximasMantenimiento = 0;
   vencidasMantenimiento = 0;
 
-  // ── Lecturas ─────────────────────────────────────────────────────────────
-  drawerLecturasVisible = false;
+  // ── Lecturas (diálogo flotante) ──────────────────────────────────────────
+  dialogoLecturaVisible = signal(false);
   maquinaSeleccionada: IMaquinaria | null = null;
   lecturas: LecturaHorometro[] = [];
-  cargandoLecturas = false;
+  cargandoLecturas = signal(false);
+  guardandoLectura = signal(false);
 
   nuevaLectura: LecturaHorometro = {
     maquina_id: '',
@@ -66,7 +69,6 @@ export class MaquinariaComponent implements OnInit {
     operador: '',
     observaciones: ''
   };
-  guardandoLectura = false;
 
   constructor(
     private supabase: SupabaseService,
@@ -101,8 +103,6 @@ export class MaquinariaComponent implements OnInit {
     }
   }
 
-  // ─── Cálculo de estado de mantenimiento ─────────────────────────────────
-
   private calcularEstadoMantenimiento(maquina: any): IMaquinaria {
     const horometroActual = maquina.horometro_actual || maquina.horometro_inicial || 0;
     const intervalo = maquina.intervalo_mantenimiento || 0;
@@ -128,13 +128,12 @@ export class MaquinariaComponent implements OnInit {
   }
 
   private calcularKPIs() {
-    this.totalFlota = this.items.length;
     this.operativas = this.items.filter(i => i.activa && i.estado === 'operativa').length;
     this.proximasMantenimiento = this.items.filter(i => i.estado_mantenimiento === 'proximo').length;
     this.vencidasMantenimiento = this.items.filter(i => i.estado_mantenimiento === 'vencido').length;
   }
 
-  // ─── CRUD (Nuevo/Editar/Eliminar) ──────────────────────────────────────
+  // ─── CRUD ────────────────────────────────────────────────────────────────
 
   formVacio(): IMaquinaria {
     return {
@@ -186,13 +185,11 @@ export class MaquinariaComponent implements OnInit {
       };
 
       if (this.esEdicion && datos.id) {
-        const { error } = await this.supabase.client
-          .from('maquinaria').update(datos).eq('id', datos.id);
+        const { error } = await this.supabase.client.from('maquinaria').update(datos).eq('id', datos.id);
         if (error) throw error;
         this.msg.add({ severity: 'success', summary: 'Actualizado', detail: 'Equipo actualizado' });
       } else {
-        const { error } = await this.supabase.client
-          .from('maquinaria').insert([datos]);
+        const { error } = await this.supabase.client.from('maquinaria').insert([datos]);
         if (error) throw error;
         this.msg.add({ severity: 'success', summary: 'Creado', detail: 'Equipo agregado al catálogo' });
       }
@@ -217,8 +214,7 @@ export class MaquinariaComponent implements OnInit {
 
   async eliminar(item: IMaquinaria) {
     try {
-      const { error } = await this.supabase.client
-        .from('maquinaria').delete().eq('id', item.id!);
+      const { error } = await this.supabase.client.from('maquinaria').delete().eq('id', item.id!);
       if (error) throw error;
       this.items = this.items.filter(i => i.id !== item.id);
       this.calcularKPIs();
@@ -228,9 +224,9 @@ export class MaquinariaComponent implements OnInit {
     }
   }
 
-  // ─── Lecturas de Horómetro ─────────────────────────────────────────────
+  // ─── Diálogo de lecturas de horómetro ────────────────────────────────────
 
-  abrirLecturas(maquina: IMaquinaria) {
+  abrirDialogoLecturas(maquina: IMaquinaria) {
     this.maquinaSeleccionada = maquina;
     this.nuevaLectura = {
       maquina_id: maquina.id || '',
@@ -240,13 +236,13 @@ export class MaquinariaComponent implements OnInit {
       operador: '',
       observaciones: ''
     };
-    this.drawerLecturasVisible = true;
-    this.cargarLecturas();
+    this.dialogoLecturaVisible.set(true);
+    this.cargarHistorialLecturas();
   }
 
-  async cargarLecturas() {
+  async cargarHistorialLecturas() {
     if (!this.maquinaSeleccionada?.id) return;
-    this.cargandoLecturas = true;
+    this.cargandoLecturas.set(true);
     try {
       const { data, error } = await this.supabase.client
         .from('lecturas_horometro')
@@ -259,7 +255,7 @@ export class MaquinariaComponent implements OnInit {
     } catch {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las lecturas' });
     } finally {
-      this.cargandoLecturas = false;
+      this.cargandoLecturas.set(false);
       this.cdr.detectChanges();
     }
   }
@@ -269,7 +265,7 @@ export class MaquinariaComponent implements OnInit {
       this.msg.add({ severity: 'warn', summary: 'Campos requeridos', detail: 'Ingresa el horómetro y la fecha' });
       return;
     }
-    this.guardandoLectura = true;
+    this.guardandoLectura.set(true);
     try {
       const { error } = await this.supabase.client
         .from('lecturas_horometro')
@@ -284,24 +280,20 @@ export class MaquinariaComponent implements OnInit {
 
       await this.supabase.client
         .from('maquinaria')
-        .update({
-          horometro_actual: nuevoHorometro,
-          ultimo_mantenimiento: ultimoMantenimiento
-        })
+        .update({ horometro_actual: nuevoHorometro, ultimo_mantenimiento: ultimoMantenimiento })
         .eq('id', this.maquinaSeleccionada!.id!);
 
       this.msg.add({ severity: 'success', summary: 'Lectura registrada', detail: 'Horómetro actualizado' });
       await this.cargar();
-      await this.cargarLecturas();
+      await this.cargarHistorialLecturas();
     } catch (e: any) {
       this.msg.add({ severity: 'error', summary: 'Error', detail: e.message });
     } finally {
-      this.guardandoLectura = false;
+      this.guardandoLectura.set(false);
     }
   }
 
-  // ─── Helpers para el template ───────────────────────────────────────────
-
+  // ─── Helpers ─────────────────────────────────────────────────────────────
   getColorEstadoMantenimiento(estado: string | undefined): 'success' | 'warn' | 'danger' | 'secondary' {
     switch (estado) {
       case 'al_dia': return 'success';
