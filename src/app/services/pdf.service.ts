@@ -40,6 +40,15 @@ export class PdfService {
     return empresa?.color || '#01696f';
   }
 
+  /**
+   * Formatea un número con separadores de miles y dos decimales fijos.
+   * Ejemplo: 19575 -> "19,575.00"
+   */
+  private formatNumber(value: number): string {
+    if (value == null || isNaN(value)) return '0.00';
+    return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   // ── Método principal ─────────────────────────────────────────────────────
 
   async generarYDescargarCotizacion(
@@ -50,8 +59,8 @@ export class PdfService {
   ) {
     if (!datosEmpresa) return;
 
-    const colorEmpresa    = this.color(datosEmpresa);
-    const logoConvertido  = await this.cargarImagen(datosEmpresa.ruta_logo);
+    const colorEmpresa = this.color(datosEmpresa);
+    const logoConvertido = await this.cargarImagen(datosEmpresa.ruta_logo);
     const firmaConvertida = await this.cargarImagen(datosEmpresa.ruta_firma);
 
     // ── Datos comunes ─────────────────────────────────────────────────────
@@ -85,16 +94,32 @@ export class PdfService {
                 stack: [
                   { text: `COTIZACIÓN`, fontSize: 10, color: '#6b7280', alignment: 'right', margin: [0, 0, 0, 1] },
                   { text: data.folio, fontSize: 16, bold: true, color: colorEmpresa, alignment: 'right' },
-                  { text: datosEmpresa.razon_social || datosEmpresa.nombre_comercial,
-                    fontSize: 9, color: '#374151', alignment: 'right', margin: [0, 4, 0, 0] },
+                  {
+                    text: datosEmpresa.razon_social || datosEmpresa.nombre_comercial,
+                    fontSize: 9, color: '#374151', alignment: 'right', margin: [0, 4, 0, 0]
+                  },
                   { text: `RUC: ${datosEmpresa.ruc || '-'}`, fontSize: 9, color: '#6b7280', alignment: 'right' },
-                  { text: datosEmpresa.direccion || '', fontSize: 7.5, color: '#9ca3af', alignment: 'right', margin: [0, 2, 0, 0] },
-                  { text: [
+                  ...(datosEmpresa.direccion ? [{
+                    stack: datosEmpresa.direccion
+                      .replace(/\\n/g, '\n')   // convierte "\n" literal en salto real
+                      .split('\n')
+                      .filter((linea: string) => linea.trim() !== '')  // elimina líneas vacías
+                      .map((linea: string) => ({
+                        text: linea.trim(),
+                        fontSize: 7.5,
+                        color: '#9ca3af',
+                        alignment: 'right',
+                        margin: [0, 0, 0, 1]
+                      })),
+                    margin: [0, 2, 0, 0]
+                  }] : []), {
+                    text: [
                       datosEmpresa.telefonos ? `Tel: ${datosEmpresa.telefonos}` : '',
                       datosEmpresa.telefonos && datosEmpresa.correo ? '  •  ' : '',
                       datosEmpresa.correo || ''
                     ].join(''),
-                    fontSize: 7.5, color: '#9ca3af', alignment: 'right' }
+                    fontSize: 7.5, color: '#9ca3af', alignment: 'right'
+                  }
                 ]
               }
             ]
@@ -108,10 +133,14 @@ export class PdfService {
     const footerFn = (currentPage: number, pageCount: number): any => ({
       margin: [40, 0, 40, 15],
       columns: [
-        { text: `${datosEmpresa.nombre_comercial || ''} • ${datosEmpresa.ruc || ''}`,
-          fontSize: 7, color: '#9ca3af' },
-        { text: `Página ${currentPage} de ${pageCount}`,
-          fontSize: 7, color: '#9ca3af', alignment: 'right' }
+        {
+          text: `${datosEmpresa.nombre_comercial || ''} • ${datosEmpresa.ruc || ''}`,
+          fontSize: 7, color: '#9ca3af'
+        },
+        {
+          text: `Página ${currentPage} de ${pageCount}`,
+          fontSize: 7, color: '#9ca3af', alignment: 'right'
+        }
       ]
     });
 
@@ -134,8 +163,8 @@ export class PdfService {
           { text: this.formatearTextoLargo(item.descripcion), style: 'tdCell', fillColor: bg },
           { text: item.unidad || '-', style: 'tdCell', alignment: 'center', fillColor: bg },
           { text: String(item.cantidad), style: 'tdCell', alignment: 'center', fillColor: bg },
-          { text: `S/ ${Number(item.precio_unitario).toFixed(2)}`, style: 'tdCell', alignment: 'right', fillColor: bg },
-          { text: `S/ ${Number(item.subtotal).toFixed(2)}`, style: 'tdCell', alignment: 'right', bold: true, fillColor: bg }
+          { text: `S/ ${this.formatNumber(item.precio_unitario)}`, style: 'tdCell', alignment: 'right', fillColor: bg },
+          { text: `S/ ${this.formatNumber(item.subtotal)}`, style: 'tdCell', alignment: 'right', bold: true, fillColor: bg }
         ];
       })
     ];
@@ -153,15 +182,15 @@ export class PdfService {
             body: [
               [
                 { text: 'Subtotal', fontSize: 9, color: '#374151', border: [false, false, false, false], margin: [0, 4, 0, 4] },
-                { text: `S/ ${Number(data.subtotal).toFixed(2)}`, fontSize: 9, alignment: 'right', border: [false, false, false, false], margin: [0, 4, 0, 4] }
+                { text: `S/ ${this.formatNumber(data.subtotal)}`, fontSize: 9, alignment: 'right', border: [false, false, false, false], margin: [0, 4, 0, 4] }
               ],
               ...(tieneIgv ? [[
                 { text: 'IGV (18%)', fontSize: 9, color: '#6b7280', border: [false, false, false, false], margin: [0, 2, 0, 2] },
-                { text: `S/ ${Number(data.igv).toFixed(2)}`, fontSize: 9, color: '#6b7280', alignment: 'right', border: [false, false, false, false], margin: [0, 2, 0, 2] }
+                { text: `S/ ${this.formatNumber(data.igv)}`, fontSize: 9, color: '#6b7280', alignment: 'right', border: [false, false, false, false], margin: [0, 2, 0, 2] }
               ]] : []),
               [
                 { text: 'TOTAL', fontSize: 13, bold: true, color: colorEmpresa, border: [false, true, false, false], borderColor: [colorEmpresa, colorEmpresa, colorEmpresa, colorEmpresa], margin: [0, 6, 0, 4] },
-                { text: `S/ ${Number(data.total).toFixed(2)}`, fontSize: 13, bold: true, color: colorEmpresa, alignment: 'right', border: [false, true, false, false], borderColor: [colorEmpresa, colorEmpresa, colorEmpresa, colorEmpresa], margin: [0, 6, 0, 4] }
+                { text: `S/ ${this.formatNumber(data.total)}`, fontSize: 13, bold: true, color: colorEmpresa, alignment: 'right', border: [false, true, false, false], borderColor: [colorEmpresa, colorEmpresa, colorEmpresa, colorEmpresa], margin: [0, 6, 0, 4] }
               ]
             ]
           },
@@ -174,8 +203,8 @@ export class PdfService {
     // ── Bloque condiciones (DENTRO del content, nunca en footer) ─────────
     const cuentas: any[] = datosEmpresa.cuentas_bancarias || [];
     const mostrarCuentas = condiciones.mostrarCuentas !== false
-                           && datosEmpresa.mostrar_cuentas !== false
-                           && cuentas.length > 0;
+      && datosEmpresa.mostrar_cuentas !== false
+      && cuentas.length > 0;
 
     // Columna izquierda: condiciones de entrega/impuestos
     const colCondiciones: any[] = [
@@ -236,12 +265,12 @@ export class PdfService {
         body: [
           mostrarCuentas || datosEmpresa.contacto_aprobacion
             ? [
-                { stack: colCondiciones, border: [false, false, false, false], margin: [10, 10, 10, 10] },
-                { stack: colPago, border: [false, false, false, false], margin: [10, 10, 10, 10] }
-              ]
+              { stack: colCondiciones, border: [false, false, false, false], margin: [10, 10, 10, 10] },
+              { stack: colPago, border: [false, false, false, false], margin: [10, 10, 10, 10] }
+            ]
             : [
-                { stack: colCondiciones, border: [false, false, false, false], margin: [10, 10, 10, 10] }
-              ]
+              { stack: colCondiciones, border: [false, false, false, false], margin: [10, 10, 10, 10] }
+            ]
         ]
       },
       layout: {

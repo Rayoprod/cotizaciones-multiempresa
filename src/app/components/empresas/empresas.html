@@ -1,7 +1,11 @@
 <p-toast />
 <p-confirmDialog />
+<!-- Spinner de carga -->
+<div *ngIf="cargando()" class="flex justify-content-center align-items-center py-8">
+  <p-progressSpinner strokeWidth="4" [style]="{ width: '60px', height: '60px' }"></p-progressSpinner>
+</div>
 
-<div class="empresas-container">
+<div class="empresas-container" *ngIf="!cargando()">
 
   <!-- ── Header Superior ─────────────────────────────────────────────────────── -->
   <div class="empresas-header">
@@ -20,22 +24,23 @@
   </div>
 
   <!-- ── Tarjeta de Estadísticas ─────────────────────────────────────────────────── -->
-  <div class="stats-card">
-    <div class="stats-grid">
-      <div class="stat-item">
-        <div class="stat-number">{{ empresas.length }}</div>
-        <div class="stat-label">Empresas Totales</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-number">{{ empresas.filter(e => e.activa).length }}</div>
-        <div class="stat-label">Empresas Activas</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-number">{{ empresas.filter(e => !e.activa).length }}</div>
-        <div class="stat-label">Empresas Inactivas</div>
+    <div class="stats-card">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-number">{{ empresas.length }}</div>
+          <div class="stat-label">Empresas Totales</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">{{ empresas.filter(e => e.activa).length }}</div>
+          <div class="stat-label">Empresas Activas</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">{{ empresas.filter(e => !e.activa).length }}</div>
+          <div class="stat-label">Empresas Inactivas</div>
+        </div>
       </div>
     </div>
-  </div>
+
 
   <!-- ── Tabla de Empresas ───────────────────────────────────────────────────── -->
   <div class="table-card">
@@ -44,17 +49,16 @@
       <div class="table-actions">
         <span class="p-input-icon-left">
           <i class="pi pi-search"></i>
-          <input pInputText type="text" #searchInput placeholder="Buscar empresa..." 
-                 (input)="dt.filterGlobal($any($event.target).value, 'contains')" class="search-input" />
+          <input pInputText type="text" #searchInput placeholder="Buscar empresa..."
+            (input)="dt.filterGlobal($any($event.target).value, 'contains')" class="search-input" />
         </span>
       </div>
     </div>
 
     <div class="table-container">
       <p-table #dt [value]="empresas" [rows]="15" [paginator]="true" [rowsPerPageOptions]="[10, 15, 25, 50]"
-               [rowHover]="true" responsiveLayout="scroll" scrollable="true" scrollHeight="flex"
-               [globalFilterFields]="['id','nombre_comercial','razon_social','ruc']"
-               styleClass="empresas-table">
+        [rowHover]="true" responsiveLayout="scroll" scrollable="true" scrollHeight="flex"
+        [globalFilterFields]="['id','nombre_comercial','razon_social','ruc']" styleClass="empresas-table">
 
         <ng-template pTemplate="header">
           <tr>
@@ -110,10 +114,10 @@
             <!-- Acciones -->
             <td class="text-center">
               <div class="action-buttons">
-                <p-button icon="pi pi-pencil" class="btn-edit" severity="info" size="small"
-                          pTooltip="Editar empresa" (click)="editarEmpresa(emp)" />
+                <p-button icon="pi pi-pencil" class="btn-edit" severity="info" size="small" pTooltip="Editar empresa"
+                  (click)="editarEmpresa(emp)" />
                 <p-button icon="pi pi-trash" class="btn-delete" severity="danger" size="small"
-                          pTooltip="Eliminar empresa" (click)="eliminarEmpresa(emp.id)" />
+                  pTooltip="Eliminar empresa" (click)="eliminarEmpresa(emp.id)" />
               </div>
             </td>
           </tr>
@@ -139,9 +143,8 @@
 </div>
 
 <!-- ── Modal de Formulario ───────────────────────────────────────────────────────── -->
-<p-dialog header="{{ esEdicion ? 'Editar Empresa' : 'Nueva Empresa' }}" 
-         [(visible)]="empresaDialog" [modal]="true" [resizable]="false"
-         [style]="{'width':'90vw','max-width':'800px'}" (onHide)="cerrarModal()">
+<p-dialog header="{{ esEdicion ? 'Editar Empresa' : 'Nueva Empresa' }}" [(visible)]="empresaDialog" [modal]="true"
+  [resizable]="false" [style]="{'width':'90vw','max-width':'800px'}" (onHide)="cerrarModal()" appendTo="body"> >
 
   <form [formGroup]="empresaForm" class="form-container">
 
@@ -153,23 +156,24 @@
           Información Principal
         </h3>
       </div>
-      
+
       <div class="form-grid">
         <div class="form-group">
           <label class="form-label">ID de Empresa <span class="required">*</span></label>
-          <input pInputText type="text" formControlName="id" class="form-input"
-                 placeholder="Ej: EMP001" maxlength="10" style="text-transform:uppercase"
-                 (input)="forzarMayusculas('id')">
+          <input pInputText type="text" formControlName="id" class="form-input" placeholder="Ej: EMP001" maxlength="10"
+            style="text-transform:uppercase" (input)="forzarMayusculas('id')">
           <small class="form-error" *ngIf="empresaForm.get('id')?.invalid && empresaForm.get('id')?.dirty">
-            {{ getErrorMensaje('id', 'required') || getErrorMensaje('id', 'pattern') || getErrorMensaje('id', 'idDuplicado') }}
+            {{ getErrorMensaje('id', 'required') || getErrorMensaje('id', 'pattern') || getErrorMensaje('id',
+            'idDuplicado') }}
           </small>
         </div>
 
         <div class="form-group">
           <label class="form-label">Nombre Comercial <span class="required">*</span></label>
           <input pInputText type="text" formControlName="nombre_comercial" class="form-input"
-                 placeholder="Nombre visible para clientes">
-          <small class="form-error" *ngIf="empresaForm.get('nombre_comercial')?.invalid && empresaForm.get('nombre_comercial')?.dirty">
+            placeholder="Nombre visible para clientes">
+          <small class="form-error"
+            *ngIf="empresaForm.get('nombre_comercial')?.invalid && empresaForm.get('nombre_comercial')?.dirty">
             {{ getErrorMensaje('nombre_comercial', 'required') || getErrorMensaje('nombre_comercial', 'minlength') }}
           </small>
         </div>
@@ -177,32 +181,34 @@
         <div class="form-group full-width">
           <label class="form-label">Razón Social</label>
           <input pInputText type="text" formControlName="razon_social" class="form-input"
-                 placeholder="Nombre legal de la empresa">
+            placeholder="Nombre legal de la empresa">
         </div>
 
         <div class="form-group">
           <label class="form-label">RUC <span class="required">*</span></label>
           <div class="input-group">
-            <input pInputText type="text" formControlName="ruc" class="form-input"
-                   placeholder="11 dígitos" maxlength="11">
+            <input pInputText type="text" formControlName="ruc" class="form-input" placeholder="11 dígitos"
+              maxlength="11">
             <p-button icon="pi pi-search" class="btn-search" [disabled]="empresaForm.get('ruc')?.invalid"
-                      (click)="consultarRUC()" />
+              (click)="consultarRUC()" />
           </div>
           <small class="form-error" *ngIf="empresaForm.get('ruc')?.invalid && empresaForm.get('ruc')?.dirty">
-            {{ getErrorMensaje('ruc', 'required') || getErrorMensaje('ruc', 'pattern') || getErrorMensaje('ruc', 'rucDuplicado') }}
+            {{ getErrorMensaje('ruc', 'required') || getErrorMensaje('ruc', 'pattern') || getErrorMensaje('ruc',
+            'rucDuplicado') }}
           </small>
         </div>
 
         <div class="form-group">
           <label class="form-label">Prefijo <span class="required">*</span></label>
           <input pInputText type="text" formControlName="prefijo" class="form-input"
-                 placeholder="Se genera automáticamente" maxlength="5" style="text-transform:uppercase"
-                 (input)="forzarMayusculas('prefijo')">
+            placeholder="Se genera automáticamente" maxlength="5" style="text-transform:uppercase"
+            (input)="forzarMayusculas('prefijo')">
           <small class="form-hint" *ngIf="!empresaForm.get('prefijo')?.errors">Ejemplo: {{ prefijoEjemplo }}</small>
           <small class="form-error" *ngIf="empresaForm.get('prefijo')?.hasError('prefijoDuplicado')">
             {{ empresaForm.get('prefijo')?.getError('prefijoDuplicado') }}
           </small>
-          <small class="form-error" *ngIf="empresaForm.get('prefijo')?.hasError('pattern') && empresaForm.get('prefijo')?.dirty">
+          <small class="form-error"
+            *ngIf="empresaForm.get('prefijo')?.hasError('pattern') && empresaForm.get('prefijo')?.dirty">
             Solo letras mayúsculas y números (1-5 caracteres)
           </small>
         </div>
@@ -217,24 +223,22 @@
           Información de Contacto
         </h3>
       </div>
-      
+
       <div class="form-grid">
         <div class="form-group">
           <label class="form-label">Dirección</label>
-          <input pInputText type="text" formControlName="direccion" class="form-input"
-                 placeholder="Dirección fiscal">
+          <input pInputText type="text" formControlName="direccion" class="form-input" placeholder="Dirección fiscal">
         </div>
 
         <div class="form-group">
           <label class="form-label">Teléfonos</label>
           <input pInputText type="text" formControlName="telefonos" class="form-input"
-                 placeholder="Ej: 01-2345678, 987654321">
+            placeholder="Ej: 01-2345678, 987654321">
         </div>
 
         <div class="form-group">
           <label class="form-label">Correo Electrónico</label>
-          <input pInputText type="email" formControlName="correo" class="form-input"
-                 placeholder="correo@empresa.com">
+          <input pInputText type="email" formControlName="correo" class="form-input" placeholder="correo@empresa.com">
           <small class="form-error" *ngIf="empresaForm.get('correo')?.invalid && empresaForm.get('correo')?.dirty">
             {{ getErrorMensaje('correo', 'pattern') }}
           </small>
@@ -243,7 +247,7 @@
         <div class="form-group">
           <label class="form-label">Contacto de Aprobación</label>
           <input pInputText type="text" formControlName="contacto_aprobacion" class="form-input"
-                 placeholder="Persona autorizada para aprobar">
+            placeholder="Persona autorizada para aprobar">
         </div>
       </div>
     </div>
@@ -256,7 +260,7 @@
           Identidad Visual
         </h3>
       </div>
-      
+
       <div class="form-grid">
         <div class="form-group">
           <label class="form-label">Color Corporativo</label>
@@ -272,7 +276,7 @@
           <div class="file-upload-container">
             <input type="file" #logoInput (change)="subirLogo($event)" accept="image/*" style="display:none">
             <p-button label="Seleccionar Logo" icon="pi pi-upload" class="btn-upload" [outlined]="true"
-                      (click)="logoInput.click()" />
+              (click)="logoInput.click()" />
             <div class="image-preview" *ngIf="empresaForm.get('ruta_logo')?.value">
               <img [src]="empresaForm.get('ruta_logo')?.value" alt="Logo">
             </div>
@@ -284,7 +288,7 @@
           <div class="file-upload-container">
             <input type="file" #firmaInput (change)="subirFirma($event)" accept="image/*" style="display:none">
             <p-button label="Seleccionar Firma" icon="pi pi-upload" class="btn-upload" [outlined]="true"
-                      (click)="firmaInput.click()" />
+              (click)="firmaInput.click()" />
             <div class="image-preview" *ngIf="empresaForm.get('ruta_firma')?.value">
               <img [src]="empresaForm.get('ruta_firma')?.value" alt="Firma">
             </div>
@@ -294,83 +298,81 @@
     </div>
 
     <!-- ── Sección: Cuentas Bancarias ───────────────────────────────────────────── -->
-<div class="form-section">
-  <div class="section-header">
-    <h3 class="section-title">
-      <i class="pi pi-credit-card"></i>
-      Cuentas Bancarias
-    </h3>
-    <p-button icon="pi pi-plus" label="Agregar Cuenta" class="btn-add-account" [outlined]="true"
-              (click)="agregarCuenta()" />
-  </div>
+    <div class="form-section">
+      <div class="section-header">
+        <h3 class="section-title">
+          <i class="pi pi-credit-card"></i>
+          Cuentas Bancarias
+        </h3>
+        <p-button icon="pi pi-plus" label="Agregar Cuenta" class="btn-add-account" [outlined]="true"
+          (click)="agregarCuenta()" />
+      </div>
 
-  <div class="accounts-container" formArrayName="cuentas_bancarias">
+      <div class="accounts-container" formArrayName="cuentas_bancarias">
 
-    <ng-container *ngIf="tieneCuentas">
-      <div *ngFor="let cuenta of cuentasBancarias.controls; let i = index"
-           [formGroupName]="i"
-           class="account-card">
+        <ng-container *ngIf="tieneCuentas">
+          <div *ngFor="let cuenta of cuentasBancarias.controls; let i = index" [formGroupName]="i" class="account-card">
 
-        <div class="account-header">
-          <span class="account-title">Cuenta Bancaria {{ i + 1 }}</span>
-          <p-button icon="pi pi-times" class="btn-remove-account" severity="danger" [text]="true" size="small"
-                    (click)="eliminarCuenta(i)" />
-        </div>
+            <div class="account-header">
+              <span class="account-title">Cuenta Bancaria {{ i + 1 }}</span>
+              <p-button icon="pi pi-times" class="btn-remove-account" severity="danger" [text]="true" size="small"
+                (click)="eliminarCuenta(i)" />
+            </div>
 
-        <div class="form-grid">
-          <div class="form-group">
-            <label class="form-label">Banco <span class="required">*</span></label>
-            <input pInputText type="text" formControlName="banco" class="form-input"
-                   placeholder="Nombre del banco">
-            <small class="form-error"
-                   *ngIf="cuentasBancarias.at(i).get('banco')?.invalid && cuentasBancarias.at(i).get('banco')?.dirty">
-              {{ getCuentaErrorMensaje(i, 'banco', 'required') }}
-            </small>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Banco <span class="required">*</span></label>
+                <input pInputText type="text" formControlName="banco" class="form-input" placeholder="Nombre del banco">
+                <small class="form-error"
+                  *ngIf="cuentasBancarias.at(i).get('banco')?.invalid && cuentasBancarias.at(i).get('banco')?.dirty">
+                  {{ getCuentaErrorMensaje(i, 'banco', 'required') }}
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Tipo de Cuenta <span class="required">*</span></label>
+                <input pInputText type="text" formControlName="tipo_cuenta" class="form-input"
+                  placeholder="Corriente/Ahorros">
+                <small class="form-error"
+                  *ngIf="cuentasBancarias.at(i).get('tipo_cuenta')?.invalid && cuentasBancarias.at(i).get('tipo_cuenta')?.dirty">
+                  {{ getCuentaErrorMensaje(i, 'tipo_cuenta', 'required') }}
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Número de Cuenta <span class="required">*</span></label>
+                <input pInputText type="text" formControlName="numero" class="form-input"
+                  placeholder="Número de cuenta">
+                <small class="form-error"
+                  *ngIf="cuentasBancarias.at(i).get('numero')?.invalid && cuentasBancarias.at(i).get('numero')?.dirty">
+                  {{ getCuentaErrorMensaje(i, 'numero', 'required') || getCuentaErrorMensaje(i, 'numero', 'minlength')
+                  }}
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">CCI</label>
+                <input pInputText type="text" formControlName="cci" class="form-input"
+                  placeholder="Código Interbancario (20 dígitos)">
+                <small class="form-error"
+                  *ngIf="cuentasBancarias.at(i).get('cci')?.invalid && cuentasBancarias.at(i).get('cci')?.dirty">
+                  {{ getCuentaErrorMensaje(i, 'cci', 'minlength') }}
+                </small>
+              </div>
+            </div>
+
           </div>
+        </ng-container>
 
-          <div class="form-group">
-            <label class="form-label">Tipo de Cuenta <span class="required">*</span></label>
-            <input pInputText type="text" formControlName="tipo_cuenta" class="form-input"
-                   placeholder="Corriente/Ahorros">
-            <small class="form-error"
-                   *ngIf="cuentasBancarias.at(i).get('tipo_cuenta')?.invalid && cuentasBancarias.at(i).get('tipo_cuenta')?.dirty">
-              {{ getCuentaErrorMensaje(i, 'tipo_cuenta', 'required') }}
-            </small>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Número de Cuenta <span class="required">*</span></label>
-            <input pInputText type="text" formControlName="numero" class="form-input"
-                   placeholder="Número de cuenta">
-            <small class="form-error"
-                   *ngIf="cuentasBancarias.at(i).get('numero')?.invalid && cuentasBancarias.at(i).get('numero')?.dirty">
-              {{ getCuentaErrorMensaje(i, 'numero', 'required') || getCuentaErrorMensaje(i, 'numero', 'minlength') }}
-            </small>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">CCI</label>
-            <input pInputText type="text" formControlName="cci" class="form-input"
-                   placeholder="Código Interbancario (20 dígitos)">
-            <small class="form-error"
-                   *ngIf="cuentasBancarias.at(i).get('cci')?.invalid && cuentasBancarias.at(i).get('cci')?.dirty">
-              {{ getCuentaErrorMensaje(i, 'cci', 'minlength') }}
-            </small>
-          </div>
+        <div class="no-accounts" *ngIf="!tieneCuentas">
+          <i class="pi pi-credit-card"></i>
+          <p>No hay cuentas bancarias agregadas</p>
+          <p-button label="Agregar Primera Cuenta" icon="pi pi-plus" class="btn-add-account" [outlined]="true"
+            (click)="agregarCuenta()" />
         </div>
 
       </div>
-    </ng-container>
-
-    <div class="no-accounts" *ngIf="!tieneCuentas">
-      <i class="pi pi-credit-card"></i>
-      <p>No hay cuentas bancarias agregadas</p>
-      <p-button label="Agregar Primera Cuenta" icon="pi pi-plus" class="btn-add-account" [outlined]="true"
-                (click)="agregarCuenta()" />
     </div>
-
-  </div>
-</div>
     <!-- ── Sección: Configuración ───────────────────────────────────────────────── -->
     <div class="form-section">
       <div class="section-header">
@@ -379,7 +381,7 @@
           Configuración
         </h3>
       </div>
-      
+
       <div class="form-grid">
         <div class="form-group">
           <div class="toggle-container">
@@ -407,10 +409,10 @@
 
   <ng-template pTemplate="footer">
     <div class="dialog-footer">
-      <p-button label="Cancelar" icon="pi pi-times" class="btn-secondary" [outlined]="true"
-                (click)="cerrarModal()" [disabled]="enviando" />
+      <p-button label="Cancelar" icon="pi pi-times" class="btn-secondary" [outlined]="true" (click)="cerrarModal()"
+        [disabled]="enviando" />
       <p-button label="{{ esEdicion ? 'Actualizar' : 'Guardar' }}" icon="pi pi-check" class="btn-primary"
-                [loading]="enviando" (click)="guardarEmpresa()" />
+        [loading]="enviando" (click)="guardarEmpresa()" />
     </div>
   </ng-template>
 

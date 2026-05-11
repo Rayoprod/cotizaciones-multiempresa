@@ -553,8 +553,8 @@ $radius-lg: 0.75rem;
   border-color: $primary-color;
   
   &:hover {
-    background: darken($primary-color, 10%);
-    border-color: darken($primary-color, 10%);
+    background: color.adjust($primary-color, $lightness: -10%);
+border-color: color.adjust($primary-color, $lightness: -10%);
   }
 }
 

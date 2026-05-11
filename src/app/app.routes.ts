@@ -4,6 +4,7 @@ import { SelectorComponent } from './components/selector-empresa/selector-empres
 import { authGuard } from './guards/auth-guard';
 import { adminGuard } from './guards/admin-guard';
 import { adminGeneralGuard } from './guards/admin-general-guard';
+import { initialRedirectGuard } from './guards/initial-redirect.guard';
 
 export const routes: Routes = [
 
@@ -54,7 +55,8 @@ export const routes: Routes = [
         .then(m => m.LayoutComponent),
     canActivate: [authGuard],
     children: [
-      { path: '', redirectTo: 'cotizador', pathMatch: 'full' },
+      // Ruta vacía que redirige según el rol usando el guard
+      { path: '', canActivate: [initialRedirectGuard], children: [] },
       {
         path: 'cotizador',
         loadComponent: () =>

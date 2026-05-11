@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Inject, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -43,23 +43,19 @@ import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/o
 })
 export class EmpresasComponent implements OnInit, OnDestroy {
   
-  // ── ESTADO ────────────────────────────────────────────────────────
-  
   empresas: IEmpresa[] = [];
+  cargando = signal(true);                          // <-- señal de carga
   empresaDialog = false;
   esEdicion = false;
   enviando = false;
   empresaActual: IEmpresa | null = null;
   
-  // Formularios reactivos
   empresaForm!: FormGroup;
   cuentasFormArray!: FormArray;
   
-  // Configuración
-  readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  readonly MAX_FILE_SIZE = 5 * 1024 * 1024;
   readonly SUPPORTED_FORMATS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
   
-  // Observables para gestión de estado
   private destroy$ = new Subject<void>();
   private autoSaveTimer$ = new Subject<void>();
   
@@ -72,8 +68,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     @Inject(DOCUMENT) public document: Document
   ) {}
-  
-  // ── INICIALIZACIÓN ──────────────────────────────────────────────────
   
   ngOnInit() {
     this.inicializarFormularios();
@@ -89,7 +83,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   }
   
   private inicializarFormularios() {
-    // Obtener el ID original si estamos editando
     const idOriginal = this.esEdicion ? this.empresaActual?.id : undefined;
     const rucOriginal = this.esEdicion ? this.empresaActual?.ruc : undefined;
 
@@ -114,12 +107,10 @@ export class EmpresasComponent implements OnInit, OnDestroy {
       cuentas_bancarias: this.fb.array([])
     });
     
-    // FormArray para cuentas bancarias
     this.cuentasFormArray = this.empresaForm.get('cuentas_bancarias') as FormArray;
   }
   
   private configurarAutosave() {
-    // Configurar autosave para el formulario
     this.empresaForm.valueChanges
       .pipe(
         takeUntil(this.destroy$),
@@ -133,12 +124,12 @@ export class EmpresasComponent implements OnInit, OnDestroy {
       });
   }
   
-  // ── CARGA DE DATOS ──────────────────────────────────────────────────
-  
   async cargarEmpresas() {
+    this.cargando.set(true);                       // activar spinner
     try {
       console.log('🔄 Cargando empresas...');
-const rol = sessionStorage.getItem('usuario_rol');      let data: any[];
+      const rol = sessionStorage.getItem('usuario_rol');   // <-- corregido a sessionStorage
+      let data: any[];
 
       if (rol === 'admin_empresa') {
         data = await this.supabase.getEmpresasDelUsuario();
@@ -177,9 +168,6 @@ const rol = sessionStorage.getItem('usuario_rol');      let data: any[];
       );
       
       this.empresas = empresasConCuentas;
-      
-      this.cdr.detectChanges();
-      
     } catch (error: any) {
       console.error('❌ Error cargando empresas:', error);
       this.msg.add({
@@ -187,6 +175,9 @@ const rol = sessionStorage.getItem('usuario_rol');      let data: any[];
         summary: 'Error',
         detail: 'No se pudieron cargar las empresas: ' + error.message
       });
+    } finally {
+      this.cargando.set(false);                    // desactivar spinner
+      this.cdr.detectChanges();
     }
   }
   
@@ -206,18 +197,10 @@ const rol = sessionStorage.getItem('usuario_rol');      let data: any[];
     this.empresaActual = empresa;
     
     try {
-      // Re-inicializar el formulario para el modo edición
       this.inicializarFormularios();
-      
-      // Cargar los datos de la empresa
       this.cargarDatosEnFormulario(empresa);
-      
-      // Deshabilitar ID en edición
       this.empresaForm.get('id')?.disable();
-      
-      // Abrir el diálogo
       this.empresaDialog = true;
-      
       console.log('✅ Empresa cargada para edición exitosamente');
     } catch (error) {
       console.error('❌ Error al preparar edición:', error);

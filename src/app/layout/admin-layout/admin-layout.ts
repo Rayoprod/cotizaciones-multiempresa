@@ -8,6 +8,7 @@ import { AvatarModule } from 'primeng/avatar';
 import { DividerModule } from 'primeng/divider';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { AuthService } from '../../services/auth';
+import { SupabaseService } from '../../services/supabase.service';
 
 interface NavItem {
   label: string;
@@ -28,6 +29,7 @@ export class AdminLayoutComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
+  private supabase = inject(SupabaseService);
 
   sidebarAbierto = false;
   usuarioNombre = '';
@@ -45,23 +47,12 @@ export class AdminLayoutComponent {
   }
 
   constructor() {
-    this.auth.obtenerSesion().then(res => {
-      const user = res?.data?.session?.user;
-      this.usuarioNombre = user?.email ?? 'Admin';
-      this.refrescarRol();
-      this.cdr.detectChanges();
-    });
+    this.inicializarSesionConReintentos();
 
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
       this.refrescarInfoSesion();
       this.cerrarMenu();
     });
-
-    // Pequeño retardo para que el router outlet cargue y luego ocultar spinner
-    setTimeout(() => {
-      this.cargandoAdmin.set(false);
-      this.cdr.detectChanges();
-    }, 400);
   }
 
   @HostListener('window:resize')
@@ -100,6 +91,51 @@ export class AdminLayoutComponent {
     this.refrescarRol();
     const email = sessionStorage.getItem('usuario_email');
     if (email) this.usuarioNombre = email;
+    this.cdr.detectChanges();
+  }
+
+  private async inicializarSesionConReintentos() {
+    const emailGuardado = sessionStorage.getItem('usuario_email');
+    const rolGuardado = sessionStorage.getItem('usuario_rol');
+    if (emailGuardado && rolGuardado) {
+      this.usuarioNombre = emailGuardado;
+      this.esAdminGeneral = rolGuardado === 'admin';
+      this.cargandoAdmin.set(false);
+      this.cdr.detectChanges();
+      return;
+    }
+
+    let intentos = 0;
+    const maxIntentos = 3;
+    let email: string | null = null;
+    let rol: string | null = null;
+
+    while (intentos < maxIntentos && !email) {
+      try {
+        const sesion = await this.supabase.obtenerSesion();
+        const user = sesion?.data?.session?.user;
+        if (user?.email) {
+          email = user.email;
+          sessionStorage.setItem('usuario_email', email);
+          const perfil = await this.supabase.obtenerPerfil();
+          if (perfil?.rol) {
+            rol = perfil.rol;
+            sessionStorage.setItem('usuario_rol', rol);
+            break;
+          }
+        }
+      } catch (e) {
+        // Reintentar
+      }
+      intentos++;
+      if (intentos < maxIntentos) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+    }
+
+    this.usuarioNombre = email || 'Admin';
+    this.esAdminGeneral = (rol === 'admin');
+    this.cargandoAdmin.set(false);
     this.cdr.detectChanges();
   }
 }
