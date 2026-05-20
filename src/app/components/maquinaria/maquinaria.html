@@ -6,115 +6,172 @@
   <div class="flex flex-column md:flex-row justify-content-between align-items-start md:align-items-center gap-3 mb-4">
     <div>
       <h2 class="text-xl md:text-2xl font-bold text-900 m-0">Maquinaria</h2>
-      <p class="text-sm text-500 m-0 mt-1">Catálogo de equipos y control de horómetros</p>
+      <p class="text-sm text-500 m-0 mt-1">Control de equipos, horómetros y mantenimiento</p>
     </div>
     <p-button icon="pi pi-plus" label="Nuevo equipo" severity="primary" (onClick)="abrirNuevo()" />
   </div>
 
-  <!-- KPIs (solo 3 accionables, responsivos) -->
-  <ng-container *ngIf="!cargando()">
-    <div class="grid mb-4">
-      <div class="col-12 sm:col-4 mb-3 sm:mb-0">
-        <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-green-500 h-full">
+  <!-- KPIs -->
+  <div [hidden]="cargando">
+    <div class="grid mb-3">
+      <div class="col-6 sm:col-3 mb-2">
+        <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-green-500 h-full cursor-pointer"
+             (click)="filtroEstado = 'operativa'; filtroMantenimiento = null; aplicarFiltros()"
+             [class.surface-100]="filtroEstado === 'operativa'">
           <div class="flex align-items-center gap-2 mb-1">
             <i class="pi pi-check-circle text-green-500"></i>
-            <span class="text-xs text-color-secondary font-semibold white-space-nowrap">Operativas</span>
+            <span class="text-xs text-color-secondary font-semibold">Operativas</span>
           </div>
-          <p class="text-2xl md:text-3xl font-bold m-0">{{ operativas }}</p>
+          <p class="text-2xl font-bold m-0">{{ operativas }}</p>
         </div>
       </div>
-      <div class="col-12 sm:col-4 mb-3 sm:mb-0">
-        <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-orange-500 h-full">
+      <div class="col-6 sm:col-3 mb-2">
+        <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-yellow-500 h-full cursor-pointer"
+             (click)="filtroEstado = 'mantenimiento'; filtroMantenimiento = null; aplicarFiltros()"
+             [class.surface-100]="filtroEstado === 'mantenimiento'">
+          <div class="flex align-items-center gap-2 mb-1">
+            <i class="pi pi-wrench text-yellow-500"></i>
+            <span class="text-xs text-color-secondary font-semibold">En mantenimiento</span>
+          </div>
+          <p class="text-2xl font-bold m-0">{{ enMantenimiento }}</p>
+        </div>
+      </div>
+      <div class="col-6 sm:col-3 mb-2">
+        <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-orange-500 h-full cursor-pointer"
+             (click)="filtroMantenimiento = 'proximo'; filtroEstado = null; aplicarFiltros()"
+             [class.surface-100]="filtroMantenimiento === 'proximo'">
           <div class="flex align-items-center gap-2 mb-1">
             <i class="pi pi-exclamation-triangle text-orange-500"></i>
-            <span class="text-xs text-color-secondary font-semibold white-space-nowrap">Próx. mantenimiento</span>
+            <span class="text-xs text-color-secondary font-semibold">Próx. mant.</span>
           </div>
-          <p class="text-2xl md:text-3xl font-bold m-0">{{ proximasMantenimiento }}</p>
+          <p class="text-2xl font-bold m-0">{{ proximasMantenimiento }}</p>
         </div>
       </div>
-      <div class="col-12 sm:col-4">
-        <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-red-500 h-full">
+      <div class="col-6 sm:col-3 mb-2">
+        <div class="surface-card border-round-xl p-3 shadow-1 border-left-3 border-red-500 h-full cursor-pointer"
+             (click)="filtroMantenimiento = 'vencido'; filtroEstado = null; aplicarFiltros()"
+             [class.surface-100]="filtroMantenimiento === 'vencido'">
           <div class="flex align-items-center gap-2 mb-1">
             <i class="pi pi-times-circle text-red-500"></i>
-            <span class="text-xs text-color-secondary font-semibold white-space-nowrap">Vencidas</span>
+            <span class="text-xs text-color-secondary font-semibold">Vencidas</span>
           </div>
-          <p class="text-2xl md:text-3xl font-bold m-0">{{ vencidasMantenimiento }}</p>
+          <p class="text-2xl font-bold m-0">{{ vencidasMantenimiento }}</p>
         </div>
       </div>
     </div>
-  </ng-container>
+  </div>
 
   <!-- Spinner -->
-  <div *ngIf="cargando()" class="flex justify-content-center py-6">
+  <div *ngIf="cargando" class="flex justify-content-center py-6">
     <p-progressSpinner strokeWidth="4" [style]="{ width: '50px', height: '50px' }" />
   </div>
 
-  <!-- Grid de máquinas -->
-  <div class="grid" *ngIf="!cargando()">
-    <div class="col-12 md:col-6 lg:col-4" *ngFor="let m of items">
-      <div class="surface-card border-round-xl shadow-1 p-3 md:p-4 h-full flex flex-column">
-        <!-- Título y estado operativo -->
-        <div class="flex justify-content-between align-items-start mb-2">
-          <div class="overflow-hidden">
-            <span class="font-bold text-900 text-base md:text-lg">{{ m.nombre }}</span>
-            <p class="text-xs text-500 m-0 mt-1">{{ m.tipo || 'Sin tipo' }} · {{ m.marca || 'Sin marca' }}</p>
-          </div>
-          <p-tag [value]="m.activa ? 'Activo' : 'Inactivo'"
-                 [severity]="m.activa ? 'success' : 'danger'"
-                 styleClass="text-xs flex-shrink-0 ml-2" />
-        </div>
+  <!-- Tabla principal -->
+  <div [hidden]="cargando">
+    <!-- Barra de filtros -->
+    <div class="flex flex-column sm:flex-row gap-2 mb-3">
+      <span class="p-input-icon-left flex-1">
+        <i class="pi pi-search"></i>
+        <input pInputText type="text" [(ngModel)]="busqueda" (ngModelChange)="aplicarFiltros()" placeholder="Buscar equipo..." class="w-full" />
+      </span>
+      <p-select [options]="estadosMaquina" [(ngModel)]="filtroEstado" (ngModelChange)="aplicarFiltros()" optionLabel="label" optionValue="value"
+                placeholder="Estado" styleClass="w-full sm:w-auto" [style]="{ minWidth: '160px' }" />
+      <p-select [options]="estadosMantenimiento" [(ngModel)]="filtroMantenimiento" (ngModelChange)="aplicarFiltros()" optionLabel="label" optionValue="value"
+                placeholder="Mantenimiento" styleClass="w-full sm:w-auto" [style]="{ minWidth: '160px' }" />
+      <p-button [hidden]="!(filtroEstado || filtroMantenimiento || busqueda)"
+                icon="pi pi-times" label="Limpiar" severity="secondary" [text]="true"
+                (onClick)="filtroEstado = null; filtroMantenimiento = null; busqueda = ''; aplicarFiltros()" />
+    </div>
 
-        <!-- Descripción -->
-        <p class="text-xs md:text-sm text-700 mb-3 flex-1" *ngIf="m.descripcion">{{ m.descripcion }}</p>
-
-        <!-- Precios -->
-        <div class="border-top-1 border-200 pt-2 mb-3">
-          <div class="grid text-xs">
-            <div class="col-6" *ngIf="m.precio_hora"><span class="text-500">Hora: </span><span class="font-bold">S/ {{ m.precio_hora | number:'1.2-2' }}</span></div>
-            <div class="col-6" *ngIf="m.precio_dia"><span class="text-500">Día: </span><span class="font-bold">S/ {{ m.precio_dia | number:'1.2-2' }}</span></div>
-            <div class="col-6" *ngIf="m.precio_mes"><span class="text-500">Mes: </span><span class="font-bold">S/ {{ m.precio_mes | number:'1.2-2' }}</span></div>
-            <div class="col-6" *ngIf="m.precio_venta"><span class="text-500">Venta: </span><span class="font-bold text-primary">S/ {{ m.precio_venta | number:'1.2-2' }}</span></div>
-          </div>
-        </div>
-
-        <!-- Indicador de mantenimiento -->
-        <div *ngIf="m.intervalo_mantenimiento" class="mb-3">
-          <div class="flex justify-content-between align-items-center mb-1">
-            <span class="text-xs text-500">Horómetro: {{ m.horometro_actual || 0 }} h</span>
-            <p-tag [value]="getEtiquetaEstadoMantenimiento(m.estado_mantenimiento!)"
-                   [severity]="getColorEstadoMantenimiento(m.estado_mantenimiento!)" styleClass="text-xs" />
-          </div>
-          <p-progressBar [value]="(m.porcentaje_progreso! > 100 ? 100 : m.porcentaje_progreso!) || 0"
-                         [color]="(m.porcentaje_progreso! > 100 ? '#ef4444' : m.porcentaje_progreso! > 85 ? '#f59e0b' : '#22c55e')"
-                         [style]="{ height: '6px' }" />
-          <p class="text-xs text-500 m-0 mt-1">
-            {{ (m.horas_restantes! > 0) ? (m.horas_restantes! + ' h restantes') : 'Vencido por ' + (-m.horas_restantes!) + ' h' }}
-          </p>
-        </div>
-
-        <!-- Acciones -->
-        <div class="flex gap-2 mt-auto">
-          <p-button icon="pi pi-clock" label="Lecturas" severity="info" size="small"
-                    (onClick)="abrirDialogoLecturas(m)" [outlined]="true" styleClass="w-full" />
-          <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" size="small" pTooltip="Editar" (onClick)="editar(m)" />
-          <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" size="small" pTooltip="Eliminar" (onClick)="confirmarEliminar(m)" />
-        </div>
-      </div>
+    <!-- Tabla -->
+    <div class="surface-card border-round-xl shadow-1 overflow-hidden">
+      <p-table [value]="itemsFiltrados" [rows]="10" [paginator]="true" [rowHover]="true"
+               styleClass="p-datatable-sm" [showCurrentPageReport]="true"
+               currentPageReportTemplate="{first}-{last} de {totalRecords} equipos">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Equipo</th>
+            <th style="width:140px">Horómetro</th>
+            <th style="width:160px">Mantenimiento</th>
+            <th style="width:110px" class="text-center">Estado</th>
+            <th style="width:150px" class="text-center">Acciones</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-m>
+          <tr>
+            <td>
+              <div class="flex flex-column">
+                <span class="font-bold text-900">{{ m.nombre }}</span>
+                <span class="text-xs text-500">{{ m.tipo || 'Sin tipo' }}{{ m.marca ? ' · ' + m.marca : '' }}{{ m.modelo ? ' · ' + m.modelo : '' }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="flex flex-column">
+                <span class="font-semibold">{{ m.horometro_actual || 0 | number:'1.1-1' }} h</span>
+                <span class="text-xs text-500" [hidden]="!m.horometro_inicial">Inicial: {{ m.horometro_inicial }} h</span>
+              </div>
+            </td>
+            <td>
+              <div *ngIf="m.intervalo_mantenimiento; else sinIntervalo">
+                <div class="flex align-items-center gap-2 mb-1">
+                  <p-tag [value]="getEtiquetaEstadoMantenimiento(m.estado_mantenimiento!)"
+                         [severity]="getColorEstadoMantenimiento(m.estado_mantenimiento!)" styleClass="text-xs" />
+                </div>
+                <p-progressBar [value]="(m.porcentaje_progreso! > 100 ? 100 : m.porcentaje_progreso!) || 0"
+                               [color]="(m.porcentaje_progreso! > 100 ? '#ef4444' : m.porcentaje_progreso! > 85 ? '#f59e0b' : '#22c55e')"
+                               [style]="{ height: '5px' }" />
+                <span class="text-xs text-500">
+                  {{ (m.horas_restantes! > 0) ? (m.horas_restantes! | number:'1.0-0') + ' h restantes' : 'Vencido por ' + (-m.horas_restantes! | number:'1.0-0') + ' h' }}
+                </span>
+              </div>
+              <ng-template #sinIntervalo>
+                <span class="text-xs text-500">Sin programa</span>
+              </ng-template>
+            </td>
+            <td class="text-center">
+              <p-tag [value]="getEtiquetaEstadoMaquina(m.estado)"
+                     [severity]="getColorEstadoMaquina(m.estado)" styleClass="text-xs" />
+            </td>
+            <td class="text-center">
+              <div class="flex gap-1 justify-content-center">
+                <p-button icon="pi pi-clock" severity="info" [text]="true" [rounded]="true" size="small"
+                          pTooltip="Registrar lectura / operación" (onClick)="abrirDialogoOperaciones(m)" />
+                <p-button icon="pi pi-pencil" severity="info" [text]="true" [rounded]="true" size="small"
+                          pTooltip="Editar equipo" (onClick)="editar(m)" />
+                <p-button icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true" size="small"
+                          pTooltip="Eliminar equipo" (onClick)="confirmarEliminar(m)" />
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="5">
+              <div class="flex flex-column align-items-center py-6 text-color-secondary">
+                <i class="pi pi-wrench text-5xl mb-3 opacity-40"></i>
+                <p class="font-semibold m-0 mb-1">No se encontraron equipos</p>
+                <p class="text-sm m-0" [hidden]="!(filtroEstado || filtroMantenimiento || busqueda)">Ajusta los filtros de búsqueda</p>
+                <p class="text-sm m-0" [hidden]="filtroEstado || filtroMantenimiento || busqueda">Agrega tu primer equipo para empezar</p>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
     </div>
   </div>
 
-  <!-- Diálogo CRUD (Nuevo/Editar) con Signal -->
-  <p-dialog [visible]="modalVisible()"
-            (visibleChange)="modalVisible.set($event)"
+  <!-- ── Diálogo CRUD Maquinaria ────────────────────────────────────────── -->
+  <p-dialog [visible]="modalVisible"
+            (visibleChange)="modalVisible = $event"
             [header]="esEdicion ? 'Editar equipo' : 'Nuevo equipo'"
             [modal]="true"
-            [style]="{ width: '90vw', maxWidth: '520px' }"
+            [style]="{ width: '90vw', maxWidth: '560px' }"
             [draggable]="false"
             appendTo="body"
             (onHide)="resetForm()">
     <div class="flex flex-column gap-3 pt-2">
       <div class="flex flex-column gap-1">
-        <label class="text-xs font-semibold text-700">Nombre *</label>
+        <label class="text-xs font-semibold text-700">Nombre <span class="text-red-500">*</span></label>
         <input pInputText [(ngModel)]="form.nombre" class="w-full" placeholder="Ej: Excavadora CAT 320" />
       </div>
       <div class="grid">
@@ -135,74 +192,108 @@
         <label class="text-xs font-semibold text-700">Descripción</label>
         <textarea pInputTextarea [(ngModel)]="form.descripcion" rows="2" placeholder="Detalles del equipo..."></textarea>
       </div>
-      <div class="grid">
-        <div class="col-6 flex flex-column gap-1">
-          <label class="text-xs font-semibold text-700">Precio por hora</label>
-          <p-inputNumber [(ngModel)]="form.precio_hora" mode="decimal" [minFractionDigits]="2" styleClass="w-full" />
-        </div>
-        <div class="col-6 flex flex-column gap-1">
-          <label class="text-xs font-semibold text-700">Precio por día</label>
-          <p-inputNumber [(ngModel)]="form.precio_dia" mode="decimal" [minFractionDigits]="2" styleClass="w-full" />
-        </div>
-        <div class="col-6 flex flex-column gap-1">
-          <label class="text-xs font-semibold text-700">Precio por mes</label>
-          <p-inputNumber [(ngModel)]="form.precio_mes" mode="decimal" [minFractionDigits]="2" styleClass="w-full" />
-        </div>
-        <div class="col-6 flex flex-column gap-1">
-          <label class="text-xs font-semibold text-700">Precio de venta</label>
-          <p-inputNumber [(ngModel)]="form.precio_venta" mode="decimal" [minFractionDigits]="2" styleClass="w-full" />
-        </div>
-      </div>
-      <div class="grid">
-        <div class="col-6 flex flex-column gap-1">
-          <label class="text-xs font-semibold text-700">Horómetro inicial</label>
-          <p-inputNumber [(ngModel)]="form.horometro_inicial" mode="decimal" styleClass="w-full" />
-        </div>
-        <div class="col-6 flex flex-column gap-1">
-          <label class="text-xs font-semibold text-700">Intervalo mant. (h)</label>
-          <p-inputNumber [(ngModel)]="form.intervalo_mantenimiento" mode="decimal" styleClass="w-full" />
+
+      <!-- Sección: Precios -->
+      <div class="border-top-1 border-200 pt-3">
+        <p class="text-xs font-bold text-500 uppercase mb-2">Precios de alquiler / venta</p>
+        <div class="grid">
+          <div class="col-6 flex flex-column gap-1">
+            <label class="text-xs font-semibold text-700">Por hora</label>
+            <input pInputText type="number" [(ngModel)]="form.precio_hora" step="0.01" min="0" class="w-full" />
+          </div>
+          <div class="col-6 flex flex-column gap-1">
+            <label class="text-xs font-semibold text-700">Por día</label>
+            <input pInputText type="number" [(ngModel)]="form.precio_dia" step="0.01" min="0" class="w-full" />
+          </div>
+          <div class="col-6 flex flex-column gap-1">
+            <label class="text-xs font-semibold text-700">Por mes</label>
+            <input pInputText type="number" [(ngModel)]="form.precio_mes" step="0.01" min="0" class="w-full" />
+          </div>
+          <div class="col-6 flex flex-column gap-1">
+            <label class="text-xs font-semibold text-700">Precio venta</label>
+            <input pInputText type="number" [(ngModel)]="form.precio_venta" step="0.01" min="0" class="w-full" />
+          </div>
         </div>
       </div>
+
+      <!-- Sección: Horómetro y Mantenimiento -->
+      <div class="border-top-1 border-200 pt-3">
+        <p class="text-xs font-bold text-500 uppercase mb-2">Horómetro y mantenimiento</p>
+        <div class="grid">
+          <div class="col-6 flex flex-column gap-1">
+            <label class="text-xs font-semibold text-700">Horómetro inicial</label>
+            <input pInputText type="number" [(ngModel)]="form.horometro_inicial" step="0.1" min="0" class="w-full" />
+          </div>
+          <div class="col-6 flex flex-column gap-1">
+            <label class="text-xs font-semibold text-700">Horómetro actual</label>
+            <input pInputText type="number" [(ngModel)]="form.horometro_actual" step="0.1" min="0" class="w-full" />
+          </div>
+          <div class="col-6 flex flex-column gap-1">
+            <label class="text-xs font-semibold text-700">Intervalo mant. (horas)</label>
+            <input pInputText type="number" [(ngModel)]="form.intervalo_mantenimiento" step="1" min="0" class="w-full" />
+          </div>
+          <div class="col-6 flex flex-column gap-1">
+            <label class="text-xs font-semibold text-700">Último mant. (horómetro)</label>
+            <input pInputText type="number" [(ngModel)]="form.ultimo_mantenimiento" step="0.1" min="0" class="w-full" />
+          </div>
+        </div>
+      </div>
+
       <div class="flex align-items-center gap-3">
         <p-checkbox [(ngModel)]="form.activa" [binary]="true" inputId="activa" />
         <label for="activa" class="text-sm text-700">Equipo activo</label>
       </div>
     </div>
     <ng-template pTemplate="footer">
-      <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="modalVisible.set(false)" />
+      <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="modalVisible = false" />
       <p-button label="Guardar" icon="pi pi-check" severity="primary" [loading]="guardando" (onClick)="guardar()" />
     </ng-template>
   </p-dialog>
 
-  <!-- Diálogo flotante de Registro de Lectura (ya con Signal) -->
-  <p-dialog [visible]="dialogoLecturaVisible()"
-            (visibleChange)="dialogoLecturaVisible.set($event)"
-            [header]="'Lecturas: ' + (maquinaSeleccionada?.nombre || '')"
+  <!-- ── Diálogo de Operaciones ─────────────────────────────────────────── -->
+  <p-dialog [visible]="dialogoOperacionesVisible"
+            (visibleChange)="dialogoOperacionesVisible = $event"
+            [header]="maquinaSeleccionada?.nombre || 'Operaciones'"
             [modal]="true"
-            [style]="{ width: '90vw', maxWidth: '500px' }"
+            [style]="{ width: '90vw', maxWidth: '600px' }"
             [draggable]="false"
             appendTo="body">
     <div class="flex flex-column gap-4 pt-2">
-      <!-- Formulario de nueva lectura -->
+
+      <!-- Info rápida del equipo -->
+      <div class="flex align-items-center gap-3 p-3 surface-ground border-round-lg">
+        <div class="flex flex-column flex-1">
+          <span class="text-xs text-500">Horómetro actual</span>
+          <span class="text-xl font-bold">{{ ultimoHorometro | number:'1.1-1' }} h</span>
+        </div>
+        <p-tag [value]="getEtiquetaEstadoMaquina(maquinaSeleccionada?.estado)"
+               [severity]="getColorEstadoMaquina(maquinaSeleccionada?.estado)" />
+      </div>
+
+      <!-- Formulario de registro / edición -->
       <div class="surface-ground border-round-lg p-3">
-        <p class="font-semibold text-900 m-0 mb-3">Registrar lectura</p>
+        <p class="font-semibold text-900 m-0 mb-3">
+          <i [class]="editandoOperacion ? 'pi pi-pencil' : 'pi pi-plus-circle'" class="mr-2"></i>
+          {{ editandoOperacion ? 'Editar operación' : 'Nueva operación' }}
+        </p>
         <div class="flex flex-column gap-3">
           <div class="flex flex-column gap-1">
-            <label class="text-xs font-semibold text-700">Horómetro actual</label>
-            <p-inputNumber [(ngModel)]="nuevaLectura.horometro" mode="decimal" styleClass="w-full" />
+            <label class="text-xs font-semibold text-700">Horómetro <span class="text-red-500">*</span></label>
+            <input pInputText type="number" [(ngModel)]="nuevaLectura.horometro" step="0.1" min="0" class="w-full" />
           </div>
           <div class="flex flex-column gap-1">
-            <label class="text-xs font-semibold text-700">Fecha</label>
-            <p-datepicker [(ngModel)]="nuevaLectura.fecha_lectura" 
-                          [showIcon]="true"
-                          [baseZIndex]="5000"
+            <label class="text-xs font-semibold text-700">Fecha <span class="text-red-500">*</span></label>
+            <p-datepicker [(ngModel)]="fechaOperacion"
+                          [touchUI]="true" [showIcon]="true" appendTo="body"
+                          [maxDate]="hoy"
+                          dateFormat="dd/mm/yy"
                           styleClass="w-full" />
-          </div>
+            </div>
           <div class="flex flex-column gap-1">
             <label class="text-xs font-semibold text-700">Tipo de evento</label>
             <p-select [options]="[
-              { label: 'Lectura', value: 'lectura' },
-              { label: 'Mantenimiento', value: 'mantenimiento' },
+              { label: 'Lectura de horómetro', value: 'lectura' },
+              { label: 'Mantenimiento realizado', value: 'mantenimiento' },
               { label: 'Reparación', value: 'reparacion' }
             ]" [(ngModel)]="nuevaLectura.tipo_evento" optionLabel="label" optionValue="value" styleClass="w-full" />
           </div>
@@ -212,31 +303,69 @@
           </div>
           <div class="flex flex-column gap-1">
             <label class="text-xs font-semibold text-700">Observaciones</label>
-            <textarea pInputTextarea [(ngModel)]="nuevaLectura.observaciones" rows="2" class="w-full"></textarea>
+            <textarea pInputTextarea [(ngModel)]="nuevaLectura.observaciones" rows="2"
+                      placeholder="Detalles adicionales..." class="w-full"></textarea>
           </div>
         </div>
-        <p-button label="Guardar lectura" icon="pi pi-check" severity="primary"
-                  [loading]="guardandoLectura()" (onClick)="guardarLectura()" styleClass="w-full mt-3" />
+        <div class="flex gap-2 mt-3">
+          <p-button [label]="editandoOperacion ? 'Actualizar' : 'Guardar'"
+                    [icon]="editandoOperacion ? 'pi pi-check' : 'pi pi-save'"
+                    severity="primary"
+                    [loading]="guardandoLectura"
+                    (onClick)="guardarOperacion()"
+                    styleClass="flex-1" />
+          <p-button [hidden]="!editandoOperacion"
+                    label="Cancelar"
+                    icon="pi pi-times"
+                    severity="secondary"
+                    [outlined]="true"
+                    (onClick)="resetFormularioOperacion()" />
+        </div>
       </div>
 
-      <!-- Historial de lecturas -->
+      <!-- Historial -->
       <div>
-        <p class="font-semibold text-900 mb-2">Últimas lecturas</p>
-        <p-progressSpinner *ngIf="cargandoLecturas()" styleClass="w-2rem h-2rem" strokeWidth="4" />
-        <div *ngIf="!cargandoLecturas()" class="max-h-15rem overflow-y-auto">
-          <div *ngFor="let l of lecturas" class="flex justify-content-between align-items-center p-2 border-bottom-1 border-200">
-            <div>
-              <p class="text-sm font-bold m-0">{{ l.horometro }} h</p>
-              <p class="text-xs text-500 m-0">{{ l.fecha_lectura | date:'dd/MM/yyyy' }} · {{ l.tipo_evento }}</p>
+        <div class="flex justify-content-between align-items-center mb-2">
+          <p class="font-semibold text-900 m-0">Historial de operaciones</p>
+          <span class="text-xs text-500" [hidden]="!hayLecturas">{{ totalLecturas }} registros</span>
+        </div>
+        <p-progressSpinner *ngIf="cargandoLecturas" styleClass="w-2rem h-2rem" strokeWidth="4" />
+
+        <div [hidden]="cargandoLecturas || !hayLecturas" class="max-h-18rem overflow-y-auto border-round-lg border-1 border-200">
+          <div *ngFor="let l of historialLecturas; let last = last"
+               class="flex justify-content-between align-items-start p-3"
+               [class.border-bottom-1]="!last" [class.border-200]="!last">
+            <div class="flex-1">
+              <div class="flex align-items-center gap-2 mb-1">
+                <span class="font-bold text-sm">{{ l.horometro | number:'1.1-1' }} h</span>
+                <p-tag [value]="l.tipo_evento === 'lectura' ? 'Lectura' : l.tipo_evento === 'mantenimiento' ? 'Mantenimiento' : 'Reparación'"
+                       [severity]="l.tipo_evento === 'lectura' ? 'info' : l.tipo_evento === 'mantenimiento' ? 'success' : 'warn'"
+                       styleClass="text-xs" />
+              </div>
+              <p class="text-xs text-500 m-0">{{ l.fecha_lectura | date:'dd/MM/yyyy' }}</p>
+              <p class="text-xs text-500 m-0 mt-1" [hidden]="!l.operador">Operador: {{ l.operador }}</p>
+              <p class="text-xs text-600 m-0 mt-1" [hidden]="!l.observaciones">{{ l.observaciones }}</p>
             </div>
-            <p-tag [value]="l.tipo_evento" severity="info" styleClass="text-xs" />
+            <div class="flex gap-1 ml-2 flex-shrink-0">
+              <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small"
+                        severity="info" pTooltip="Editar" (onClick)="editarOperacion(l)" />
+              <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small"
+                        severity="danger" pTooltip="Eliminar" (onClick)="confirmarEliminarOperacion(l)" />
+            </div>
           </div>
-          <p *ngIf="lecturas.length === 0" class="text-xs text-500">Sin lecturas registradas</p>
+        </div>
+
+        <div [hidden]="cargandoLecturas || hayLecturas"
+             class="text-center py-4 surface-ground border-round-lg">
+          <i class="pi pi-inbox text-3xl text-400 mb-2"></i>
+          <p class="text-sm text-500 m-0">Sin operaciones registradas</p>
         </div>
       </div>
-    </div>
+   
     <ng-template pTemplate="footer">
-      <p-button label="Cerrar" severity="secondary" [text]="true" (onClick)="dialogoLecturaVisible.set(false)" />
+      <p-button label="Cerrar" severity="secondary" [text]="true" (onClick)="dialogoOperacionesVisible = false" />
     </ng-template>
+  
+    </div>
   </p-dialog>
 </div>

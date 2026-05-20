@@ -1,6 +1,6 @@
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { provideAnimations } from '@angular/platform-browser/animations';
 import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeng/themes/aura';
 import { routes } from './app.routes';
@@ -9,13 +9,19 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideAnimationsAsync(), // Indispensable para que los componentes se dibujen
+    provideAnimations(),
     providePrimeNG({
     theme: {
         preset: Aura,
         options: {
-            darkModeSelector: 'none' // En la v21 se prefiere 'none' o un selector específico
+            darkModeSelector: 'none'
         }
+    },
+    zIndex: {
+        modal: 1100,
+        overlay: 1000,
+        menu: 1000,
+        tooltip: 1100
     }
 })
   ]

@@ -14,8 +14,9 @@
         Administra los accesos y empresas asignadas
       </p>
     </div>
-    <p-button label="Nuevo Usuario" icon="pi pi-user-plus"
-              styleClass="w-full md:w-auto" (onClick)="abrirModal()" />
+    <!-- Botón oculto: la creación de usuarios vía signUp no funciona correctamente -->
+    <!-- <p-button label="Nuevo Usuario" icon="pi pi-user-plus"
+              styleClass="w-full md:w-auto" (onClick)="abrirModal()" /> -->
   </div>
 
   <!-- LOADING STATE -->
@@ -71,6 +72,16 @@
         </div>
         <p class="text-2xl font-bold text-900 m-0">{{ usuariosAdmin }}</p>
         <p class="text-xs text-500 m-0 mt-1">administradores</p>
+      </div>
+    </div>
+    <div class="col-6 md:col-3">
+      <div class="surface-card border-round-xl p-3 md:p-4 shadow-1 border-left-3 border-indigo-500 h-full">
+        <div class="flex align-items-center gap-2 mb-2">
+          <i class="pi pi-building text-indigo-500 text-lg"></i>
+          <span class="text-color-secondary text-xs font-semibold uppercase">Admin Emp.</span>
+        </div>
+        <p class="text-2xl font-bold text-900 m-0">{{ usuariosAdminEmpresa }}</p>
+        <p class="text-xs text-500 m-0 mt-1">por empresa</p>
       </div>
     </div>
     <div class="col-6 md:col-3">

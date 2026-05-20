@@ -31,7 +31,7 @@ export class AuthService {
   }
 
   async isAdmin(): Promise<boolean> {
-const rolLocal = localStorage.getItem('usuario_rol');
+    const rolLocal = sessionStorage.getItem('usuario_rol');
     if (rolLocal) return rolLocal === 'admin' || rolLocal === 'admin_empresa';
 
     const perfil = await this.supabase.obtenerPerfil();
@@ -39,7 +39,7 @@ const rolLocal = localStorage.getItem('usuario_rol');
   }
 
   async isAdminGeneral(): Promise<boolean> {
-    const rolLocal = localStorage.getItem('usuario_rol');
+    const rolLocal = sessionStorage.getItem('usuario_rol');
     if (rolLocal) return rolLocal === 'admin';
 
     // Fallback: consulta la BD
@@ -48,7 +48,7 @@ const rolLocal = localStorage.getItem('usuario_rol');
   }
 
   async getRol(): Promise<string | null> {
-    const rolLocal = localStorage.getItem('usuario_rol');
+    const rolLocal = sessionStorage.getItem('usuario_rol');
     if (rolLocal) return rolLocal;
 
     const perfil = await this.supabase.obtenerPerfil();

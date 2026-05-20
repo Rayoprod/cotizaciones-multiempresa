@@ -72,6 +72,10 @@ export class UsuariosComponent implements OnInit {
     return this.usuarios.filter(u => u.rol === 'admin').length;
   }
 
+  get usuariosAdminEmpresa(): number {
+    return this.usuarios.filter(u => u.rol === 'admin_empresa').length;
+  }
+
   get usuariosVendedor(): number {
     return this.usuarios.filter(u => u.rol === 'vendedor').length;
   }

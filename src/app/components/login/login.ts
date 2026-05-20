@@ -57,8 +57,6 @@ export class LoginComponent {
       // Admin general → panel de gestión | Admin_empresa/Vendedor → selector de empresa
       if (rol === 'admin') {
         this.router.navigate(['/admin/empresas']);
-      } else if (rol === 'admin_empresa') {
-        this.router.navigate(['/admin/empresas']);
       } else {
         this.router.navigate(['/selector']);
       }

@@ -18,7 +18,7 @@
         <p class="header-subtitle">Administra la información corporativa y cuentas bancarias</p>
       </div>
       <div class="header-actions">
-        <p-button label="Nueva Empresa" icon="pi pi-plus" class="btn-primary" (click)="abrirNuevo()" />
+        <p-button *ngIf="esAdminGeneral" label="Nueva Empresa" icon="pi pi-plus" class="btn-primary" (click)="abrirNuevo()" />
       </div>
     </div>
   </div>
@@ -114,9 +114,9 @@
             <!-- Acciones -->
             <td class="text-center">
               <div class="action-buttons">
-                <p-button icon="pi pi-pencil" class="btn-edit" severity="info" size="small" pTooltip="Editar empresa"
+                <p-button *ngIf="esAdminGeneral || esAdminEmpresa" icon="pi pi-pencil" class="btn-edit" severity="info" size="small" pTooltip="Editar empresa"
                   (click)="editarEmpresa(emp)" />
-                <p-button icon="pi pi-trash" class="btn-delete" severity="danger" size="small"
+                <p-button *ngIf="esAdminGeneral" icon="pi pi-trash" class="btn-delete" severity="danger" size="small"
                   pTooltip="Eliminar empresa" (click)="eliminarEmpresa(emp.id)" />
               </div>
             </td>
@@ -130,7 +130,7 @@
                 <i class="pi pi-inbox"></i>
                 <h3>No hay empresas registradas</h3>
                 <p>Comienza agregando tu primera empresa para comenzar a gestionar tus cotizaciones</p>
-                <p-button label="Agregar Empresa" icon="pi pi-plus" class="btn-primary" (click)="abrirNuevo()" />
+                <p-button *ngIf="esAdminGeneral" label="Agregar Empresa" icon="pi pi-plus" class="btn-primary" (click)="abrirNuevo()" />
               </div>
             </td>
           </tr>

@@ -49,6 +49,8 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   esEdicion = false;
   enviando = false;
   empresaActual: IEmpresa | null = null;
+  esAdminGeneral = false;
+  esAdminEmpresa = false;
   
   empresaForm!: FormGroup;
   cuentasFormArray!: FormArray;
@@ -70,6 +72,9 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   ) {}
   
   ngOnInit() {
+    const rol = sessionStorage.getItem('usuario_rol');
+    this.esAdminGeneral = rol === 'admin';
+    this.esAdminEmpresa = rol === 'admin_empresa';
     this.inicializarFormularios();
     this.configurarAutosave();
     this.cargarEmpresas();
