@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, signal } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
@@ -6,21 +6,22 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { SupabaseService } from '../../services/supabase.service';
 import { PdfService } from '../../services/pdf.service';
 import { ApiPeruService } from '../../services/api-peru.service';
-import { ICotizacion } from '../../models/cotizacion.model';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
+
+import { ToggleButtonModule } from 'primeng/togglebutton';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import { DialogModule } from 'primeng/dialog';
-import { SelectModule } from 'primeng/select';
+import { DropdownModule } from 'primeng/dropdown';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
+import { InputTextareaModule } from 'primeng/inputtextarea';
 import { MessageService } from 'primeng/api';
+import { SessionContextService } from '../../services/session-context.service';
 
 @Component({
   selector: 'app-cotizador',
@@ -28,9 +29,9 @@ import { MessageService } from 'primeng/api';
   imports: [
     CommonModule, FormsModule, RouterModule,
     TableModule, ButtonModule, CardModule,
-    InputNumberModule, InputTextModule, TextareaModule,
-    ToggleSwitchModule, SelectButtonModule, AutoCompleteModule,
-    DialogModule, SelectModule, TooltipModule, ToastModule,
+    InputNumberModule, InputTextModule,
+    ToggleButtonModule, SelectButtonModule, AutoCompleteModule,
+    DialogModule, DropdownModule, TooltipModule, ToastModule, InputTextareaModule,
     ProgressSpinnerModule,
   ],
   providers: [MessageService],
@@ -84,9 +85,9 @@ export class CotizadorComponent implements OnInit {
   totalFinal: number = 0;
 
   // ── Selector maquinaria ───────────────────────────────────────────────────
-  modalMaquinariaVisible = signal(false);       // ← ahora es signal
+  modalMaquinariaVisible = false;
   borradorModo: 'revision' | 'duplicar' | null = null;
-  cargando = signal(true);
+  cargando = true;
   borradorFolioPadre: string | null = null;
   maquinaSeleccionada: any = null;
   modalidadMaquina: string = 'alquiler_dia';
@@ -105,18 +106,20 @@ export class CotizadorComponent implements OnInit {
     private pdfSvc: PdfService,
     private router: Router,
     private messageService: MessageService,
-    private apiPeru: ApiPeruService
+    private apiPeru: ApiPeruService,
+    private session: SessionContextService  // ← agregar esta línea
+
   ) { }
 
   // ── Init ──────────────────────────────────────────────────────────────────
 
   async ngOnInit() {
-    this.cargando.set(true);
+    this.cargando = true;
 
     this.agregarFila();
 
-    const datos = sessionStorage.getItem('empresa_activa');
-    this.empresaActiva = datos ? JSON.parse(datos) : null;
+    this.empresaActiva = this.session.empresaActiva();
+
     this.datosActuales = this.empresaActiva;
 
     this.cargarBorradorSiExiste();
@@ -124,7 +127,7 @@ export class CotizadorComponent implements OnInit {
     if (!this.empresaActiva?.id) {
       const hayBorrador = sessionStorage.getItem('cotizador-borrador');
       if (!hayBorrador) {
-        this.cargando.set(false);
+        this.cargando = false;
         this.messageService.add({
           severity: 'warn', summary: 'Empresa no seleccionada',
           detail: 'Debes seleccionar una empresa antes de cotizar.'
@@ -139,8 +142,8 @@ export class CotizadorComponent implements OnInit {
 
     await this.cargarDatosDesdeBD();
 
-    this.cargando.set(false);
-    this.cdr.detectChanges();
+    this.cargando = false;
+    this.cdr.markForCheck();
   }
 
   // ── Validación ────────────────────────────────────────────────────────────
@@ -180,8 +183,8 @@ export class CotizadorComponent implements OnInit {
         detail: 'No se pudieron cargar productos o clientes.'
       });
     } finally {
-      this.cargando.set(false);
-      this.cdr.detectChanges();
+      this.cargando = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -206,7 +209,7 @@ export class CotizadorComponent implements OnInit {
       this.clienteTelefono = cliente.telefono || '';
       this.clienteDireccion = cliente.direccion || '';
       this.clienteCorreo = cliente.correo || '';
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
     }
   }
 
@@ -228,7 +231,7 @@ export class CotizadorComponent implements OnInit {
       this.clienteTelefono = clienteExistente.telefono || '';
       this.clienteCorreo = clienteExistente.correo || '';
       this.messageService.add({ severity: 'success', summary: 'Local', detail: 'Datos obtenidos de tu Base de Datos.' });
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -270,7 +273,7 @@ export class CotizadorComponent implements OnInit {
       this.clienteDireccion = datos.direccion_completa || datos.direccion || datos.address || '';
       this.clienteTelefono = '';
       this.clienteCorreo = '';
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
 
       this.messageService.add({ severity: 'success', summary: 'API', detail: 'Datos obtenidos de SUNAT/RENIEC.' });
     } catch {
@@ -349,7 +352,7 @@ export class CotizadorComponent implements OnInit {
     this.subtotalGeneral = this.carrito.reduce((acc, item) => acc + Number(item.subtotal), 0);
     this.igvTotal = this.incluyeIgv ? this.subtotalGeneral * 0.18 : 0;
     this.totalFinal = this.subtotalGeneral + this.igvTotal;
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   // ── Generar PDF ───────────────────────────────────────────────────────────
@@ -383,7 +386,7 @@ export class CotizadorComponent implements OnInit {
         total: this.totalFinal,
         estado: 'PENDIENTE',
         items: itemsValidos,
-        vendedor: sessionStorage.getItem('usuario_email'),
+        vendedor: this.session.usuario()?.email ?? null,
         lugar_entrega: this.lugarEntrega,
         observaciones: this.clienteObservaciones || null
       };
@@ -424,7 +427,7 @@ export class CotizadorComponent implements OnInit {
     this.maquinaSeleccionada = null;
     this.modalidadMaquina = 'alquiler_dia';
     this.cantidadMaquina = 1;
-    this.modalMaquinariaVisible.set(true);          // ← signal
+    this.modalMaquinariaVisible = true;
   }
 
   get precioMaquinaSeleccionada(): number {
@@ -458,7 +461,7 @@ export class CotizadorComponent implements OnInit {
       precio_unitario: this.precioMaquinaSeleccionada,
       subtotal: this.cantidadMaquina * this.precioMaquinaSeleccionada
     }];
-    this.modalMaquinariaVisible.set(false);          // ← signal
+    this.modalMaquinariaVisible = false;
     this.recalcularTodo();
     this.messageService.add({ severity: 'success', summary: 'Agregado', detail: descripcion });
   }
@@ -494,7 +497,7 @@ export class CotizadorComponent implements OnInit {
       this.borradorFolioPadre = b.folio_padre || null;
 
       this.recalcularTodo();
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
 
       this.messageService.add({
         severity: b.modo === 'revision' ? 'warn' : 'info',

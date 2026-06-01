@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { SupabaseService } from '../../services/supabase.service';
+import { SessionContextService } from '../../services/session-context.service';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
@@ -24,6 +25,7 @@ export class LoginComponent {
   constructor(
     private authService: AuthService,
     private supabaseSvc: SupabaseService,
+    private session: SessionContextService, // ✅ nuevo
     private router: Router
   ) {}
 
@@ -45,16 +47,22 @@ export class LoginComponent {
         return;
       }
 
-      sessionStorage.setItem('usuario_email', data.user?.email || '');
-
-      // Pequeña pausa para que Supabase confirme la sesión antes de consultarla
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Usamos AuthService.getRol() que ya guarda en sessionStorage
-      const rol = await this.authService.getRol();
-      sessionStorage.setItem('usuario_rol', rol || 'vendedor');
+      const perfil = await this.supabaseSvc.obtenerPerfil();
 
-      // Admin general → panel de gestión | Admin_empresa/Vendedor → selector de empresa
+      if (perfil) {
+        // ✅ Reemplaza los 2 sessionStorage.setItem anteriores
+        this.session.setUsuario({
+          id: data.user?.id ?? '',
+          email: data.user?.email ?? '',
+          rol: perfil.rol ?? 'vendedor',
+          activo: true
+        });
+      }
+
+      const rol = perfil?.rol ?? 'vendedor';
+
       if (rol === 'admin') {
         this.router.navigate(['/admin/empresas']);
       } else {
@@ -67,4 +75,4 @@ export class LoginComponent {
       this.cargando = false;
     }
   }
-} 
+}

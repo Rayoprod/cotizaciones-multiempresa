@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, signal } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -10,8 +10,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ToolbarModule } from 'primeng/toolbar';
 
 import { SupabaseService } from '../../services/supabase.service';
-import { IProducto } from '../../models/producto.model';
-
+import { IProducto} from '../../models';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -32,8 +31,8 @@ import { ToastModule } from 'primeng/toast';
 export class ProductosComponent implements OnInit {
 
   productos: IProducto[] = [];
-  cargando = signal(true);
-  productoDialog = signal(false);               // ← ahora es signal
+  cargando = true;
+  productoDialog = false;
   productoActual: IProducto = this.productoVacio();
   productoOriginal: string = '';
   enviando: boolean = false;
@@ -53,14 +52,14 @@ export class ProductosComponent implements OnInit {
 
   async cargarProductos() {
     if (!this.empresaActiva?.id) return;
-    this.cargando.set(true);
+    this.cargando = true;
     try {
       this.productos = await this.supabaseSvc.getProductos(this.empresaActiva.id) as IProducto[];
     } catch (error) {
       console.error('Error al cargar productos:', error);
     } finally {
-      this.cargando.set(false);
-      this.cdr.detectChanges();
+      this.cargando = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -86,13 +85,13 @@ export class ProductosComponent implements OnInit {
     };
     this.productoOriginal = JSON.stringify(this.productoActual);
     this.enviando = false;
-    this.productoDialog.set(true);               // ← signal
+    this.productoDialog = true;
   }
 
   editarProducto(producto: IProducto) {
     this.productoActual = { ...producto };
     this.productoOriginal = JSON.stringify(this.productoActual);
-    this.productoDialog.set(true);               // ← signal
+    this.productoDialog = true;
   }
 
   async borrarProducto(producto: IProducto) {
@@ -137,7 +136,7 @@ export class ProductosComponent implements OnInit {
     }
 
     if (this.productoOriginal === JSON.stringify(this.productoActual)) {
-      this.productoDialog.set(false);            // ← signal
+      this.productoDialog = false;
       return;
     }
 
@@ -145,7 +144,7 @@ export class ProductosComponent implements OnInit {
     try {
       const payload = { ...this.productoActual, empresa_id: this.empresaActiva.id };
       await this.supabaseSvc.guardarProducto(payload);
-      this.productoDialog.set(false);            // ← signal
+      this.productoDialog = false;
       await this.cargarProductos();
     } catch (error) {
       console.error('Error al guardar:', error);
@@ -160,11 +159,11 @@ export class ProductosComponent implements OnInit {
   }
 
   ocultarDialog() {
-    this.productoDialog.set(false);              // ← signal
+    this.productoDialog = false;
     this.enviando = false;
   }
 
   private productoVacio(): IProducto {
-    return { codigo_sku: '', descripcion: '', unidad: 'm3', precio_unitario_base: null };
+    return { codigo_sku: '', descripcion: '', unidad: 'm3', precio_unitario_base: 0, created_at: '', empresa_id: '' };
   }
 }

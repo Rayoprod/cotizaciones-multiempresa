@@ -1,17 +1,14 @@
 <div class="flex h-screen overflow-hidden relative">
 
-  <!-- ================= OVERLAY OSCURO PARA MÓVIL ================= -->
   <div *ngIf="sidebarAbierto"
        class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-50 z-4"
        (click)="cerrarMenu()">
   </div>
 
-  <!-- ================= EL ÚNICO MENÚ ADMIN (RESPONSIVE) ================= -->
   <aside class="fixed md:static top-0 left-0 z-5 h-full shadow-2 flex flex-column transition-transform transition-duration-300"
          style="width: 18rem; background: #1f2937; color: white;"
          [ngClass]="sidebarAbierto ? 'translate-x-0' : '-translate-x-100 md:translate-x-0'">
 
-    <!-- Encabezado del Menú -->
     <div class="p-4 flex align-items-center gap-3" style="border-bottom: 1px solid rgba(255,255,255,.08);">
       <p-avatar icon="pi pi-shield-check" shape="circle" [style]="{ background: '#3b82f6', color: '#ffffff' }"></p-avatar>
       <div class="flex flex-column">
@@ -20,7 +17,6 @@
       </div>
     </div>
 
-    <!-- Botones de Navegación -->
     <div class="flex-1 overflow-y-auto p-3">
       <div class="mb-3" style="color: rgba(255,255,255,.6); font-size: .75rem; font-weight: 700; text-transform: uppercase;">
         Gestión
@@ -34,41 +30,44 @@
         </a>
 
         <p-divider styleClass="border-white-alpha-20"></p-divider>
-        <button pButton type="button" icon="pi pi-briefcase" label="Operar empresa" severity="success" class="w-full justify-content-start" (click)="operarEmpresa()"></button>
+        <button pButton type="button" icon="pi pi-briefcase" label="Operar empresa"
+                severity="success" class="w-full justify-content-start"
+                (click)="operarEmpresa()">
+        </button>
       </div>
     </div>
 
-    <!-- Perfil del usuario al fondo -->
     <div class="p-3 mt-auto" style="border-top: 1px solid rgba(255,255,255,.08);">
       <div class="flex align-items-center gap-3 mb-3 p-2 border-round" style="background: rgba(255,255,255,.06);">
         <p-avatar icon="pi pi-user" shape="circle" [style]="{ background: '#3b82f6', color: '#ffffff' }"></p-avatar>
         <div class="flex flex-column overflow-hidden">
-          <span class="font-medium text-white">Administrador</span>
-          <span class="white-space-nowrap overflow-hidden text-overflow-ellipsis text-xs text-white-alpha-70">{{ usuarioNombre }}</span>
+          <!-- ✅ Muestra rol real desde signal -->
+          <span class="font-medium text-white">{{ esAdminGeneral ? 'Admin General' : 'Administrador' }}</span>
+          <span class="white-space-nowrap overflow-hidden text-overflow-ellipsis text-xs text-white-alpha-70">
+            {{ usuarioNombre }}
+          </span>
         </div>
       </div>
-      <button pButton type="button" icon="pi pi-sign-out" label="Cerrar sesión" severity="danger" class="w-full" (click)="logout()"></button>
+      <button pButton type="button" icon="pi pi-sign-out" label="Cerrar sesión"
+              severity="danger" class="w-full" (click)="logout()">
+      </button>
     </div>
 
   </aside>
 
-  <!-- ================= ÁREA PRINCIPAL DE TRABAJO ================= -->
   <div class="flex-1 flex flex-column min-w-0 overflow-hidden z-1">
-    
-    <!-- TOPBAR MÓVIL OSCURA -->
-    <div class="md:hidden flex align-items-center gap-2 px-3 shadow-1" style="height: 4rem; background: #1f2937; color: white;">
+    <div class="md:hidden flex align-items-center gap-2 px-3 shadow-1"
+         style="height: 4rem; background: #1f2937; color: white;">
       <button pButton type="button" icon="pi pi-bars" text class="text-white" (click)="toggleSidebar()"></button>
       <span class="font-bold text-lg">Panel Admin</span>
     </div>
-    
+
     <main class="flex-1 overflow-auto p-2 md:p-4" style="background: #f8fafc;">
-      <!-- Spinner mientras carga el contenido inicial -->
-      <div *ngIf="cargandoAdmin()" class="flex justify-content-center align-items-center h-full">
+      <div *ngIf="cargandoAdmin" class="flex justify-content-center align-items-center h-full">
         <p-progressSpinner strokeWidth="4" [style]="{ width: '60px', height: '60px' }"></p-progressSpinner>
       </div>
-      <!-- Contenido real una vez que la sesión está lista -->
-      <router-outlet *ngIf="!cargandoAdmin()"></router-outlet>
+      <router-outlet *ngIf="!cargandoAdmin"></router-outlet>
     </main>
-
   </div>
+
 </div>

@@ -1,3 +1,6 @@
+// src/app/models/maquinaria.model.ts
+import { EstadoMaquinaria, EstadoMantenimiento, TipoEventoHorometro } from './types';
+
 export interface IMaquinaria {
   id?: string;
   empresa_id: string;
@@ -13,31 +16,29 @@ export interface IMaquinaria {
   unidad_medida?: string;
   activa?: boolean;
   created_at?: string;
-
-  // Campos de mantenimiento (desde BD)
   codigo?: string;
   numero_serie?: string;
   placa?: string;
   anio_fabricacion?: number;
-  estado?: 'operativa' | 'mantenimiento' | 'baja';
+  estado?: EstadoMaquinaria;
   horometro_inicial?: number;
   horometro_actual?: number;
   intervalo_mantenimiento?: number;
-  ultimo_mantenimiento?: number; // horómetro al último mantenimiento
-
-  // Campos calculados en el frontend
+  ultimo_mantenimiento?: number;
+  // Campos calculados en frontend, no existen en BD
   horas_desde_mantenimiento?: number;
   horas_restantes?: number;
-  porcentaje_progreso?: number;   // 0-100+ (100 = justo en el límite)
-  estado_mantenimiento?: 'al_dia' | 'proximo' | 'vencido';
+  porcentaje_progreso?: number;
+  estado_mantenimiento?: EstadoMantenimiento;
 }
 
-export interface LecturaHorometro {
+export interface ILecturaHorometro {
   id?: string;
   maquina_id: string;
   horometro: number;
-  fecha_lectura: string;  // 'YYYY-MM-DD'
-  tipo_evento: 'lectura' | 'mantenimiento' | 'reparacion';
+  fecha_lectura: string;
+  tipo_evento: TipoEventoHorometro;
   operador?: string;
   observaciones?: string;
+  created_at?: string;
 }

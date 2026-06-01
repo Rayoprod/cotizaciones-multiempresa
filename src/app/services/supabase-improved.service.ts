@@ -1,8 +1,11 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
-import { DatabaseSchema, EmpresaTable, ProfileTable, ClienteTable, ProductoTable, CotizacionTable, CuentaBancariaTable, UsuarioEmpresaTable } from '../models/database-schema';
-
+import { IEmpresa, ICuentaBancaria } from '../models/empresa.model';
+import { ICliente } from '../models/cliente.model';
+import { IProducto } from '../models/producto.model';
+import { ICotizacion } from '../models/cotizacion.model';
+import { IProfile } from '../models/auth.model';
 @Injectable({ providedIn: 'root' })
 export class SupabaseImprovedService {
   readonly client: SupabaseClient;
@@ -44,7 +47,7 @@ export class SupabaseImprovedService {
 
   // ─── EMPRESAS ───────────────────────────────────────────────────────────────
 
-  async getEmpresas(): Promise<EmpresaTable[]> {
+  async getEmpresas(): Promise<IEmpresa[]> {
     const { data, error } = await this.client
       .from('empresas')
       .select('*')
@@ -53,7 +56,7 @@ export class SupabaseImprovedService {
     return data || [];
   }
 
-  async getEmpresaById(id: string): Promise<EmpresaTable | null> {
+  async getEmpresaById(id: string): Promise<IEmpresa | null> {
     const { data, error } = await this.client
       .from('empresas')
       .select('*')
@@ -63,7 +66,7 @@ export class SupabaseImprovedService {
     return data;
   }
 
-  async guardarEmpresa(empresa: EmpresaTable): Promise<EmpresaTable> {
+  async guardarEmpresa(empresa: IEmpresa): Promise<IEmpresa> {
     // Verificar si ya existe
     const { data: existente } = await this.client
       .from('empresas')
@@ -100,7 +103,7 @@ export class SupabaseImprovedService {
 
   // ─── CUENTAS BANCARIAS (Tabla separada) ───────────────────────────────────
 
-  async getCuentasBancarias(empresaId: string): Promise<CuentaBancariaTable[]> {
+  async getCuentasBancarias(empresaId: string): Promise<ICuentaBancaria[]> {
     const { data, error } = await this.client
       .from('cuentas_bancarias')
       .select('*')
@@ -110,7 +113,7 @@ export class SupabaseImprovedService {
     return data || [];
   }
 
-  async guardarCuentaBancaria(cuenta: Omit<CuentaBancariaTable, 'id' | 'created_at'>): Promise<CuentaBancariaTable> {
+  async guardarCuentaBancaria(cuenta: Omit<ICuentaBancaria, 'id' | 'created_at'>): Promise<ICuentaBancaria> {
     const { data, error } = await this.client
       .from('cuentas_bancarias')
       .insert([cuenta])
@@ -120,7 +123,7 @@ export class SupabaseImprovedService {
     return data;
   }
 
-  async actualizarCuentaBancaria(id: string, datos: Partial<CuentaBancariaTable>): Promise<CuentaBancariaTable> {
+  async actualizarCuentaBancaria(id: string, datos: Partial<ICuentaBancaria>): Promise<ICuentaBancaria> {
     const { data, error } = await this.client
       .from('cuentas_bancarias')
       .update(datos)
@@ -138,7 +141,7 @@ export class SupabaseImprovedService {
 
   // ─── USUARIOS Y PERFILES ─────────────────────────────────────────────────────
 
-  async getUsuarios(): Promise<ProfileTable[]> {
+  async getUsuarios(): Promise<IProfile[]> {
     const { data, error } = await this.client
       .from('profiles')
       .select('id, email, rol, activo, created_at')
@@ -147,7 +150,7 @@ export class SupabaseImprovedService {
     return data || [];
   }
 
-  async getUsuarioById(id: string): Promise<ProfileTable | null> {
+  async getUsuarioById(id: string): Promise<IProfile | null> {
     const { data, error } = await this.client
       .from('profiles')
       .select('*')
@@ -218,7 +221,7 @@ export class SupabaseImprovedService {
 
   // ─── CLIENTES ─────────────────────────────────────────────────────────────
 
-  async getClientes(empresaId: string): Promise<ClienteTable[]> {
+  async getClientes(empresaId: string): Promise<ICliente[]> {
     const { data, error } = await this.client
       .from('clientes')
       .select('*')
@@ -228,7 +231,7 @@ export class SupabaseImprovedService {
     return data || [];
   }
 
-  async guardarCliente(cliente: Omit<ClienteTable, 'id' | 'created_at'>): Promise<ClienteTable> {
+  async guardarCliente(cliente: Omit<ICliente, 'id' | 'created_at'>): Promise<ICliente> {
     const { data, error } = await this.client
       .from('clientes')
       .insert([cliente])
@@ -238,7 +241,7 @@ export class SupabaseImprovedService {
     return data;
   }
 
-  async actualizarCliente(id: string, datos: Partial<ClienteTable>): Promise<ClienteTable> {
+  async actualizarCliente(id: string, datos: Partial<ICliente>): Promise<ICliente> {
     const { data, error } = await this.client
       .from('clientes')
       .update(datos)
@@ -256,7 +259,7 @@ export class SupabaseImprovedService {
 
   // ─── PRODUCTOS ─────────────────────────────────────────────────────────────
 
-  async getProductos(empresaId: string): Promise<ProductoTable[]> {
+  async getProductos(empresaId: string): Promise<IProducto[]> {
     const { data, error } = await this.client
       .from('productos')
       .select('*')
@@ -266,7 +269,7 @@ export class SupabaseImprovedService {
     return data || [];
   }
 
-  async guardarProducto(producto: Omit<ProductoTable, 'id' | 'created_at'>): Promise<ProductoTable> {
+  async guardarProducto(producto: Omit<IProducto, 'id' | 'created_at'>): Promise<IProducto> {
     const { data, error } = await this.client
       .from('productos')
       .insert([producto])
@@ -276,7 +279,7 @@ export class SupabaseImprovedService {
     return data;
   }
 
-  async actualizarProducto(id: string, datos: Partial<ProductoTable>): Promise<ProductoTable> {
+  async actualizarProducto(id: string, datos: Partial<IProducto>): Promise<IProducto> {
     const { data, error } = await this.client
       .from('productos')
       .update(datos)
@@ -294,7 +297,7 @@ export class SupabaseImprovedService {
 
   // ─── COTIZACIONES ─────────────────────────────────────────────────────────
 
-  async getHistorial(empresaId: string): Promise<CotizacionTable[]> {
+  async getHistorial(empresaId: string): Promise<ICotizacion[]> {
     if (!empresaId) return [];
 
     const { data, error } = await this.client
@@ -307,7 +310,7 @@ export class SupabaseImprovedService {
     return data || [];
   }
 
-  async guardarCotizacion(cotizacion: Omit<CotizacionTable, 'id'>): Promise<CotizacionTable> {
+  async guardarCotizacion(cotizacion: Omit<ICotizacion, 'id'>): Promise<ICotizacion> {
     const { data, error } = await this.client
       .from('cotizaciones')
       .insert([cotizacion])
@@ -317,7 +320,7 @@ export class SupabaseImprovedService {
     return data;
   }
 
-  async actualizarCotizacion(id: string, datos: Partial<CotizacionTable>): Promise<CotizacionTable> {
+  async actualizarCotizacion(id: string, datos: Partial<ICotizacion>): Promise<ICotizacion> {
     const { data, error } = await this.client
       .from('cotizaciones')
       .update(datos)
@@ -328,7 +331,7 @@ export class SupabaseImprovedService {
     return data;
   }
 
-  async actualizarEstado(id: string, nuevoEstado: string): Promise<CotizacionTable> {
+  async actualizarEstado(id: string, nuevoEstado: string): Promise<ICotizacion> {
     const { data, error } = await this.client
       .from('cotizaciones')
       .update({ estado: nuevoEstado })

@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, signal } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -9,7 +9,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ToolbarModule } from 'primeng/toolbar';
 
 import { SupabaseService } from '../../services/supabase.service';
-import { ICliente } from '../../models/cliente.model';
+import { ICliente} from '../../models';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
@@ -30,8 +30,8 @@ import { ToastModule } from 'primeng/toast';
 export class ClientesComponent implements OnInit {
 
   clientes: ICliente[] = [];
-  cargando = signal(true);
-  clienteDialog = signal(false);                 // ← ahora es signal
+  cargando = true;
+  clienteDialog = false;
   clienteActual: ICliente = this.clienteVacio();
   clienteOriginal: string = '';
   enviando: boolean = false;
@@ -52,14 +52,14 @@ export class ClientesComponent implements OnInit {
 
   async cargarClientes() {
     if (!this.empresaActiva?.id) return;
-    this.cargando.set(true);
+    this.cargando = true;
     try {
       this.clientes = await this.supabaseSvc.getClientes(this.empresaActiva.id) as ICliente[];
     } catch (error) {
       console.error('Error al cargar clientes:', error);
     } finally {
-      this.cargando.set(false);
-      this.cdr.detectChanges();
+      this.cargando = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -75,13 +75,13 @@ export class ClientesComponent implements OnInit {
     this.clienteActual = this.clienteVacio();
     this.clienteOriginal = JSON.stringify(this.clienteActual);
     this.enviando = false;
-    this.clienteDialog.set(true);                // ← signal
+    this.clienteDialog = true;
   }
 
   editarCliente(cliente: ICliente) {
     this.clienteActual = { ...cliente };
     this.clienteOriginal = JSON.stringify(this.clienteActual);
-    this.clienteDialog.set(true);                // ← signal
+    this.clienteDialog = true;
   }
 
   async buscarDocumento() {
@@ -105,7 +105,7 @@ export class ClientesComponent implements OnInit {
       this.clienteActual.direccion = clienteExistente.direccion || '';
       this.clienteActual.telefono = clienteExistente.telefono || '';
       this.clienteActual.correo = clienteExistente.correo || '';
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -162,7 +162,7 @@ export class ClientesComponent implements OnInit {
       if (!this.clienteActual.telefono) this.clienteActual.telefono = '';
       if (!this.clienteActual.correo) this.clienteActual.correo = '';
 
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
 
     } catch (e) {
       console.error('Error de red:', e);
@@ -200,7 +200,7 @@ export class ClientesComponent implements OnInit {
     }
 
     if (this.clienteOriginal === JSON.stringify(this.clienteActual)) {
-      this.clienteDialog.set(false);             // ← signal
+      this.clienteDialog = false;
       return;
     }
 
@@ -208,7 +208,7 @@ export class ClientesComponent implements OnInit {
     try {
       const payload = { ...this.clienteActual, empresa_id: this.empresaActiva.id };
       await this.supabaseSvc.guardarCliente(payload);
-      this.clienteDialog.set(false);             // ← signal
+      this.clienteDialog = false;
       await this.cargarClientes();
     } catch (error) {
       console.error('Error al guardar:', error);
@@ -241,10 +241,10 @@ export class ClientesComponent implements OnInit {
   }
 
   ocultarDialog() {
-    this.clienteDialog.set(false);               // ← signal
+    this.clienteDialog = false;
   }
 
   private clienteVacio(): ICliente {
-    return { documento_identidad: '', nombre_razon_social: '', direccion: '', telefono: '', correo: '' };
+    return { documento_identidad: '', nombre_razon_social: '', direccion: '', telefono: '', correo: '', empresa_id: '' };
   }
 }

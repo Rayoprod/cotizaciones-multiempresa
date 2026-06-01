@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../services/supabase.service';
-import { IMaquinaria, LecturaHorometro } from '../../models/maquinaria.model';
+import { ILecturaHorometro, IMaquinaria } from '../../models';
 
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -15,8 +15,8 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { SelectModule } from 'primeng/select';
-import { DatePickerModule } from 'primeng/datepicker';
+import { DropdownModule } from 'primeng/dropdown';
+import { CalendarModule } from 'primeng/calendar';
 import { TableModule } from 'primeng/table';
 import { MessageService, ConfirmationService } from 'primeng/api';
 
@@ -28,7 +28,7 @@ import { MessageService, ConfirmationService } from 'primeng/api';
     ButtonModule, InputTextModule, InputNumberModule,
     TagModule, DialogModule, ToastModule, TooltipModule,
     CheckboxModule, ConfirmDialogModule, ProgressBarModule, ProgressSpinnerModule,
-    SelectModule, DatePickerModule, TableModule
+    DropdownModule, CalendarModule, TableModule
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './maquinaria.html'
@@ -73,13 +73,13 @@ export class MaquinariaComponent implements OnInit {
   // ── Operaciones ──────────────────────────────────────────────────────────
   dialogoOperacionesVisible = false;
   maquinaSeleccionada: IMaquinaria | null = null;
-  lecturas: LecturaHorometro[] = [];
+  lecturas: ILecturaHorometro[] = [];
   cargandoLecturas = false;
   guardandoLectura = false;
   editandoOperacion = false;
   operacionEditadaId: string | null = null;
 
-  nuevaLectura: LecturaHorometro = this.lecturaVacia();
+  nuevaLectura: ILecturaHorometro = this.lecturaVacia();
   fechaOperacion: Date = new Date();
 
   get ultimoHorometro(): number {
@@ -89,7 +89,7 @@ export class MaquinariaComponent implements OnInit {
     return this.maquinaSeleccionada?.horometro_actual || 0;
   }
 
-  get historialLecturas(): LecturaHorometro[] {
+  get historialLecturas(): ILecturaHorometro[] {
     return this.lecturas;
   }
 
@@ -327,7 +327,7 @@ export class MaquinariaComponent implements OnInit {
     return new Date();
   }
 
-  private lecturaVacia(): LecturaHorometro {
+  private lecturaVacia(): ILecturaHorometro {
     return {
       maquina_id: '',
       horometro: 0,
@@ -379,14 +379,14 @@ export class MaquinariaComponent implements OnInit {
     }
   }
 
-  editarOperacion(lectura: LecturaHorometro) {
+  editarOperacion(lectura: ILecturaHorometro) {
     this.editandoOperacion = true;
     this.operacionEditadaId = lectura.id!;
     this.nuevaLectura = { ...lectura };
     this.fechaOperacion = lectura.fecha_lectura ? new Date(lectura.fecha_lectura + 'T12:00:00') : new Date();
   }
 
-  confirmarEliminarOperacion(lectura: LecturaHorometro) {
+  confirmarEliminarOperacion(lectura: ILecturaHorometro) {
     this.confirm.confirm({
       message: `¿Eliminar esta operación del historial?`,
       header: 'Confirmar eliminación',
@@ -522,10 +522,10 @@ export class MaquinariaComponent implements OnInit {
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
-  getColorEstadoMantenimiento(estado: string | undefined): 'success' | 'warn' | 'danger' | 'secondary' {
+  getColorEstadoMantenimiento(estado: string | undefined): 'success' | 'warning' | 'danger' | 'secondary' {
     switch (estado) {
       case 'al_dia': return 'success';
-      case 'proximo': return 'warn';
+      case 'proximo': return 'warning';
       case 'vencido': return 'danger';
       default: return 'secondary';
     }
@@ -540,10 +540,10 @@ export class MaquinariaComponent implements OnInit {
     }
   }
 
-  getColorEstadoMaquina(estado: string | undefined): 'success' | 'warn' | 'danger' | 'info' {
+  getColorEstadoMaquina(estado: string | undefined): 'success' | 'warning' | 'danger' | 'info' {
     switch (estado) {
       case 'operativa': return 'success';
-      case 'mantenimiento': return 'warn';
+      case 'mantenimiento': return 'warning';
       case 'baja': return 'danger';
       default: return 'info';
     }

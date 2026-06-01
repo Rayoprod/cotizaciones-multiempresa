@@ -1,13 +1,12 @@
 <p-toast />
 <p-confirmDialog />
 <!-- Spinner de carga -->
-<div *ngIf="cargando()" class="flex justify-content-center align-items-center py-8">
+<div *ngIf="cargando" class="flex justify-content-center align-items-center py-8">
   <p-progressSpinner strokeWidth="4" [style]="{ width: '60px', height: '60px' }"></p-progressSpinner>
 </div>
 
-<div class="empresas-container" *ngIf="!cargando()">
-
-  <!-- ── Header Superior ─────────────────────────────────────────────────────── -->
+<div class="empresas-container" *ngIf="!cargando">
+  <!-- Header Superior -->
   <div class="empresas-header">
     <div class="header-content">
       <div class="header-info">
@@ -23,7 +22,7 @@
     </div>
   </div>
 
-  <!-- ── Tarjeta de Estadísticas ─────────────────────────────────────────────────── -->
+  <!-- Tarjeta de Estadísticas -->
     <div class="stats-card">
       <div class="stats-grid">
         <div class="stat-item">
@@ -31,18 +30,18 @@
           <div class="stat-label">Empresas Totales</div>
         </div>
         <div class="stat-item">
-          <div class="stat-number">{{ empresas.filter(e => e.activa).length }}</div>
+          <div class="stat-number">{{ empresasActivasCount }}</div>
           <div class="stat-label">Empresas Activas</div>
         </div>
         <div class="stat-item">
-          <div class="stat-number">{{ empresas.filter(e => !e.activa).length }}</div>
+          <div class="stat-number">{{ empresasInactivasCount }}</div>
           <div class="stat-label">Empresas Inactivas</div>
         </div>
       </div>
     </div>
 
 
-  <!-- ── Tabla de Empresas ───────────────────────────────────────────────────── -->
+  <!-- -- Tabla de Empresas ----------------------------------------------------─ -->
   <div class="table-card">
     <div class="table-header">
       <h2 class="table-title">Lista de Empresas</h2>
@@ -142,13 +141,13 @@
 
 </div>
 
-<!-- ── Modal de Formulario ───────────────────────────────────────────────────────── -->
+<!-- -- Modal de Formulario --------------------------------------------------------─ -->
 <p-dialog header="{{ esEdicion ? 'Editar Empresa' : 'Nueva Empresa' }}" [(visible)]="empresaDialog" [modal]="true"
-  [resizable]="false" [style]="{'width':'90vw','max-width':'800px'}" (onHide)="cerrarModal()" appendTo="body"> >
+  [resizable]="false" [style]="{'width':'90vw','max-width':'800px'}" (onHide)="cerrarModal()" appendTo="body" >
 
   <form [formGroup]="empresaForm" class="form-container">
 
-    <!-- ── Sección: Información Principal ─────────────────────────────────────── -->
+    <!-- -- Sección: Información Principal --------------------------------------─ -->
     <div class="form-section">
       <div class="section-header">
         <h3 class="section-title">
@@ -215,7 +214,7 @@
       </div>
     </div>
 
-    <!-- ── Sección: Contacto ───────────────────────────────────────────────────── -->
+    <!-- -- Sección: Contacto ----------------------------------------------------─ -->
     <div class="form-section">
       <div class="section-header">
         <h3 class="section-title">
@@ -252,7 +251,7 @@
       </div>
     </div>
 
-    <!-- ── Sección: Identidad Visual ───────────────────────────────────────────── -->
+    <!-- -- Sección: Identidad Visual --------------------------------------------─ -->
     <div class="form-section">
       <div class="section-header">
         <h3 class="section-title">
@@ -275,7 +274,7 @@
           <label class="form-label">Logo</label>
           <div class="file-upload-container">
             <input type="file" #logoInput (change)="subirLogo($event)" accept="image/*" style="display:none">
-            <p-button label="Seleccionar Logo" icon="pi pi-upload" class="btn-upload" [outlined]="true"
+            <p-button label="Seleccionar Logo" icon="pi pi-upload" class="btn-upload" outlined
               (click)="logoInput.click()" />
             <div class="image-preview" *ngIf="empresaForm.get('ruta_logo')?.value">
               <img [src]="empresaForm.get('ruta_logo')?.value" alt="Logo">
@@ -287,7 +286,7 @@
           <label class="form-label">Firma Digital</label>
           <div class="file-upload-container">
             <input type="file" #firmaInput (change)="subirFirma($event)" accept="image/*" style="display:none">
-            <p-button label="Seleccionar Firma" icon="pi pi-upload" class="btn-upload" [outlined]="true"
+            <p-button label="Seleccionar Firma" icon="pi pi-upload" class="btn-upload" outlined
               (click)="firmaInput.click()" />
             <div class="image-preview" *ngIf="empresaForm.get('ruta_firma')?.value">
               <img [src]="empresaForm.get('ruta_firma')?.value" alt="Firma">
@@ -297,14 +296,14 @@
       </div>
     </div>
 
-    <!-- ── Sección: Cuentas Bancarias ───────────────────────────────────────────── -->
+    <!-- -- Sección: Cuentas Bancarias --------------------------------------------─ -->
     <div class="form-section">
       <div class="section-header">
         <h3 class="section-title">
           <i class="pi pi-credit-card"></i>
           Cuentas Bancarias
         </h3>
-        <p-button icon="pi pi-plus" label="Agregar Cuenta" class="btn-add-account" [outlined]="true"
+        <p-button icon="pi pi-plus" label="Agregar Cuenta" class="btn-add-account" outlined
           (click)="agregarCuenta()" />
       </div>
 
@@ -367,13 +366,13 @@
         <div class="no-accounts" *ngIf="!tieneCuentas">
           <i class="pi pi-credit-card"></i>
           <p>No hay cuentas bancarias agregadas</p>
-          <p-button label="Agregar Primera Cuenta" icon="pi pi-plus" class="btn-add-account" [outlined]="true"
+          <p-button label="Agregar Primera Cuenta" icon="pi pi-plus" class="btn-add-account" outlined
             (click)="agregarCuenta()" />
         </div>
 
       </div>
     </div>
-    <!-- ── Sección: Configuración ───────────────────────────────────────────────── -->
+    <!-- -- Sección: Configuración ------------------------------------------------─ -->
     <div class="form-section">
       <div class="section-header">
         <h3 class="section-title">
@@ -385,7 +384,7 @@
       <div class="form-grid">
         <div class="form-group">
           <div class="toggle-container">
-            <p-toggleSwitch formControlName="activa"></p-toggleSwitch>
+            <p-toggleButton formControlName="activa"></p-toggleButton>
             <div class="toggle-info">
               <label class="toggle-label">Empresa Activa</label>
               <small class="toggle-description">Permite que esta empresa genere cotizaciones</small>
@@ -395,7 +394,7 @@
 
         <div class="form-group">
           <div class="toggle-container">
-            <p-toggleSwitch formControlName="mostrar_cuentas"></p-toggleSwitch>
+            <p-toggleButton formControlName="mostrar_cuentas"></p-toggleButton>
             <div class="toggle-info">
               <label class="toggle-label">Mostrar Cuentas</label>
               <small class="toggle-description">Muestra cuentas bancarias en cotizaciones</small>
@@ -409,9 +408,9 @@
 
   <ng-template pTemplate="footer">
     <div class="dialog-footer">
-      <p-button label="Cancelar" icon="pi pi-times" class="btn-secondary" [outlined]="true" (click)="cerrarModal()"
+      <p-button label="Cancelar" icon="pi pi-times" class="btn-secondary" outlined (click)="cerrarModal()"
         [disabled]="enviando" />
-      <p-button label="{{ esEdicion ? 'Actualizar' : 'Guardar' }}" icon="pi pi-check" class="btn-primary"
+      <p-button [label]="getBotonLabel()" icon="pi pi-check" class="btn-primary"
         [loading]="enviando" (click)="guardarEmpresa()" />
     </div>
   </ng-template>

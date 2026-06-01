@@ -16,7 +16,7 @@
   </div>
 
   <!-- Loading State -->
-  <ng-container *ngIf="cargando()">
+  <ng-container *ngIf="cargando">
     <div class="flex flex-column align-items-center justify-content-center gap-4 py-6">
       <p-progressSpinner strokeWidth="4" animationDuration=".8s" [style]="{ width: '60px', height: '60px' }" />
       <div class="text-center">
@@ -36,7 +36,7 @@
   </ng-container>
 
   <!-- Data Loaded -->
-  <ng-container *ngIf="!cargando()">
+  <ng-container *ngIf="!cargando">
 
     <!-- KPI Cards -->
     <div class="grid mb-4">
@@ -88,7 +88,8 @@
             <span class="p-input-icon-left w-full md:w-auto">
               <i class="pi pi-search"></i>
               <input pInputText type="text" class="w-full md:w-20rem"
-                     (input)="dt.filterGlobal($any($event.target).value, 'contains')"
+                     #filterInput
+                     (input)="dt.filterGlobal(filterInput.value, 'contains')"
                      placeholder="Buscar código o descripción..." />
             </span>
           </div>
@@ -142,8 +143,7 @@
   </ng-container>
 </div>
 
-<p-dialog [visible]="productoDialog()"
-          (visibleChange)="productoDialog.set($event)"
+<p-dialog [(visible)]="productoDialog"
           [style]="{width: '450px', maxWidth: '90vw'}"
           header="Detalles del Producto"
           [modal]="true"

@@ -17,11 +17,11 @@
 
     <div class="flex align-items-center gap-3 flex-wrap">
       <div class="flex align-items-center gap-2">
-        <p-toggleswitch
+        <p-togglebutton
           [(ngModel)]="mostrarOcultas"
-          (onChange)="onToggleOcultas()"
+          onLabel="Ocultas" offLabel="Todas"
           inputId="toggleOcultas">
-        </p-toggleswitch>
+        </p-togglebutton>
         <label for="toggleOcultas" class="text-sm cursor-pointer select-none">
           <i class="pi pi-eye-slash mr-1 text-color-secondary"></i>
           Mostrar ocultas
@@ -36,7 +36,7 @@
   </div>
 
   <!-- ─── KPIs ────────────────────────────────────────────────────────── -->
-  <ng-container *ngIf="!cargando()">
+  <ng-container *ngIf="!cargando">
     <div class="grid mb-4">
       <div class="col-6 lg:col-3">
         <div class="surface-card border-round-xl p-3 shadow-1 h-full">
@@ -153,7 +153,7 @@
               S/ {{ cot.total | number:'1.2-2' }}
             </td>
             <td>
-              <p-select
+              <p-dropdown
                 [options]="opcionesEstado"
                 [(ngModel)]="cot.estado"
                 (onChange)="cambiarEstado(cot, cot.estado)"
@@ -161,20 +161,20 @@
                 optionValue="value"
                 styleClass="p-inputtext-sm w-full"
                 appendTo="body">
-              </p-select>
+              </p-dropdown>
             </td>
             <td class="text-center">
               <div class="flex justify-content-center gap-1">
                 <p-button icon="pi pi-file-pdf" severity="danger"
                           styleClass="p-button-text p-button-sm"
                           pTooltip="Descargar PDF"
-                          [loading]="descargando() === cot.id"
+                          [loading]="descargando === cot.id"
                           (onClick)="descargarPDF(cot)">
                 </p-button>
                 <p-button icon="pi pi-pencil"
           styleClass="p-button-text p-button-sm"
           pTooltip="Editar / Revisar"
-          [loading]="cotizacionCargandoModal() === cot.id"
+          [loading]="cotizacionCargandoModal === cot.id"
           (onClick)="abrirModalEditar(cot)">
 </p-button>
                 <p-button [icon]="cot.oculta ? 'pi pi-eye' : 'pi pi-eye-slash'"
@@ -201,7 +201,7 @@
   </ng-container>
 
   <!-- Spinner ───────────────────────────────────────────────────────────── -->
-  <div *ngIf="cargando()"
+  <div *ngIf="cargando"
        class="flex justify-content-center align-items-center"
        style="min-height:300px">
     <p-progressSpinner strokeWidth="3"></p-progressSpinner>
@@ -212,8 +212,7 @@
 
 <!-- ═══ MODAL EDITAR ════════════════════════════════════════════════════════ -->
 <p-dialog
-  [visible]="modalEditarVisible()"
-  (visibleChange)="modalEditarVisible.set($event)"
+  [(visible)]="modalEditarVisible"
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
@@ -279,11 +278,11 @@
           </div>
 
           <div *ngIf="opcionEditar.empresaOrigen === 'otra'" class="pl-5 flex flex-column gap-2">
-            <p-progressSpinner *ngIf="cargandoEmpresas()"
+            <p-progressSpinner *ngIf="cargandoEmpresas"
                                styleClass="w-2rem h-2rem" strokeWidth="4">
             </p-progressSpinner>
-            <ng-container *ngIf="!cargandoEmpresas()">
-              <div *ngFor="let emp of empresasDisponibles()"
+            <ng-container *ngIf="!cargandoEmpresas">
+              <div *ngFor="let emp of empresasDisponibles"
                    class="flex align-items-center gap-2 p-2 border-round cursor-pointer
                           hover:surface-200 transition-duration-150"
                    [class.surface-200]="opcionEditar.empresaSeleccionadaId === emp.id"
@@ -296,7 +295,7 @@
                   {{ emp.nombre_comercial }}
                 </label>
               </div>
-              <p *ngIf="empresasDisponibles().length === 0"
+              <p *ngIf="empresasDisponibles.length === 0"
                  class="text-xs text-color-secondary">
                 No tienes otras empresas asignadas.
               </p>
@@ -328,7 +327,7 @@
           <div>
             <label for="opAnular" class="font-semibold text-sm cursor-pointer">
               Marcar como ANULADA
-              <p-tag value="Recomendado" severity="warn" styleClass="ml-2 text-xs"></p-tag>
+              <p-tag value="Recomendado" severity="warning" styleClass="ml-2 text-xs"></p-tag>
             </label>
             <p class="text-xs text-color-secondary m-0 mt-1">
               La original queda como historial. Se abre el cotizador con los datos precargados.
@@ -362,12 +361,12 @@
   <ng-template pTemplate="footer">
     <div class="flex gap-2 justify-content-end">
       <p-button label="Cancelar" severity="secondary" outlined
-                (onClick)="modalEditarVisible.set(false)"
-                [disabled]="procesandoEdicion()">
+                (onClick)="modalEditarVisible = false"
+                [disabled]="procesandoEdicion">
       </p-button>
       <p-button label="Continuar al cotizador"
                 icon="pi pi-arrow-right" iconPos="right"
-                [loading]="procesandoEdicion()"
+                [loading]="procesandoEdicion"
                 (onClick)="confirmarEdicion()">
       </p-button>
     </div>

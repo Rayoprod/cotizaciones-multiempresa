@@ -1,11 +1,10 @@
-import { Component, OnInit, signal, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
-import { ICotizacion } from '../../models/cotizacion.model';
 import { SupabaseService } from '../../services/supabase.service';
 import { PdfService } from '../../services/pdf.service';
-
+import { EstadoCotizacion, ICotizacion} from '../../models';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { Router } from '@angular/router';
@@ -14,15 +13,19 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
-import { SelectModule } from 'primeng/select';
+import { DropdownModule } from 'primeng/dropdown';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ChartModule } from 'primeng/chart';
 import { DialogModule } from 'primeng/dialog';
 import { RadioButtonModule } from 'primeng/radiobutton';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { ToggleButtonModule } from 'primeng/togglebutton';
 import { DividerModule } from 'primeng/divider';
+
+
+import { SessionContextService } from '../../services/session-context.service';
+
 
 interface EstadoOption {
   label: string;
@@ -51,7 +54,7 @@ interface OpcionEditar {
     ButtonModule,
     InputTextModule,
     TagModule,
-    SelectModule,
+    DropdownModule,
     ToastModule,
     TooltipModule,
     ProgressSpinnerModule,
@@ -59,7 +62,7 @@ interface OpcionEditar {
     ConfirmDialogModule,
     DialogModule,
     RadioButtonModule,
-    ToggleSwitchModule,
+    ToggleButtonModule,
     DividerModule
   ],
   providers: [MessageService, ConfirmationService],
@@ -71,15 +74,15 @@ export class HistorialComponent implements OnInit {
   cotizacionesFiltradas: ICotizacion[] = [];
   empresaActiva: any = null;
 
-  // Señales para estado reactivo
-  empresasDisponibles = signal<any[]>([]);           // ← ahora es signal
-  descargando = signal<string | null>(null);
-  cargando = signal(true);
-  modalEditarVisible = signal(false);
+  // Estado reactivo
+  empresasDisponibles: any[] = [];
+  descargando: string | null = null;
+  cargando = true;
+  modalEditarVisible = false;
   cotizacionParaEditar: ICotizacion | null = null;
-  procesandoEdicion = signal(false);
-  cargandoEmpresas = signal(false);
-cotizacionCargandoModal = signal<string | null>(null);
+  procesandoEdicion = false;
+  cargandoEmpresas = false;
+  cotizacionCargandoModal: string | null = null;
 
   mostrarOcultas = false;
 
@@ -117,7 +120,8 @@ cotizacionCargandoModal = signal<string | null>(null);
     private cdr: ChangeDetectorRef,
     private zone: NgZone,
     private confirmSvc: ConfirmationService,
-    private router: Router
+    private router: Router,
+    private session: SessionContextService
   ) {
     this.initChartOptions();
   }
@@ -127,20 +131,18 @@ cotizacionCargandoModal = signal<string | null>(null);
   }
 
   async cargarDatos() {
-    this.cargando.set(true);
+    this.cargando = true;
     try {
-      const empresaData = sessionStorage.getItem('empresa_activa');
-      if (!empresaData) {
-        this.msg.add({
-          severity: 'warn',
-          summary: 'Empresa no seleccionada',
-          detail: 'Por favor selecciona una empresa para ver el historial'
-        });
-        return;
-      }
+    this.empresaActiva = this.session.empresaActiva(); // ← desde signal
 
-      this.empresaActiva = JSON.parse(empresaData);
-
+    if (!this.empresaActiva) {
+      this.msg.add({
+        severity: 'warn',
+        summary: 'Empresa no seleccionada',
+        detail: 'Por favor selecciona una empresa para ver el historial'
+      });
+      return;
+    }
       const data = await this.supabase.getHistorial(
         this.empresaActiva.id,
         this.mostrarOcultas
@@ -163,8 +165,8 @@ cotizacionCargandoModal = signal<string | null>(null);
         detail: 'No se pudo cargar el historial de cotizaciones'
       });
     } finally {
-      this.cargando.set(false);
-      this.cdr.detectChanges();
+      this.cargando = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -174,9 +176,9 @@ cotizacionCargandoModal = signal<string | null>(null);
 
   async cargarEmpresasDisponibles() {
     // Si ya hay datos, no los vuelve a cargar
-    if (this.empresasDisponibles().length > 0) return;
+    if (this.empresasDisponibles.length > 0) return;
 
-    this.cargandoEmpresas.set(true);
+    this.cargandoEmpresas = true;
     try {
       const { data: { user } } = await this.supabase.client.auth.getUser();
       if (!user) return;
@@ -194,11 +196,11 @@ cotizacionCargandoModal = signal<string | null>(null);
         .filter(Boolean)
         .filter((empresa: any) => empresa.id !== this.empresaActiva?.id);
 
-      this.empresasDisponibles.set(lista);                // ← actualizar señal
+      this.empresasDisponibles = lista;
     } catch (e: any) {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas' });
     } finally {
-      this.cargandoEmpresas.set(false);
+      this.cargandoEmpresas = false;
     }
   }
 
@@ -341,7 +343,7 @@ cotizacionCargandoModal = signal<string | null>(null);
       cot.cliente_nombre,
       cot.cliente_documento || '',
       cot.total?.toFixed(2) || '0.00',
-      this.getEstadoLabel(cot.estado),
+      this.getEstadoLabel(cot.estado as EstadoCotizacion) ,
       cot.vendedor || ''
     ]);
     const csvContent = [headers, ...rows]
@@ -364,7 +366,7 @@ cotizacionCargandoModal = signal<string | null>(null);
 
       [this.cotizaciones, this.cotizacionesFiltradas].forEach(arr => {
         const idx = arr.findIndex(c => c.id === cotizacion.id);
-        if (idx !== -1) arr[idx] = { ...arr[idx], estado: nuevoEstado };
+        if (idx !== -1) arr[idx] = { ...arr[idx], estado: nuevoEstado as EstadoCotizacion};
       });
 
       this.calcularKPIs();
@@ -379,7 +381,7 @@ cotizacionCargandoModal = signal<string | null>(null);
 
   async descargarPDF(cotizacion: ICotizacion) {
     if (!cotizacion.id || !this.empresaActiva) return;
-    this.descargando.set(cotizacion.id);
+    this.descargando = cotizacion.id;
     try {
       await this.pdfSvc.generarYDescargarCotizacion(
         cotizacion,
@@ -394,7 +396,7 @@ cotizacionCargandoModal = signal<string | null>(null);
     } catch {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo generar el PDF' });
     } finally {
-      this.descargando.set(null);
+      this.descargando = null;
     }
   }
 
@@ -437,10 +439,10 @@ cotizacionCargandoModal = signal<string | null>(null);
       empresaSeleccionadaId: this.empresaActiva?.id || null,
       accionOriginal: 'anular'
     };
-    this.cotizacionCargandoModal.set(cot.id!);    // ← activa el spinner solo en esta fila
+    this.cotizacionCargandoModal = cot.id!;
   await this.cargarEmpresasDisponibles();
-  this.modalEditarVisible.set(true);
-  this.cotizacionCargandoModal.set(null);  
+  this.modalEditarVisible = true;
+  this.cotizacionCargandoModal = null;  
   }
 
   onEmpresaOrigenChange() {
@@ -460,7 +462,7 @@ cotizacionCargandoModal = signal<string | null>(null);
       return;
     }
 
-    this.procesandoEdicion.set(true);
+    this.procesandoEdicion = true;
     const cot = this.cotizacionParaEditar;
 
     try {
@@ -472,13 +474,12 @@ cotizacionCargandoModal = signal<string | null>(null);
 
       let empresaDestino = this.empresaActiva;
       if (this.opcionEditar.empresaOrigen === 'otra') {
-        empresaDestino = this.empresasDisponibles().find(          // ← usar señal
-          e => e.id === this.opcionEditar.empresaSeleccionadaId
-        );
-        if (!empresaDestino) throw new Error('No se encontró la empresa seleccionada');
-        sessionStorage.setItem('empresa_activa', JSON.stringify(empresaDestino));
-        sessionStorage.setItem('empresa_activa_id', empresaDestino.id);
-      }
+  empresaDestino = this.empresasDisponibles.find(
+    e => e.id === this.opcionEditar.empresaSeleccionadaId
+  );
+  if (!empresaDestino) throw new Error('No se encontró la empresa seleccionada');
+  this.session.setEmpresaActiva(empresaDestino); // ← único cambio
+}
 
       const borrador = {
         modo: 'editar',
@@ -496,13 +497,13 @@ cotizacionCargandoModal = signal<string | null>(null);
 
       sessionStorage.setItem('cotizador-borrador', JSON.stringify(borrador));
       this.msg.add({ severity: 'success', summary: 'Listo', detail: 'Redirigiendo al cotizador...', life: 1500 });
-      this.modalEditarVisible.set(false);
+      this.modalEditarVisible = false;
       setTimeout(() => this.router.navigate(['/cotizador']), 900);
 
     } catch (e: any) {
       this.msg.add({ severity: 'error', summary: 'Error', detail: e.message || 'No se pudo procesar' });
     } finally {
-      this.procesandoEdicion.set(false);
+      this.procesandoEdicion = false;
     }
   }
 

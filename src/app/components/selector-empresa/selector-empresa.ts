@@ -4,6 +4,7 @@ import { RouterModule, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { SupabaseService } from '../../services/supabase.service';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { SessionContextService } from '../../services/session-context.service';
 
 @Component({
   selector: 'app-selector',
@@ -17,27 +18,21 @@ export class SelectorComponent implements OnInit {
   empresas: any[] = [];
   cargando: boolean = true;
 
-  // Detecta si viene desde el panel admin para redirigir correctamente
-  private vieneDeAdmin: boolean = false;
-
   constructor(
     private router: Router,
     private supabaseSvc: SupabaseService,
-    private cdr: ChangeDetectorRef
-  ) {
-    const url = this.router.url;
-    this.vieneDeAdmin = url.includes('/admin/');
-  }
+    private cdr: ChangeDetectorRef,
+    private session: SessionContextService
+  ) {}
 
   async ngOnInit() {
     const usuario = await this.supabaseSvc.obtenerUsuarioActual();
-const email = usuario?.email || sessionStorage.getItem('usuario_email') || '';
+    const email = this.session.usuario()?.email || usuario?.email || '';
     this.nombreUsuario = email.split('@')[0];
 
     try {
       this.empresas = await this.supabaseSvc.getEmpresasDelUsuario();
 
-      // Si solo hay una empresa, la selecciona automáticamente
       if (this.empresas.length === 1) {
         this.seleccionar(this.empresas[0]);
         return;
@@ -46,13 +41,12 @@ const email = usuario?.email || sessionStorage.getItem('usuario_email') || '';
       console.error('Error al cargar empresas:', error);
     } finally {
       this.cargando = false;
-      this.cdr.detectChanges();
+      this.cdr.markForCheck();
     }
   }
 
   seleccionar(empresa: any) {
-sessionStorage.setItem('empresa_activa', JSON.stringify(empresa));
-    // Siempre navega al cotizador — tanto vendedor como admin operando
+    this.session.setEmpresaActiva(empresa);
     this.router.navigate(['/cotizador']);
   }
 }

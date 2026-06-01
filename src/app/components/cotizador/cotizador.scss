@@ -1,3 +1,28 @@
+.step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.85rem;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  background-color: #fef2f2;
+  color: #dc2626 !important;
+  border: 1.5px solid #fca5a5;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.08);
+  user-select: none;
+  line-height: 1;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: #ffe4e6;
+    border-color: #f87171;
+    transform: translateY(-1px);
+  }
+}
+
 :host ::ng-deep .p-selectbutton.flex-wrap {
   .p-button {
     flex: 1 1 auto;

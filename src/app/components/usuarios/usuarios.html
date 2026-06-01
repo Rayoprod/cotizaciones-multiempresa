@@ -20,7 +20,7 @@
   </div>
 
   <!-- LOADING STATE -->
-  <ng-container *ngIf="cargando()">
+  <ng-container *ngIf="cargando">
     <div class="flex flex-column align-items-center justify-content-center gap-4 py-6">
       <p-progressSpinner strokeWidth="4" animationDuration=".8s" [style]="{ width: '60px', height: '60px' }" />
       <div class="text-center">
@@ -40,7 +40,7 @@
   </ng-container>
 
   <!-- DATA LOADED -->
-  <ng-container *ngIf="!cargando()">
+  <ng-container *ngIf="!cargando">
 
   <!-- KPI Cards -->
   <div class="grid mb-4">
@@ -111,7 +111,8 @@
             <i class="pi pi-search"></i>
             <input pInputText type="text" placeholder="Buscar usuario..."
                    style="width:240px"
-                   (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
+                   #filterInput
+                   (input)="dt.filterGlobal(filterInput.value, 'contains')" />
           </span>
         </div>
       </ng-template>
@@ -144,16 +145,17 @@
           </td>
 
           <td>
-            <p-select [options]="rolesOpciones"
+            <p-dropdown [options]="rolesOpciones"
                       [ngModel]="u.rol"
-                      (ngModelChange)="cambiarRol(u, $event)"
+                      (onChange)="cambiarRol(u, $event.value)"
                       optionLabel="label" optionValue="value"
+                      appendTo="body"
                       [style]="{'min-width':'130px'}" />
           </td>
 
           <td class="text-center">
             <p-tag [value]="u.activo ? 'Activo' : 'Inactivo'"
-                   [severity]="u.activo ? 'success' : 'warn'" />
+                   [severity]="u.activo ? 'success' : 'warning'" />
           </td>
 
           <td class="text-center">
@@ -166,7 +168,7 @@
           <td class="text-center">
             <div class="flex gap-1 justify-content-center">
               <p-button [icon]="u.activo ? 'pi pi-ban' : 'pi pi-check-circle'"
-                        [severity]="u.activo ? 'warn' : 'success'"
+                        [severity]="u.activo ? 'warning' : 'success'"
                         [text]="true" [rounded]="true" size="small"
                         [pTooltip]="u.activo ? 'Desactivar' : 'Activar'"
                         (onClick)="toggleActivo(u)" />
@@ -195,7 +197,7 @@
 
   <!-- CARDS MÓVIL -->
   <div class="flex flex-column gap-3 md:hidden">
-    <div *ngIf="cargando()" class="text-center p-6 surface-card border-round-xl">
+    <div *ngIf="cargando" class="text-center p-6 surface-card border-round-xl">
       <i class="pi pi-spin pi-spinner text-2xl"></i>
     </div>
 
@@ -212,16 +214,17 @@
             {{ u.email || u.id }}
           </p>
           <p-tag [value]="u.activo ? 'Activo' : 'Inactivo'"
-                 [severity]="u.activo ? 'success' : 'warn'"
+                 [severity]="u.activo ? 'success' : 'warning'"
                  styleClass="mt-1" />
         </div>
       </div>
 
       <div class="mb-3">
         <label class="text-xs font-bold text-color-secondary uppercase mb-1 block">Rol</label>
-        <p-select [options]="rolesOpciones" [ngModel]="u.rol"
-                  (ngModelChange)="cambiarRol(u, $event)"
-                  optionLabel="label" optionValue="value" styleClass="w-full" />
+        <p-dropdown [options]="rolesOpciones" [ngModel]="u.rol"
+                  (onChange)="cambiarRol(u, $event.value)"
+                  optionLabel="label" optionValue="value"
+                  appendTo="body" styleClass="w-full" />
       </div>
 
       <div class="flex gap-2">
@@ -229,7 +232,7 @@
                   severity="info" [outlined]="true" size="small"
                   styleClass="flex-1" (onClick)="abrirEmpresas(u)" />
         <p-button [icon]="u.activo ? 'pi pi-ban' : 'pi pi-check-circle'"
-                  [severity]="u.activo ? 'warn' : 'success'"
+                  [severity]="u.activo ? 'warning' : 'success'"
                   [outlined]="true" size="small"
                   (onClick)="toggleActivo(u)" />
         <p-button icon="pi pi-trash" severity="danger" [outlined]="true"
@@ -242,11 +245,10 @@
   </ng-container>
 </div>
 
-<!-- ── DRAWER: ASIGNAR EMPRESAS ─────────────────── -->
-<p-drawer [(visible)]="drawerVisible"
+<!-- ── SIDEBAR: ASIGNAR EMPRESAS ─────────────────── -->
+<p-sidebar [(visible)]="drawerVisible"
           position="right"
           appendTo="body"
-          [baseZIndex]="3000"
           [style]="{'width':'100%','max-width':'420px'}">
 
   <ng-template pTemplate="header">
@@ -305,7 +307,7 @@
                 styleClass="flex-1" (onClick)="guardarEmpresas()" />
     </div>
   </ng-template>
-</p-drawer>
+</p-sidebar>
 
 <!-- ── MODAL NUEVO USUARIO ─────────────────────── -->
 <p-dialog header="Nuevo Usuario" [(visible)]="modalVisible"
@@ -325,7 +327,7 @@
     </div>
     <div class="flex flex-column gap-2">
       <label class="font-semibold text-900">Rol</label>
-      <p-select [options]="rolesOpciones" [(ngModel)]="nuevoRol"
+      <p-dropdown [options]="rolesOpciones" [(ngModel)]="nuevoRol"
                 optionLabel="label" optionValue="value" styleClass="w-full" />
     </div>
     <div *ngIf="errorModal" class="border-round p-3 text-sm flex gap-2 align-items-center"

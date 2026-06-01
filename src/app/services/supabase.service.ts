@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
-import { ICotizacion } from '../models/cotizacion.model';
-import { IEmpresa } from '../models/empresa.model';
+import { IEmpresa, ICotizacion} from '../models';
 
 
 @Injectable({ providedIn: 'root' })
@@ -72,32 +71,35 @@ export class SupabaseService {
   // ─── EMPRESAS CRUD ────────────────────────────────────────────────────────
 
   async guardarEmpresa(empresa: IEmpresa): Promise<IEmpresa> {
-    const { data: existente } = await this.client
-      .from('empresas')
-      .select('id')
-      .eq('id', empresa.id)
-      .maybeSingle();
+  // Excluir cuentas_bancarias antes de mandar a la tabla empresas
+  const { cuentas_bancarias, ...empresaLimpia } = empresa as any;
 
-    if (existente) {
-      const { id, ...datos } = empresa as any;
-      const { data, error } = await this.client
-        .from('empresas')
-        .update(datos)
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as IEmpresa;
-    } else {
-      const { data, error } = await this.client
-        .from('empresas')
-        .insert([empresa])
-        .select()
-        .single();
-      if (error) throw error;
-      return data as IEmpresa;
-    }
+  const { data: existente } = await this.client
+    .from('empresas')
+    .select('id')
+    .eq('id', empresaLimpia.id)
+    .maybeSingle();
+
+  if (existente) {
+    const { id, ...datos } = empresaLimpia;
+    const { data, error } = await this.client
+      .from('empresas')
+      .update(datos)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as IEmpresa;
+  } else {
+    const { data, error } = await this.client
+      .from('empresas')
+      .insert([empresaLimpia])
+      .select()
+      .single();
+    if (error) throw error;
+    return data as IEmpresa;
   }
+}
 
   async verificarIdExistente(id: string): Promise<boolean> {
     const { data } = await this.client

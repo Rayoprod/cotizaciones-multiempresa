@@ -2,8 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable, Subject, of, timer, throwError, BehaviorSubject, from } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, switchMap, map, catchError, tap } from 'rxjs/operators';
 import { SupabaseService } from './supabase.service';
-import { EmpresaTable } from '../models/database-schema';
-import { EmpresaFormData, EmpresaValidationError, EmpresaFormState, IEmpresa } from '../models/empresa.model';
+import { IEmpresa, ICuentaBancaria, EmpresaFormData, EmpresaValidationError, EmpresaFormState } from '../models/empresa.model';
 import { EmpresaValidators } from '../validators/empresa.validators';
 
 @Injectable({
@@ -167,7 +166,7 @@ export class EmpresaService {
       });
     }
     
-    formData.cuentas_bancarias?.forEach((cuenta, index) => {
+formData.cuentas_bancarias?.forEach((cuenta: ICuentaBancaria, index: number) => {
       if (!cuenta.banco?.trim()) {
         errores.push({ 
           campo: `cuenta_${index}_banco`, 
@@ -215,7 +214,7 @@ export class EmpresaService {
       ruta_logo: formData.ruta_logo?.trim() || '',
       ruta_firma: formData.ruta_firma?.trim() || '',
       activa: formData.activa,
-      cuentas_bancarias: formData.cuentas_bancarias.filter(c => 
+cuentas_bancarias: formData.cuentas_bancarias.filter((c: ICuentaBancaria) =>
         c.banco?.trim() && c.numero?.trim()
       ),
       contacto_aprobacion: formData.contacto_aprobacion?.trim() || '',

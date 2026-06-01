@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -13,19 +13,21 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { ToggleButtonModule } from 'primeng/togglebutton';
 import { ColorPickerModule } from 'primeng/colorpicker';
 import { ToastModule } from 'primeng/toast';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { TextareaModule } from 'primeng/textarea';
+import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { InputNumberModule } from 'primeng/inputnumber';
 
 import { Observable, Subject, of, timer } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+
+import { SessionContextService } from '../../services/session-context.service';
 
 @Component({
   selector: 'app-empresas',
@@ -33,9 +35,9 @@ import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/o
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule,
     TableModule, ButtonModule, InputTextModule, InputNumberModule,
-    DialogModule, ToggleSwitchModule, ColorPickerModule,
+    DialogModule, ToggleButtonModule, ColorPickerModule,
     ToastModule, TagModule, TooltipModule, ConfirmDialogModule,
-    ProgressSpinnerModule, TextareaModule
+    ProgressSpinnerModule, InputTextareaModule
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './empresas.html',
@@ -44,7 +46,7 @@ import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/o
 export class EmpresasComponent implements OnInit, OnDestroy {
   
   empresas: IEmpresa[] = [];
-  cargando = signal(true);                          // <-- señal de carga
+  cargando = true;
   empresaDialog = false;
   esEdicion = false;
   enviando = false;
@@ -68,17 +70,18 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     private msg: MessageService,
     private confirm: ConfirmationService,
     private cdr: ChangeDetectorRef,
+     private session: SessionContextService,
     @Inject(DOCUMENT) public document: Document
   ) {}
   
   ngOnInit() {
-    const rol = sessionStorage.getItem('usuario_rol');
-    this.esAdminGeneral = rol === 'admin';
-    this.esAdminEmpresa = rol === 'admin_empresa';
-    this.inicializarFormularios();
-    this.configurarAutosave();
-    this.cargarEmpresas();
-  }
+  const rol = this.session.usuario()?.rol; // ← cambio
+  this.esAdminGeneral = rol === 'admin';
+  this.esAdminEmpresa = rol === 'admin_empresa';
+  this.inicializarFormularios();
+  this.configurarAutosave();
+  this.cargarEmpresas();
+}
   
   ngOnDestroy() {
     this.destroy$.next();
@@ -130,61 +133,54 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   }
   
   async cargarEmpresas() {
-    this.cargando.set(true);                       // activar spinner
-    try {
-      console.log('🔄 Cargando empresas...');
-      const rol = sessionStorage.getItem('usuario_rol');   // <-- corregido a sessionStorage
-      let data: any[];
+  this.cargando = true;
+  try {
+    const rol = this.session.usuario()?.rol; // ← cambio
+    let data: any[];
 
-      if (rol === 'admin_empresa') {
-        data = await this.supabase.getEmpresasDelUsuario();
-      } else {
-        data = await this.supabase.getEmpresas();
-      }
-      console.log('✅ Empresas cargadas:', data);
-      
-      const empresasConCuentas = await Promise.all(
-        data.map(async (empresa: any) => {
-          try {
-            const cuentasDB = await this.supabase.getCuentasBancarias(empresa.id);
-            if (cuentasDB.length > 0) {
-              return {
-                ...empresa,
-                cuentas_bancarias: cuentasDB.map((c: any) => ({
-                  banco: c.banco,
-                  tipo_cuenta: c.tipo_cuenta,
-                  moneda: c.moneda,
-                  numero: c.numero,
-                  cci: c.cci || '',
-                  titular: c.titular || '',
-                  activa: c.activa,
-                  orden: c.orden
-                }))
-              };
-            }
-          } catch {}
-          return {
-            ...empresa,
-            cuentas_bancarias: Array.isArray(empresa.cuentas_bancarias) ? empresa.cuentas_bancarias : [],
-            mostrar_cuentas: empresa.mostrar_cuentas ?? true,
-            activa: empresa.activa ?? true
-          };
-        })
-      );
-      
-      this.empresas = empresasConCuentas;
-    } catch (error: any) {
-      console.error('❌ Error cargando empresas:', error);
-      this.msg.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudieron cargar las empresas: ' + error.message
-      });
-    } finally {
-      this.cargando.set(false);                    // desactivar spinner
-      this.cdr.detectChanges();
+    if (rol === 'admin_empresa') {
+      data = await this.supabase.getEmpresasDelUsuario();
+    } else {
+      data = await this.supabase.getEmpresas();
     }
+
+    const empresasConCuentas = await Promise.all(
+      data.map(async (empresa: any) => {
+        try {
+          const cuentasDB = await this.supabase.getCuentasBancarias(empresa.id);
+          if (cuentasDB.length > 0) {
+            return {
+              ...empresa,
+              cuentas_bancarias: cuentasDB.map((c: any) => ({
+                banco: c.banco,
+                tipo_cuenta: c.tipo_cuenta,
+                moneda: c.moneda,
+                numero: c.numero,
+                cci: c.cci || '',
+                titular: c.titular || '',
+                activa: c.activa,
+                orden: c.orden
+              }))
+            };
+          }
+        } catch {}
+        return {
+          ...empresa,
+          cuentas_bancarias: Array.isArray(empresa.cuentas_bancarias) ? empresa.cuentas_bancarias : [],
+          mostrar_cuentas: empresa.mostrar_cuentas ?? true,
+          activa: empresa.activa ?? true
+        };
+      })
+    );
+
+    this.empresas = empresasConCuentas;
+  } catch (error: any) {
+    this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas: ' + error.message });
+  } finally {
+    this.cargando = false;
+    this.cdr.markForCheck();
   }
+}
   
   // ── GESTIÓN DEL MODAL ───────────────────────────────────────────────
   
@@ -245,7 +241,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     });
     this.cuentasFormArray.clear();
     
-    // Rehabilitar ID si estaba deshabilitado
     this.empresaForm.get('id')?.enable();
   }
   
@@ -274,7 +269,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     console.log('✅ Datos cargados en formulario');
     console.log('📋 Valor del ID después de cargar:', this.empresaForm.get('id')?.value);
     
-    // Cargar cuentas bancarias
     this.cuentasFormArray.clear();
     if (empresa.cuentas_bancarias && empresa.cuentas_bancarias.length > 0) {
       empresa.cuentas_bancarias.forEach(cuenta => {
@@ -290,22 +284,22 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     console.log('📋 FormArray actual:', this.cuentasFormArray.controls);
     console.log('📋 Longitud actual:', this.cuentasFormArray.length);
     
-    // Limpiar y validar los datos de la cuenta
     const cuentaLimpia: ICuentaBancaria = {
       banco: (cuenta?.banco || '').trim(),
       tipo_cuenta: (cuenta?.tipo_cuenta || 'corriente').trim(),
       numero: (cuenta?.numero || '').trim(),
-      cci: (cuenta?.cci || '').trim()
+      cci: (cuenta?.cci || '').trim(),
+      moneda: cuenta?.moneda || 'PEN',
     };
     
     console.log('🧹 Cuenta limpia:', cuentaLimpia);
     
     const cuentaGroup = this.fb.group({
-  banco: [cuentaLimpia.banco, Validators.required],
-  tipo_cuenta: [cuentaLimpia.tipo_cuenta, Validators.required],
-  numero: [cuentaLimpia.numero, [Validators.required, Validators.minLength(6), Validators.maxLength(30)]],
-  cci: [cuentaLimpia.cci, [Validators.minLength(20), Validators.maxLength(20)]]  // CCI es siempre 20 dígitos o vacío
-});
+      banco: [cuentaLimpia.banco, Validators.required],
+      tipo_cuenta: [cuentaLimpia.tipo_cuenta, Validators.required],
+      numero: [cuentaLimpia.numero, [Validators.required, Validators.minLength(6), Validators.maxLength(30)]],
+      cci: [cuentaLimpia.cci, [Validators.minLength(20), Validators.maxLength(20)]]
+    });
     
     try {
       this.cuentasFormArray.push(cuentaGroup);
@@ -345,19 +339,19 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   }
   
   getCuentaErrorMensaje(index: number, controlName: string, errorName: string): string {
-  const control = this.cuentasFormArray.at(index).get(controlName);
-  if (!control || !control.errors) return '';
-  
-  const errors = control.errors;
-  switch (errorName) {
-    case 'required': return 'Este campo es obligatorio';
-    case 'pattern': return 'Solo se permiten números';
-    case 'minlength': return `Mínimo ${errors['minlength'].requiredLength} caracteres`;
-    case 'maxlength': return `Máximo ${errors['maxlength'].requiredLength} caracteres`;
-    default: return 'Error de validación';
+    const control = this.cuentasFormArray.at(index).get(controlName);
+    if (!control || !control.errors) return '';
+    
+    const errors = control.errors;
+    switch (errorName) {
+      case 'required': return 'Este campo es obligatorio';
+      case 'pattern': return 'Solo se permiten números';
+      case 'minlength': return `Mínimo ${errors['minlength'].requiredLength} caracteres`;
+      case 'maxlength': return `Máximo ${errors['maxlength'].requiredLength} caracteres`;
+      default: return 'Error de validación';
+    }
   }
-}
-  
+
   // ── API PERU ─────────────────────────────────────────────────────────
   
   async consultarRUC() {
@@ -387,12 +381,10 @@ export class EmpresasComponent implements OnInit, OnDestroy {
           direccion: data.direccion || ''
         };
 
-        // Auto-generar prefijo si está vacío
         if (!this.empresaForm.get('prefijo')?.value) {
           patchData.prefijo = this.generarPrefijo(razon);
         }
 
-        // Auto-generar nombre comercial si está vacío
         if (!this.empresaForm.get('nombre_comercial')?.value) {
           patchData.nombre_comercial = razon;
         }
@@ -402,7 +394,7 @@ export class EmpresasComponent implements OnInit, OnDestroy {
         this.msg.add({
           severity: 'success',
           summary: 'RUC encontrado',
-          detail: `Datos de ${razon} cargados`
+          detail: `Datos de ${razon} cargados` 
         });
       } else {
         this.msg.add({
@@ -431,7 +423,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     
     try {
       const base64 = await this.convertirABase64(file);
-      // El resultado ya incluye el prefijo data:, no necesitamos agregarlo
       this.empresaForm.patchValue({
         ruta_logo: base64
       });
@@ -442,7 +433,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
         detail: 'El logo se cargó correctamente'
       });
       
-      // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
       event.target.value = '';
     } catch (error: any) {
       console.error('Error subiendo logo:', error);
@@ -452,7 +442,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
         detail: 'No se pudo subir el logo: ' + error.message
       });
       
-      // Limpiar el input en caso de error
       event.target.value = '';
     }
   }
@@ -465,7 +454,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     
     try {
       const base64 = await this.convertirABase64(file);
-      // El resultado ya incluye el prefijo data:, no necesitamos agregarlo
       this.empresaForm.patchValue({
         ruta_firma: base64
       });
@@ -476,7 +464,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
         detail: 'La firma se cargó correctamente'
       });
       
-      // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
       event.target.value = '';
     } catch (error: any) {
       console.error('Error subiendo firma:', error);
@@ -486,13 +473,11 @@ export class EmpresasComponent implements OnInit, OnDestroy {
         detail: 'No se pudo subir la firma: ' + error.message
       });
       
-      // Limpiar el input en caso de error
       event.target.value = '';
     }
   }
   
   private validarArchivo(file: File): boolean {
-    // Validar tamaño
     if (file.size > this.MAX_FILE_SIZE) {
       this.msg.add({
         severity: 'error',
@@ -502,13 +487,12 @@ export class EmpresasComponent implements OnInit, OnDestroy {
       return false;
     }
     
-    // Validar formato
     const extension = file.name.split('.').pop()?.toLowerCase();
     if (!extension || !this.SUPPORTED_FORMATS.includes(extension)) {
       this.msg.add({
         severity: 'error',
         summary: 'Formato no soportado',
-        detail: `Formatos permitidos: ${this.SUPPORTED_FORMATS.join(', ')}`
+        detail: `Formatos permitidos: ${this.SUPPORTED_FORMATS.join(', ')}` 
       });
       return false;
     }
@@ -521,7 +505,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
-        // Validar que el resultado sea válido
         if (result && result.startsWith('data:')) {
           resolve(result);
         } else {
@@ -536,126 +519,127 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   // ── GUARDADO ─────────────────────────────────────────────────────────
   
   async guardarEmpresa() {
-  console.log('🔍 Validando formulario...');
+    console.log('🔍 Validando formulario...');
 
-  // Marcar todos los campos para mostrar errores visualmente
-  this.empresaForm.markAllAsTouched();
+    this.empresaForm.markAllAsTouched();
 
-  // Validar solo los campos principales (sin contar el FormArray en la validación raíz)
-  const camposPrincipales = ['nombre_comercial', 'ruc', 'color', 'prefijo'];
-  const hayErrorEnPrincipales = camposPrincipales.some(campo => {
-    const ctrl = this.empresaForm.get(campo);
-    return ctrl?.invalid && ctrl?.errors;
-  });
-
-  console.log('📋 Formulario válido:', this.empresaForm.valid);
-  console.log('📋 Formulario completo:', this.empresaForm.value);
-
-  if (hayErrorEnPrincipales) {
-    console.log('❌ Formulario inválido - errores en campos principales');
-    this.msg.add({
-      severity: 'warn',
-      summary: 'Formulario inválido',
-      detail: 'Por favor completa todos los campos requeridos'
+    const camposPrincipales = ['nombre_comercial', 'ruc', 'color', 'prefijo'];
+    const hayErrorEnPrincipales = camposPrincipales.some(campo => {
+      const ctrl = this.empresaForm.get(campo);
+      return ctrl?.invalid && ctrl?.errors;
     });
-    return;
-  }
 
-  // Validar que las cuentas que existan sean válidas
-  if (this.cuentasFormArray.length > 0 && this.cuentasFormArray.invalid) {
-    console.log('❌ Hay cuentas bancarias con datos incompletos');
-    this.msg.add({
-      severity: 'warn',
-      summary: 'Cuentas incompletas',
-      detail: 'Completa o elimina las cuentas bancarias con datos faltantes'
-    });
-    return;
-  }
+    console.log('📋 Formulario válido:', this.empresaForm.valid);
+    console.log('📋 Formulario completo:', this.empresaForm.value);
 
-  this.enviando = true;
-
-  try {
-    // Obtener el valor del ID considerando si está deshabilitado
-    const idControl = this.empresaForm.get('id');
-    const idValue = idControl?.disabled ? idControl?.value : this.empresaForm.value.id;
-
-    console.log('📝 ID final a usar:', idValue);
-
-    const formData = {
-      ...this.empresaForm.value,
-      id: idValue
-    };
-
-    console.log('📝 Datos a guardar:', formData);
-    console.log('📝 Es edición:', this.esEdicion);
-
-    if (!idValue || idValue.trim() === '') {
+    if (hayErrorEnPrincipales) {
+      console.log('❌ Formulario inválido - errores en campos principales');
       this.msg.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'El ID de la empresa es requerido'
+        severity: 'warn',
+        summary: 'Formulario inválido',
+        detail: 'Por favor completa todos los campos requeridos'
       });
       return;
     }
 
-    if (!formData.nombre_comercial || formData.nombre_comercial.trim() === '') {
+    if (this.cuentasFormArray.length > 0 && this.cuentasFormArray.invalid) {
+      console.log('❌ Hay cuentas bancarias con datos incompletos');
       this.msg.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'El nombre comercial es requerido'
+        severity: 'warn',
+        summary: 'Cuentas incompletas',
+        detail: 'Completa o elimina las cuentas bancarias con datos faltantes'
       });
       return;
     }
 
-    if (!this.esEdicion) {
-      const idExiste = await this.supabase.verificarIdExistente(formData.id);
-      if (idExiste) {
+    this.enviando = true;
+
+    try {
+      const idControl = this.empresaForm.get('id');
+      const idValue = idControl?.disabled ? idControl?.value : this.empresaForm.value.id;
+
+      console.log('📝 ID final a usar:', idValue);
+
+      const formData = {
+        ...this.empresaForm.value,
+        id: idValue
+      };
+
+      console.log('📝 Datos a guardar:', formData);
+      console.log('📝 Es edición:', this.esEdicion);
+
+      if (!idValue || idValue.trim() === '') {
         this.msg.add({
           severity: 'error',
-          summary: 'ID duplicado',
-          detail: 'El ID ya existe en la base de datos'
+          summary: 'Error',
+          detail: 'El ID de la empresa es requerido'
         });
         return;
       }
 
-      const rucExiste = await this.supabase.verificarRucExistente(formData.ruc);
-      if (rucExiste) {
+      if (!formData.nombre_comercial || formData.nombre_comercial.trim() === '') {
         this.msg.add({
           severity: 'error',
-          summary: 'RUC duplicado',
-          detail: 'El RUC ya existe en la base de datos'
+          summary: 'Error',
+          detail: 'El nombre comercial es requerido'
         });
         return;
       }
+
+      if (!this.esEdicion) {
+        const idExiste = await this.supabase.verificarIdExistente(formData.id);
+        if (idExiste) {
+          this.msg.add({
+            severity: 'error',
+            summary: 'ID duplicado',
+            detail: 'El ID ya existe en la base de datos'
+          });
+          return;
+        }
+
+        const rucExiste = await this.supabase.verificarRucExistente(formData.ruc);
+        if (rucExiste) {
+          this.msg.add({
+            severity: 'error',
+            summary: 'RUC duplicado',
+            detail: 'El RUC ya existe en la base de datos'
+          });
+          return;
+        }
+      }
+
+      await this.supabase.guardarEmpresa(formData);
+
+      await this.supabase.sincronizarCuentasBancarias(
+        formData.id,
+        (formData.cuentas_bancarias || []).filter((c: any) => c.banco?.trim() && c.numero?.trim())
+      );
+
+      this.msg.add({
+        severity: 'success',
+        summary: 'Empresa guardada',
+        detail: this.esEdicion ? 'Empresa actualizada correctamente' : 'Empresa creada correctamente'
+      });
+
+      this.cerrarModal();
+      await this.cargarEmpresas();
+
+    } catch (error: any) {
+      console.error('Error guardando empresa:', error);
+      this.msg.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No se pudo guardar la empresa: ' + error.message
+      });
+    } finally {
+      this.enviando = false;
     }
-
-    await this.supabase.guardarEmpresa(formData);
-
-    await this.supabase.sincronizarCuentasBancarias(
-      formData.id,
-      (formData.cuentas_bancarias || []).filter((c: any) => c.banco?.trim() && c.numero?.trim())
-    );
-
-    this.msg.add({
-      severity: 'success',
-      summary: 'Empresa guardada',
-      detail: this.esEdicion ? 'Empresa actualizada correctamente' : 'Empresa creada correctamente'
-    });
-
-    this.cerrarModal();
-    await this.cargarEmpresas();
-
-  } catch (error: any) {
-    console.error('Error guardando empresa:', error);
-    this.msg.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'No se pudo guardar la empresa: ' + error.message
-    });
-  } finally {
-    this.enviando = false;
   }
-}
+
+  getBotonLabel(): string {
+    return this.esEdicion ? 'Actualizar' : 'Guardar';
+  }
+
   // ── ELIMINACIÓN ───────────────────────────────────────────────────────
   
   async eliminarEmpresa(id: string) {
@@ -712,10 +696,16 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     return `${prefijo}-001`;
   }
 
-  /** Genera un prefijo automático basado en la razón social */
+  get empresasActivasCount(): number {
+    return this.empresas.filter(e => e.activa).length;
+  }
+
+  get empresasInactivasCount(): number {
+    return this.empresas.filter(e => !e.activa).length;
+  }
+
   generarPrefijo(razonSocial: string): string {
     if (!razonSocial) return '';
-    // Limpiar caracteres especiales y tomar iniciales significativas
     const palabras = razonSocial
       .replace(/[^A-Za-z0-9\s]/g, '')
       .split(/\s+/)
@@ -723,17 +713,14 @@ export class EmpresasComponent implements OnInit, OnDestroy {
 
     let prefijo = '';
     if (palabras.length >= 2) {
-      // Tomar primera letra de las 2-3 primeras palabras significativas
       prefijo = palabras.slice(0, 3).map(p => p[0]).join('').toUpperCase();
     } else if (palabras.length === 1) {
-      // Tomar primeras 2-3 letras de la única palabra
       prefijo = palabras[0].substring(0, 3).toUpperCase();
     }
 
     return prefijo || razonSocial.substring(0, 2).toUpperCase();
   }
 
-  /** Fuerza mayúsculas en el campo de prefijo/id */
   forzarMayusculas(controlName: string) {
     const control = this.empresaForm.get(controlName);
     if (control?.value) {

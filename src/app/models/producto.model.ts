@@ -1,7 +1,11 @@
+// src/app/models/producto.model.ts
+
 export interface IProducto {
-  id?: string; // Es opcional porque al crear uno nuevo aún no tiene ID
+  id?: string;
   codigo_sku: string;
   descripcion: string;
-  unidad: string;
-  precio_unitario_base: number | null; // Null para cuando el formulario está vacío
+  unidad?: string;
+  precio_unitario_base: number | null;
+  created_at?: string;
+  empresa_id: string;
 }

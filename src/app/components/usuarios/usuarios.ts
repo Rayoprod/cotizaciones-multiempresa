@@ -1,4 +1,5 @@
-import { Component, OnInit, signal, ChangeDetectorRef } from '@angular/core';import { CommonModule } from '@angular/common';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../services/supabase.service';
 
@@ -8,8 +9,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { TagModule } from 'primeng/tag';
 import { DialogModule } from 'primeng/dialog';
-import { DrawerModule } from 'primeng/drawer';
-import { SelectModule } from 'primeng/select';
+import { SidebarModule } from 'primeng/sidebar';
+import { DropdownModule } from 'primeng/dropdown';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -30,7 +31,7 @@ interface Usuario {
   imports: [
     CommonModule, FormsModule,
     TableModule, ButtonModule, InputTextModule, PasswordModule,
-    TagModule, DialogModule, DrawerModule, SelectModule,
+    TagModule, DialogModule, SidebarModule, DropdownModule,
     ToastModule, ConfirmDialogModule, TooltipModule, CheckboxModule,
     ProgressSpinnerModule
   ],
@@ -41,7 +42,7 @@ interface Usuario {
 export class UsuariosComponent implements OnInit {
 
   usuarios: Usuario[] = [];
-  cargando = signal(true);
+  cargando = true;
 
   // Modal nuevo usuario
   modalVisible  = false;
@@ -94,13 +95,13 @@ export class UsuariosComponent implements OnInit {
   }
 
   async cargarUsuarios() {
-    this.cargando.set(true);
+    this.cargando = true;
     try {
       this.usuarios = await this.supabase.getUsuarios();
     } catch {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar los usuarios' });
     } finally {
-      this.cargando.set(false);
+      this.cargando = false;
     }
   }
 
@@ -148,11 +149,15 @@ export class UsuariosComponent implements OnInit {
 
   // ── ROL / ACTIVO ─────────────────────────────────
   async cambiarRol(usuario: Usuario, nuevoRol: string) {
+    if (!nuevoRol || nuevoRol === usuario.rol) return;
+
+    const rolAnterior = usuario.rol;
     try {
       await this.supabase.actualizarRolUsuario(usuario.id, nuevoRol);
       usuario.rol = nuevoRol as 'admin' | 'admin_empresa' | 'vendedor';
       this.msg.add({ severity: 'success', summary: 'Rol actualizado', detail: nuevoRol });
     } catch {
+      usuario.rol = rolAnterior;
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cambiar el rol' });
     }
   }
@@ -207,7 +212,7 @@ export class UsuariosComponent implements OnInit {
     this.usuarioSeleccionado = usuario;
     this.empresasAsignadas   = [];        // limpiar antes
     this.drawerVisible       = true;      // abrir drawer primero
-    this.cdr.detectChanges();             // forzar render del drawer
+    this.cdr.markForCheck();             // forzar render del drawer
 
     try {
       this.empresasAsignadas = await this.supabase.getEmpresasDeUsuario(usuario.id);
@@ -215,7 +220,7 @@ export class UsuariosComponent implements OnInit {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas' });
     }
 
-    this.cdr.detectChanges();             // forzar render con los datos cargados
+    this.cdr.markForCheck();
   }
 
   toggleEmpresa(empresaId: string) {

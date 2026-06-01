@@ -64,8 +64,7 @@ export class PdfService {
     const firmaConvertida = await this.cargarImagen(datosEmpresa.ruta_firma);
 
     // ── Datos comunes ─────────────────────────────────────────────────────
-    const fechaFormat = new Date(data.fecha).toLocaleDateString('es-PE', {
-      day: '2-digit', month: 'long', year: 'numeric'
+const fechaFormat = new Date(data.fecha ?? new Date()).toLocaleDateString('es-PE', {        day: '2-digit', month: 'long', year: 'numeric'
     });
 
     const entregaRaw = String(lugarEntrega || (data as any).lugar_entrega || '').toUpperCase().trim();
