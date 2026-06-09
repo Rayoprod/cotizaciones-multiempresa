@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
-import { IEmpresa, ICotizacion} from '../models';
+import { IEmpresa, ICotizacion, ICuentaBancaria } from '../models';
 
 
 @Injectable({ providedIn: 'root' })
@@ -56,7 +56,8 @@ export class SupabaseService {
       .order('id');
 
     if (error) throw error;
-    return data as IEmpresa[];
+    const empresas = data as IEmpresa[];
+    return Promise.all(empresas.map(e => this.enriquecerConCuentasBancarias(e)));
   }
 
   async getEmpresas(): Promise<IEmpresa[]> {
@@ -259,6 +260,29 @@ export class SupabaseService {
       .order('orden', { ascending: true });
     if (error) throw error;
     return data || [];
+  }
+
+  /** Carga cuentas desde la tabla cuentas_bancarias (ya no vienen embebidas en empresas). */
+  async enriquecerConCuentasBancarias(empresa: IEmpresa): Promise<IEmpresa> {
+    if (!empresa?.id) return empresa;
+    try {
+      const cuentasDB = await this.getCuentasBancarias(empresa.id);
+      return {
+        ...empresa,
+        cuentas_bancarias: cuentasDB.map((c: any): ICuentaBancaria => ({
+          banco: c.banco,
+          tipo_cuenta: c.tipo_cuenta,
+          moneda: c.moneda,
+          numero: c.numero,
+          cci: c.cci || '',
+          titular: c.titular || '',
+          activa: c.activa,
+          orden: c.orden
+        }))
+      };
+    } catch {
+      return { ...empresa, cuentas_bancarias: empresa.cuentas_bancarias ?? [] };
+    }
   }
 
   async guardarCuentaBancaria(cuenta: any): Promise<any> {

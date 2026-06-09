@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ICotizacion } from '../models/cotizacion.model';
+import { SupabaseService } from './supabase.service';
 
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
@@ -10,6 +11,8 @@ Object.assign(pdfMake, { vfs: vfsReal });
 
 @Injectable({ providedIn: 'root' })
 export class PdfService {
+
+  constructor(private supabase: SupabaseService) {}
 
   // ── Utilidades ───────────────────────────────────────────────────────────
 
@@ -58,6 +61,10 @@ export class PdfService {
     condiciones: any = {}
   ) {
     if (!datosEmpresa) return;
+
+    if (datosEmpresa.id) {
+      datosEmpresa = await this.supabase.enriquecerConCuentasBancarias(datosEmpresa);
+    }
 
     const colorEmpresa = this.color(datosEmpresa);
     const logoConvertido = await this.cargarImagen(datosEmpresa.ruta_logo);
