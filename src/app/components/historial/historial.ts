@@ -147,7 +147,7 @@ export class HistorialComponent implements OnInit {
       }
       const data = await this.supabase.getHistorial(
         this.empresaActiva.id,
-        this.mostrarOcultas
+        true // Cargar siempre todas para tener la cuenta exacta de ocultas
       );
 
       this.zone.run(() => {
@@ -155,10 +155,8 @@ export class HistorialComponent implements OnInit {
           ...c,
           oculta: c.oculta ?? false
         }));
-        this.cotizacionesFiltradas = [...this.cotizaciones];
         this.cantidadOcultas = this.cotizaciones.filter(c => c.oculta === true).length;
-        this.calcularKPIs();
-        this.calcularInsights();
+        this.aplicarFiltros();
       });
     } catch (error: any) {
       console.error('Error cargando historial:', error);
@@ -173,8 +171,9 @@ export class HistorialComponent implements OnInit {
     }
   }
 
-  async onToggleOcultas() {
-    await this.cargarDatos();
+  onToggleOcultas() {
+    this.mostrarOcultas = !this.mostrarOcultas;
+    this.aplicarFiltros();
   }
 
   async cargarEmpresasDisponibles() {
@@ -297,13 +296,15 @@ export class HistorialComponent implements OnInit {
     this.terminoBusqueda = '';
     this.fechaDesde = '';
     this.fechaHasta = '';
-    this.cotizacionesFiltradas = [...this.cotizaciones];
-    this.calcularKPIs();
-    this.calcularInsights();
+    this.aplicarFiltros();
   }
 
   private aplicarFiltros() {
     let resultado = [...this.cotizaciones];
+
+    if (!this.mostrarOcultas) {
+      resultado = resultado.filter(cot => !cot.oculta);
+    }
 
     if (this.terminoBusqueda.trim()) {
       const term = this.terminoBusqueda.toLowerCase().trim();

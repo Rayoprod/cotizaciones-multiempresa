@@ -137,3 +137,26 @@
       - Incorporado `appendTo="body"` en `<p-confirmDialog>` para prevenir bloqueos de overlay y z-index.
       - Refactorizado `ocultarCotizacion()` en `HistorialComponent` con actualización local reactiva bajo `ChangeDetectionStrategy.OnPush`, invocación garantizada de `cdr.markForCheck()` y notificaciones Toast explicativas (`warn` para archivadas, `success` para restauradas).
       - Rediseñado el control superior de toggle: etiquetas claras `Ver Ocultas` / `Ocultas Incluidas` y badge animado con contador dinámico `cantidadOcultas` para conocer en todo momento el volumen de registros archivados.
+- Tue Aug 11 07:12:00 -05 2026: Estandarización de Diálogos de Confirmación PrimeNG, Notificador de Estado de Red PWA y Verificación AOT:
+   1. SUSTITUCIÓN DE DIÁLOGOS NATIVOS POR CONFIRMDIALOG PRIMENG:
+      - Reemplazadas todas las llamadas nativas `confirm(...)` por `ConfirmationService` + `<p-confirmDialog>` en `ClientesComponent` y `ProductosComponent`.
+      - Eliminadas las ventanas emergentes nativas del navegador al eliminar clientes o productos, garantizando una estética corporativa homogénea en toda la aplicación.
+   2. DETECCIÓN Y NOTIFICACIÓN DE ESTADO DE RED EN PWA (`LayoutComponent`):
+      - Inyectado `MessageService` y manejadores `@HostListener('window:online')` y `@HostListener('window:offline')` en `LayoutComponent`.
+      - Incorporado tag de conectividad (`Online` / `Offline`) con icono reactivo (`pi-wifi` / `pi-wifi-off`) en el encabezado PWA para alertar al usuario si la conexión se interrumpe durante su uso.
+   3. VERIFICACIÓN Y COMPILACIÓN AOT DE PRODUCCIÓN:
+      - Compilación limpia ejecutada exitosamente con `npx ng build --configuration production`. Cero errores de tipos y empaquetado optimizado.
+- Tue Aug 11 07:20:00 -05 2026: Restauración y Optimización Visual del Botón "Ver Ocultas" en Historial de Cotizaciones:
+   1. MEJORA DE BOTÓN Y CONTEO REAL EN TIEMPO REAL:
+      - Carga completa de cotizaciones de la empresa en `HistorialComponent.cargarDatos()`, permitiendo calcular en tiempo real el contador real de cotizaciones archivadas (`cantidadOcultas`).
+      - Sustitución de `p-togglebutton` por un botón destacado `<p-button>` en la barra superior con badge dinámico `Ver Ocultas (N)` / `Ocultar Archivadas`, icono reactivo (`pi-eye` / `pi-eye-slash`) y cambio de variante visual (`warning` cuando están activas).
+      - Alternancia instantánea en memoria sin esperas de red al hacer clic.
+- Tue Aug 11 07:23:00 -05 2026: Gestión de Versiones Service Worker PWA, Prompt de Instalación Nativa y Eliminación de Advertencias AOT:
+   1. PWA SERVICE WORKER & PROMPT DE INSTALACIÓN (`PwaUpdateService`):
+      - Creado e inyectado `PwaUpdateService` para monitorear `SwUpdate.versionUpdates` y alertar a los usuarios vía Toast interactivo `pwa-update-toast` cuando una nueva versión de la aplicación esté lista en producción, permitiendo actualizar con 1 clic sin perder sesión.
+      - Capturado el evento `beforeinstallprompt` a nivel global para exponer la signal `canInstallPwa()` y renderizar un botón "Instalar App" destacado en la barra superior PWA de `LayoutComponent` y `AdminLayoutComponent`.
+   2. ELIMINACIÓN DE ADVERTENCIAS Y PRESUPUESTOS EN COMPILACIÓN AOT (`angular.json`):
+      - Configurada la opción `allowedCommonJsDependencies: ["pdfmake/build/pdfmake", "pdfmake/build/vfs_fonts"]` en `angular.json`, eliminando las advertencias de optimización de CommonJS/AMD durante el empaquetado de producción.
+      - Ajustados los presupuestos de tamaño inicial a `1.2MB` para alinearse con las bibliotecas corporativas PrimeNG y Supabase, logrando un build AOT con **0 advertencias y 0 errores**.
+
+

@@ -1,3 +1,19 @@
+<p-toast />
+<p-toast key="pwa-update-toast" position="bottom-center">
+  <ng-template let-message pTemplate="message">
+    <div class="flex flex-column gap-2 w-full p-2">
+      <div class="flex align-items-center gap-2 font-bold text-sm text-900">
+        <i class="pi pi-refresh text-sky-600 text-lg"></i>
+        <span>{{ message.summary }}</span>
+      </div>
+      <div class="text-xs text-700">{{ message.detail }}</div>
+      <div class="flex gap-2 justify-content-end mt-2">
+        <button pButton type="button" label="Actualizar Ahora" icon="pi pi-sync" size="small"
+                class="p-button-sm p-button-primary border-round-lg shadow-2" (click)="reloadPwaApp()"></button>
+      </div>
+    </div>
+  </ng-template>
+</p-toast>
 <div class="flex h-screen overflow-hidden relative surface-ground">
 
   <!-- Backdrop para móvil -->
@@ -168,6 +184,15 @@
 
       <!-- Quick Status & Action -->
       <div class="flex align-items-center gap-2 md:gap-3">
+        <button *ngIf="pwaUpdate.canInstallPwa()" pButton type="button" icon="pi pi-download" label="Instalar App"
+                severity="success" size="small" class="font-bold text-xs border-round-lg shadow-2 px-3"
+                (click)="instalarPwa()"></button>
+        <p-tag [value]="estaOnline ? 'Online' : 'Offline'"
+               [severity]="estaOnline ? 'success' : 'warning'"
+               [icon]="estaOnline ? 'pi pi-wifi' : 'pi pi-wifi-off'"
+               styleClass="font-bold text-xs px-2 py-1 border-round-md"
+               [pTooltip]="estaOnline ? 'Conexión activa con el servidor' : 'Sin conexión a internet'"
+               tooltipPosition="bottom"></p-tag>
         <p-tag [value]="esAdminGeneral ? 'Super Admin' : esAdminEmpresa ? 'Admin Empresa' : 'Vendedor'"
                [severity]="esAdminGeneral ? 'danger' : esAdminEmpresa ? 'warning' : 'info'"
                styleClass="font-bold text-xs px-2 py-1 border-round-md hidden sm:inline-flex"></p-tag>

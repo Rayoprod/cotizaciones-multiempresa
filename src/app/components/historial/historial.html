@@ -15,24 +15,17 @@
     </div>
 
     <div class="flex align-items-center gap-3 flex-wrap w-full md:w-auto">
-      <div class="flex align-items-center gap-2 surface-card px-3 py-2 border-round-xl border-1 surface-border">
-        <p-togglebutton
-          [(ngModel)]="mostrarOcultas"
-          (onChange)="onToggleOcultas()"
-          onLabel="Ocultas Incluidas" offLabel="Ver Ocultas"
-          onIcon="pi pi-eye" offIcon="pi pi-eye-slash"
-          inputId="toggleOcultas">
-        </p-togglebutton>
-        <span *ngIf="cantidadOcultas > 0"
-              class="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 border-round-pill flex align-items-center gap-1"
-              pTooltip="Cotizaciones ocultas en esta empresa">
-          <i class="pi pi-eye-slash text-xs"></i>
-          {{ cantidadOcultas }}
-        </span>
-      </div>
+      <p-button
+        [label]="mostrarOcultas ? 'Ocultar Archivadas' : ('Ver Ocultas (' + cantidadOcultas + ')')"
+        [icon]="mostrarOcultas ? 'pi pi-eye-slash' : 'pi pi-eye'"
+        [severity]="mostrarOcultas ? 'warning' : 'secondary'"
+        styleClass="border-round-xl font-bold"
+        [outlined]="!mostrarOcultas"
+        (onClick)="onToggleOcultas()">
+      </p-button>
 
       <p-button label="Exportar CSV" icon="pi pi-download"
-                severity="secondary" class="border-round-xl font-bold p-button-outlined"
+                severity="secondary" styleClass="border-round-xl font-bold p-button-outlined"
                 (onClick)="exportarCSV()">
       </p-button>
     </div>

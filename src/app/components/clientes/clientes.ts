@@ -15,8 +15,9 @@ import { ICliente} from '../../models';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 @Component({
   selector: 'app-clientes',
@@ -24,9 +25,9 @@ import { ToastModule } from 'primeng/toast';
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule,
     InputTextModule, DialogModule, ToolbarModule, ProgressSpinnerModule,
-    TagModule, TooltipModule, ToastModule
+    TagModule, TooltipModule, ToastModule, ConfirmDialogModule
   ],
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './clientes.html'
 })
@@ -46,7 +47,8 @@ export class ClientesComponent implements OnInit {
     private apiPeru: ApiPeruService,
     private session: SessionContextService,
     private cdr: ChangeDetectorRef,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private confirmationService: ConfirmationService
   ) {}
 
   async ngOnInit() {
@@ -258,21 +260,37 @@ export class ClientesComponent implements OnInit {
     }
   }
 
+  confirmarBorrarCliente(cliente: ICliente) {
+    this.confirmationService.confirm({
+      message: `¿Estás seguro de eliminar a "${cliente.nombre_razon_social}"?`,
+      header: 'Confirmar eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger border-round-xl',
+      rejectButtonStyleClass: 'p-button-outlined border-round-xl',
+      accept: () => this.borrarCliente(cliente)
+    });
+  }
+
   async borrarCliente(cliente: ICliente) {
-    if (confirm(`¿Estás seguro de eliminar a "${cliente.nombre_razon_social}"?`)) {
-      try {
-        if (cliente.id) {
-          await this.supabaseSvc.eliminarCliente(cliente.id);
-          await this.cargarClientes();
-        }
-      } catch (error) {
-        console.error('Error al eliminar:', error);
+    try {
+      if (cliente.id) {
+        await this.supabaseSvc.eliminarCliente(cliente.id);
         this.messageService.add({
-          severity: 'error',
-          summary: 'Error al eliminar',
-          detail: 'Hubo un error al eliminar. Revisa que el cliente no tenga cotizaciones vinculadas.'
+          severity: 'success',
+          summary: 'Eliminado',
+          detail: 'Cliente eliminado correctamente.'
         });
+        await this.cargarClientes();
       }
+    } catch (error) {
+      console.error('Error al eliminar:', error);
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error al eliminar',
+        detail: 'Hubo un error al eliminar. Revisa que el cliente no tenga cotizaciones vinculadas.'
+      });
     }
   }
 

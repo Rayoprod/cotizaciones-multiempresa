@@ -10,10 +10,13 @@ import { DividerModule } from 'primeng/divider';
 import { OverlayPanelModule, OverlayPanel } from 'primeng/overlaypanel';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 
 import { SupabaseService } from '../services/supabase.service';
 import { SessionContextService } from '../services/session-context.service';
 import { AuthService } from '../services/auth';
+import { PwaUpdateService } from '../services/pwa-update.service';
 import { IEmpresa } from '../models/empresa.model';
 
 import { FormsModule } from '@angular/forms';
@@ -24,12 +27,14 @@ import { InputTextModule } from 'primeng/inputtext';
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink, RouterLinkActive, RouterOutlet,
-    ButtonModule, AvatarModule, DividerModule, OverlayPanelModule, TagModule, TooltipModule, InputTextModule
+    ButtonModule, AvatarModule, DividerModule, OverlayPanelModule, TagModule, TooltipModule, InputTextModule, ToastModule
   ],
+  providers: [MessageService],
   templateUrl: './layout.component.html'
 })
 export class LayoutComponent implements OnInit {
   menuAbierto = false;
+  estaOnline = true;
 
   constructor(
     private router: Router,
@@ -37,14 +42,41 @@ export class LayoutComponent implements OnInit {
     private session: SessionContextService,
     private auth: AuthService,
     private cdr: ChangeDetectorRef,
-    private destroyRef: DestroyRef
+    private destroyRef: DestroyRef,
+    private messageService: MessageService,
+    public pwaUpdate: PwaUpdateService
   ) {
+    this.estaOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
     this.router.events
       .pipe(
         filter(e => e instanceof NavigationEnd),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(() => this.cerrarMenu());
+  }
+
+  @HostListener('window:online')
+  onOnline() {
+    this.estaOnline = true;
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Conexión restaurada',
+      detail: 'El sistema vuelve a estar en línea.',
+      life: 3000
+    });
+    this.cdr.markForCheck();
+  }
+
+  @HostListener('window:offline')
+  onOffline() {
+    this.estaOnline = false;
+    this.messageService.add({
+      severity: 'warn',
+      summary: 'Sin conexión',
+      detail: 'El sistema requiere conexión a internet para guardar cambios en tiempo real.',
+      sticky: true
+    });
+    this.cdr.markForCheck();
   }
 
   busquedaEmpresa = '';
@@ -135,6 +167,15 @@ export class LayoutComponent implements OnInit {
     }
     this.cerrarMenu();
     this.router.navigate(['/selector']);
+  }
+
+  async instalarPwa() {
+    await this.pwaUpdate.promptInstallPwa();
+    this.cdr.markForCheck();
+  }
+
+  reloadPwaApp() {
+    this.pwaUpdate.reloadApp();
   }
 
   async cerrarSesion() {

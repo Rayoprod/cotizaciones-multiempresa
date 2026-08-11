@@ -14,8 +14,9 @@ import { IProducto} from '../../models';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { SessionContextService } from '../../services/session-context.service';
 
@@ -27,9 +28,9 @@ import { InputTextareaModule } from 'primeng/inputtextarea';
   imports: [
     CommonModule, FormsModule, TableModule, ButtonModule,
     InputTextModule, InputNumberModule, InputTextareaModule, DialogModule, ToolbarModule,
-    TagModule, TooltipModule, ProgressSpinnerModule, ToastModule
+    TagModule, TooltipModule, ProgressSpinnerModule, ToastModule, ConfirmDialogModule
   ],
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './productos.html'
 })
@@ -47,7 +48,8 @@ export class ProductosComponent implements OnInit {
     private supabaseSvc: SupabaseService,
     private session: SessionContextService,
     private cdr: ChangeDetectorRef,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private confirmationService: ConfirmationService
   ) {}
 
   async ngOnInit() {
@@ -126,21 +128,37 @@ export class ProductosComponent implements OnInit {
     this.productoDialog = true;
   }
 
+  confirmarBorrarProducto(producto: IProducto) {
+    this.confirmationService.confirm({
+      message: `¿Estás seguro de eliminar "${producto.descripcion}"?`,
+      header: 'Confirmar eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Sí, eliminar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-danger border-round-xl',
+      rejectButtonStyleClass: 'p-button-outlined border-round-xl',
+      accept: () => this.borrarProducto(producto)
+    });
+  }
+
   async borrarProducto(producto: IProducto) {
-    if (confirm(`¿Estás seguro de eliminar "${producto.descripcion}"?`)) {
-      try {
-        if (producto.id) {
-          await this.supabaseSvc.eliminarProducto(producto.id);
-          await this.cargarProductos();
-        }
-      } catch (error) {
-        console.error('Error al eliminar:', error);
+    try {
+      if (producto.id) {
+        await this.supabaseSvc.eliminarProducto(producto.id);
         this.messageService.add({
-          severity: 'error',
-          summary: 'Error al eliminar',
-          detail: 'Hubo un error al eliminar el producto.'
+          severity: 'success',
+          summary: 'Eliminado',
+          detail: 'Producto eliminado correctamente.'
         });
+        await this.cargarProductos();
       }
+    } catch (error) {
+      console.error('Error al eliminar:', error);
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error al eliminar',
+        detail: 'Hubo un error al eliminar el producto.'
+      });
     }
   }
 

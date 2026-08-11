@@ -14,6 +14,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AuthService } from '../../services/auth';
 import { SupabaseService } from '../../services/supabase.service';
 import { SessionContextService } from '../../services/session-context.service';
+import { PwaUpdateService } from '../../services/pwa-update.service';
 
 interface NavItem {
   label: string;
@@ -38,6 +39,7 @@ export class AdminLayoutComponent {
   private supabase   = inject(SupabaseService);
   private session    = inject(SessionContextService);
   private destroyRef = inject(DestroyRef);
+  public pwaUpdate   = inject(PwaUpdateService);
 
   sidebarAbierto = false;
   cargandoAdmin  = true;
@@ -107,6 +109,11 @@ export class AdminLayoutComponent {
     } else {
       this.router.navigate(['/admin/selector']);
     }
+  }
+
+  async instalarPwa() {
+    await this.pwaUpdate.promptInstallPwa();
+    this.cdr.markForCheck();
   }
 
   logout() {

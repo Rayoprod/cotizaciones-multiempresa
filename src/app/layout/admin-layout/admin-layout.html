@@ -95,6 +95,9 @@
       </div>
 
       <div class="flex align-items-center gap-3">
+        <button *ngIf="pwaUpdate.canInstallPwa()" pButton type="button" icon="pi pi-download" label="Instalar App"
+                severity="success" size="small" class="font-bold text-xs border-round-lg shadow-2 px-3"
+                (click)="instalarPwa()"></button>
         <p-tag value="RLS Activo" severity="success" styleClass="font-bold text-xs px-2 py-1 border-round-md hidden sm:inline-flex"></p-tag>
         <p-tag value="Super Admin" severity="danger" styleClass="font-bold text-xs px-2 py-1 border-round-md"></p-tag>
         <p-button icon="pi pi-external-link" label="Modo Operación" severity="secondary" [outlined]="true" size="small"
