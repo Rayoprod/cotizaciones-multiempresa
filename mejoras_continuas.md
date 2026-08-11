@@ -180,9 +180,9 @@
    3. VERIFICACIÓN AOT 100% EXITO:
       - `npx tsc --noEmit` sin errores y compilación `npx ng build --configuration production` completada de forma óptima.
 - Tue Aug 11 22:55:00 -05 2026: Corrección de Safe Area Top Bar, Sidebar Móvil y Responsividad de Notificaciones (Toasts):
-   1. SAFE AREA TOP BAR & SIDEBAR MÓVIL (`safe-area-inset-top`):
-      - Implementada la clase `.sidebar-top-header` en [layout.component.html](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/layout/layout.component.html) y [admin-layout.html](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/layout/admin-layout/admin-layout.html), aplicando `padding-top: calc(1rem + env(safe-area-inset-top, 0px))` para que el encabezado del sidebar (Logo, RUC, enlaces) comience holgadamente debajo de la barra de estado/reloj en móviles.
-      - Aumentado el margen y altura en `.pwa-top-header` en [styles.scss](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/styles.scss) para un ajuste táctil holgado.
+   1. SAFE AREA TOP BAR & SIDEBAR MÓVIL (`safe-area-inset-top` & Fallback `max()` CSS para Notch):
+      - Implementada la regla `padding-top: max(3.75rem, calc(1.25rem + var(--sat)))` en `.sidebar-top-header` y `padding-top: max(3rem, calc(0.75rem + var(--sat)))` en `.pwa-top-header` dentro de [styles.scss](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/styles.scss).
+      - Esto garantiza que el encabezado del sidebar (Logo, RUC y enlaces) y la barra superior comiencen al menos a 60px de la parte superior del smartphone, dejando un espacio libre de 16px **debajo del reloj (5:49)** y de la barra de estado/notch en cualquier dispositivo móvil (iOS y Android).
    2. RESPONSIVIDAD Y TAMAÑO DE AVISOS (`p-toast`):
       - Configurada la regla `@media screen and (max-width: 640px)` en [styles.scss](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/styles.scss) para forzar a `<p-toast>` a un ancho de `calc(100vw - 1.25rem)` con márgenes laterales y ajuste automático de texto (`word-break: break-word`).
       - Eliminado el desborde y recortamiento de notificaciones en smartphones compactos.
