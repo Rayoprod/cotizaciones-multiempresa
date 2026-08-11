@@ -179,3 +179,12 @@
       - Verificada la coherencia entre `authGuard`, `adminGuard`, `adminGeneralGuard` y `SessionContextService` en [app.routes.ts](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/app.routes.ts).
    3. VERIFICACIÓN AOT 100% EXITO:
       - `npx tsc --noEmit` sin errores y compilación `npx ng build --configuration production` completada de forma óptima.
+- Tue Aug 11 22:55:00 -05 2026: Corrección de Safe Area Top Bar, Sidebar Móvil y Responsividad de Notificaciones (Toasts):
+   1. SAFE AREA TOP BAR & SIDEBAR MÓVIL (`safe-area-inset-top`):
+      - Implementada la clase `.sidebar-top-header` en [layout.component.html](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/layout/layout.component.html) y [admin-layout.html](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/layout/admin-layout/admin-layout.html), aplicando `padding-top: calc(1rem + env(safe-area-inset-top, 0px))` para que el encabezado del sidebar (Logo, RUC, enlaces) comience holgadamente debajo de la barra de estado/reloj en móviles.
+      - Aumentado el margen y altura en `.pwa-top-header` en [styles.scss](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/styles.scss) para un ajuste táctil holgado.
+   2. RESPONSIVIDAD Y TAMAÑO DE AVISOS (`p-toast`):
+      - Configurada la regla `@media screen and (max-width: 640px)` en [styles.scss](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/styles.scss) para forzar a `<p-toast>` a un ancho de `calc(100vw - 1.25rem)` con márgenes laterales y ajuste automático de texto (`word-break: break-word`).
+      - Eliminado el desborde y recortamiento de notificaciones en smartphones compactos.
+   3. COMPILACIÓN AOT DE PRODUCCIÓN:
+      - Ejecutada verificación `npx tsc --noEmit` (0 errores) y `npx ng build --configuration production` exitoso.
