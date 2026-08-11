@@ -1,10 +1,10 @@
-import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, NgZone, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { SupabaseService } from '../../services/supabase.service';
 import { PdfService } from '../../services/pdf.service';
-import { EstadoCotizacion, ICotizacion} from '../../models';
+import { EstadoCotizacion, ICotizacion, extraerNombreClienteTexto, extraerDocumentoClienteTexto } from '../../models';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { Router } from '@angular/router';
@@ -66,6 +66,7 @@ interface OpcionEditar {
     DividerModule
   ],
   providers: [MessageService, ConfirmationService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './historial.html',
   styleUrls: ['./historial.scss']
 })
@@ -175,32 +176,19 @@ export class HistorialComponent implements OnInit {
   }
 
   async cargarEmpresasDisponibles() {
-    // Si ya hay datos, no los vuelve a cargar
     if (this.empresasDisponibles.length > 0) return;
 
     this.cargandoEmpresas = true;
     try {
-      const { data: { user } } = await this.supabase.client.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await this.supabase.client
-        .from('usuario_empresa')
-        .select('empresa_id, empresas(id, nombre_comercial, ruc, ruta_logo)')
-        .eq('usuario_id', user.id)
-        .eq('activo', true);
-
-      if (error) throw error;
-
-      const lista = (data || [])
-        .map((r: any) => r.empresas)
-        .filter(Boolean)
-        .filter((empresa: any) => empresa.id !== this.empresaActiva?.id);
-
-      this.empresasDisponibles = lista;
+      const empresasUser = await this.supabase.getEmpresasDelUsuario();
+      this.empresasDisponibles = (empresasUser || []).filter(
+        (emp: any) => emp.id !== this.empresaActiva?.id
+      );
     } catch (e: any) {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas' });
     } finally {
       this.cargandoEmpresas = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -230,10 +218,21 @@ export class HistorialComponent implements OnInit {
     this.calcularChartVentas();
   }
 
+  obtenerNombreCliente(cot: any): string {
+    const val = cot?.cliente_nombre || cot?.clientenombre || cot?.clienteNombre || cot?.nombre_razon_social || cot?.nombre;
+    const res = extraerNombreClienteTexto(val);
+    return res || 'Sin nombre';
+  }
+
+  obtenerDocumentoCliente(cot: any): string {
+    const val = cot?.cliente_documento || cot?.clientedocumento || cot?.clienteDocumento || cot?.documento_identidad;
+    return extraerDocumentoClienteTexto(val);
+  }
+
   private calcularTopClientes() {
     const clienteMap = new Map<string, TopCliente>();
     for (const cot of this.cotizacionesFiltradas) {
-      const key = cot.cliente_nombre || 'Sin nombre';
+      const key = this.obtenerNombreCliente(cot);
       const existing = clienteMap.get(key) || { nombre: key, cantidad: 0, total: 0 };
       existing.cantidad++;
       existing.total += cot.total || 0;
@@ -327,6 +326,7 @@ export class HistorialComponent implements OnInit {
     this.cotizacionesFiltradas = resultado;
     this.calcularKPIs();
     this.calcularInsights();
+    this.cdr.markForCheck();
   }
 
   // ─── Acciones ─────────────────────────────────────────────────────────────
@@ -339,7 +339,7 @@ export class HistorialComponent implements OnInit {
     const headers = ['Folio','Fecha','Cliente','Documento','Total','Estado','Vendedor'];
     const rows = this.cotizacionesFiltradas.map(cot => [
       cot.folio,
-      cot.fecha ? new Date(cot.fecha).toLocaleDateString('es-PE') : '',
+      cot.fecha ? (cot.fecha.includes('T') ? new Date(cot.fecha) : new Date(cot.fecha.replace(/-/g, '/'))).toLocaleDateString('es-PE') : '',
       cot.cliente_nombre,
       cot.cliente_documento || '',
       cot.total?.toFixed(2) || '0.00',
@@ -440,9 +440,21 @@ export class HistorialComponent implements OnInit {
       accionOriginal: 'anular'
     };
     this.cotizacionCargandoModal = cot.id!;
-  await this.cargarEmpresasDisponibles();
-  this.modalEditarVisible = true;
-  this.cotizacionCargandoModal = null;  
+    await this.cargarEmpresasDisponibles();
+    this.modalEditarVisible = true;
+    this.cotizacionCargandoModal = null;  
+  }
+
+  cerrarModalEditar() {
+    this.modalEditarVisible = false;
+    this.cotizacionParaEditar = null;
+    this.cotizacionCargandoModal = null;
+    this.opcionEditar = {
+      empresaOrigen: 'misma',
+      empresaSeleccionadaId: this.empresaActiva?.id || null,
+      accionOriginal: 'anular'
+    };
+    this.cdr.markForCheck();
   }
 
   onEmpresaOrigenChange() {
@@ -482,16 +494,17 @@ export class HistorialComponent implements OnInit {
 }
 
       const borrador = {
-        modo: 'editar',
+        modo: this.opcionEditar.accionOriginal === 'anular' ? 'revision' : 'duplicar',
         folio_padre: cot.folio,
         cotizacion_id: cot.id,
-        cliente_nombre:     cot.cliente_nombre     || '',
-        cliente_documento:  cot.cliente_documento   || '',
+        cliente_nombre:     this.obtenerNombreCliente(cot) === 'Sin nombre' ? '' : this.obtenerNombreCliente(cot),
+        cliente_documento:  this.obtenerDocumentoCliente(cot),
         cliente_telefono:   cot.cliente_telefono    || '',
         cliente_direccion:  cot.cliente_direccion   || '',
         cliente_correo:     cot.cliente_correo      || '',
         observaciones:      cot.observaciones       || '',
         lugar_entrega:      cot.lugar_entrega       || 'CANTERA',
+        incluye_igv:         (cot.igv || 0) > 0,
         items:              cot.items               || []
       };
 
@@ -524,7 +537,10 @@ export class HistorialComponent implements OnInit {
 
   formatearFecha(fecha: string | undefined): string {
     if (!fecha) return '—';
-    return new Date(fecha).toLocaleDateString('es-PE', {
+    const fechaObj = typeof fecha === 'string' && !fecha.includes('T') && fecha.includes('-')
+      ? new Date(fecha.replace(/-/g, '/'))
+      : new Date(fecha);
+    return fechaObj.toLocaleDateString('es-PE', {
       day: '2-digit', month: '2-digit', year: 'numeric'
     });
   }

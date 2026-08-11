@@ -253,6 +253,7 @@
   <!-- ── Diálogo de Operaciones ─────────────────────────────────────────── -->
   <p-dialog [visible]="dialogoOperacionesVisible"
             (visibleChange)="dialogoOperacionesVisible = $event"
+            (onHide)="resetFormularioOperacion()"
             [header]="maquinaSeleccionada?.nombre || 'Operaciones'"
             [modal]="true"
             [style]="{ width: '90vw', maxWidth: '600px' }"

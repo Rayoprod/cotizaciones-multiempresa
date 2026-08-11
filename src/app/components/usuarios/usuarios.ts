@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../services/supabase.service';
@@ -36,6 +36,7 @@ interface Usuario {
     ProgressSpinnerModule
   ],
   providers: [MessageService, ConfirmationService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './usuarios.html',
   styleUrl: './usuarios.scss'
 })
@@ -102,6 +103,7 @@ export class UsuariosComponent implements OnInit {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar los usuarios' });
     } finally {
       this.cargando = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -112,6 +114,15 @@ export class UsuariosComponent implements OnInit {
     this.nuevoRol      = 'vendedor';
     this.errorModal    = '';
     this.modalVisible  = true;
+  }
+
+  cerrarModal() {
+    this.modalVisible  = false;
+    this.nuevoEmail    = '';
+    this.nuevoPassword = '';
+    this.nuevoRol      = 'vendedor';
+    this.errorModal    = '';
+    this.guardando     = false;
   }
 
   async crearUsuario() {
@@ -159,6 +170,8 @@ export class UsuariosComponent implements OnInit {
     } catch {
       usuario.rol = rolAnterior;
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cambiar el rol' });
+    } finally {
+      this.cdr.markForCheck();
     }
   }
 
@@ -171,6 +184,8 @@ export class UsuariosComponent implements OnInit {
         summary: nuevo ? 'Activado' : 'Desactivado', detail: usuario.email || usuario.id });
     } catch {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cambiar el estado' });
+    } finally {
+      this.cdr.markForCheck();
     }
   }
 
@@ -194,6 +209,8 @@ export class UsuariosComponent implements OnInit {
       this.msg.add({ severity: 'success', summary: 'Eliminado', detail: 'Usuario eliminado' });
     } catch {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar' });
+    } finally {
+      this.cdr.markForCheck();
     }
   }
 
@@ -249,6 +266,9 @@ export class UsuariosComponent implements OnInit {
       this.drawerVisible = false;
     } catch {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar' });
-    } finally { this.guardandoEmpresas = false; }
+    } finally {
+      this.guardandoEmpresas = false;
+      this.cdr.markForCheck();
+    }
   }
 }

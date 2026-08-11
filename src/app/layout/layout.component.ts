@@ -1,7 +1,8 @@
-import { Component, OnInit, HostListener, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, HostListener, ChangeDetectorRef, DestroyRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
@@ -28,8 +29,16 @@ export class LayoutComponent implements OnInit {
     private supabaseSvc: SupabaseService,
     private session: SessionContextService, // ✅ nuevo
     private auth: AuthService,
-    private cdr: ChangeDetectorRef
-  ) {}
+    private cdr: ChangeDetectorRef,
+    private destroyRef: DestroyRef
+  ) {
+    this.router.events
+      .pipe(
+        filter(e => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => this.cerrarMenu());
+  }
 
   // ✅ Todo desde signals — sin propiedades locales duplicadas
   get usuarioActivo(): string {
@@ -54,10 +63,6 @@ export class LayoutComponent implements OnInit {
 
   async ngOnInit() {
     await this.inicializarSesion();
-
-    this.router.events
-      .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe(() => this.cerrarMenu());
   }
 
   @HostListener('window:resize')
@@ -94,34 +99,44 @@ export class LayoutComponent implements OnInit {
   }
 
   private async inicializarSesion() {
-    // Si ya hay sesión en el service, no hace nada
-    if (this.session.usuario()) {
-      this.cdr.markForCheck();
-      return;
+    // Si ya hay usuario y empresa en el service, solo notifica a Angular
+    if (!this.session.usuario()) {
+      // Fallback: reconstruir si se recargó la página
+      let intentos = 0;
+      while (intentos < 3) {
+        try {
+          const sesion = await this.supabaseSvc.obtenerSesion();
+          const user = sesion?.data?.session?.user;
+          if (user?.email) {
+            const perfil = await this.supabaseSvc.obtenerPerfil();
+            if (perfil?.rol) {
+              this.session.setUsuario({
+                id: user.id,
+                email: user.email,
+                rol: perfil.rol,
+                activo: true
+              });
+              break;
+            }
+          }
+        } catch { /* reintentar */ }
+
+        intentos++;
+        if (intentos < 3) await new Promise(r => setTimeout(r, 800));
+      }
     }
 
-    // Fallback: reconstruir si se recargó la página
-    let intentos = 0;
-    while (intentos < 3) {
+    // Si la empresa activa aún es null, intentar cargarla del usuario
+    if (!this.session.empresaActiva() && this.session.usuario()) {
       try {
-        const sesion = await this.supabaseSvc.obtenerSesion();
-        const user = sesion?.data?.session?.user;
-        if (user?.email) {
-          const perfil = await this.supabaseSvc.obtenerPerfil();
-          if (perfil?.rol) {
-            this.session.setUsuario({
-              id: user.id,
-              email: user.email,
-              rol: perfil.rol,
-              activo: true
-            });
-            break;
-          }
+        const empresas = await this.supabaseSvc.getEmpresasDelUsuario();
+        if (empresas && empresas.length > 0) {
+          this.session.setEmpresas(empresas);
+          this.session.setEmpresaActiva(empresas[0]);
         }
-      } catch { /* reintentar */ }
-
-      intentos++;
-      if (intentos < 3) await new Promise(r => setTimeout(r, 800));
+      } catch (e) {
+        console.error('Error al auto-seleccionar empresa activa:', e);
+      }
     }
 
     this.cdr.markForCheck();

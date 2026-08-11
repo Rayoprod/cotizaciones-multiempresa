@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -9,6 +9,8 @@ import { DialogModule } from 'primeng/dialog';
 import { ToolbarModule } from 'primeng/toolbar';
 
 import { SupabaseService } from '../../services/supabase.service';
+import { ApiPeruService } from '../../services/api-peru.service';
+import { SessionContextService } from '../../services/session-context.service';
 import { ICliente} from '../../models';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
@@ -25,6 +27,7 @@ import { ToastModule } from 'primeng/toast';
     TagModule, TooltipModule, ToastModule
   ],
   providers: [MessageService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './clientes.html'
 })
 export class ClientesComponent implements OnInit {
@@ -40,21 +43,24 @@ export class ClientesComponent implements OnInit {
 
   constructor(
     private supabaseSvc: SupabaseService,
+    private apiPeru: ApiPeruService,
+    private session: SessionContextService,
     private cdr: ChangeDetectorRef,
     private messageService: MessageService
   ) {}
 
   async ngOnInit() {
-    const datos = sessionStorage.getItem('empresa_activa');
-    this.empresaActiva = datos ? JSON.parse(datos) : null;
+    this.empresaActiva = this.session.empresaActiva();
     await this.cargarClientes();
   }
 
   async cargarClientes() {
-    if (!this.empresaActiva?.id) return;
+    const empresa = this.empresaActiva || this.session.empresaActiva();
+    if (!empresa?.id) return;
+    this.empresaActiva = empresa;
     this.cargando = true;
     try {
-      this.clientes = await this.supabaseSvc.getClientes(this.empresaActiva.id) as ICliente[];
+      this.clientes = await this.supabaseSvc.getClientes(empresa.id) as ICliente[];
     } catch (error) {
       console.error('Error al cargar clientes:', error);
     } finally {
@@ -72,7 +78,21 @@ export class ClientesComponent implements OnInit {
   }
 
   abrirNuevo() {
-    this.clienteActual = this.clienteVacio();
+    const empresa = this.empresaActiva || this.session.empresaActiva();
+    if (!empresa?.id) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Empresa no seleccionada',
+        detail: 'Por favor selecciona una empresa activa.'
+      });
+      return;
+    }
+    this.empresaActiva = empresa;
+    this.clienteActual = {
+      ...this.clienteVacio(),
+      empresa_id: empresa.id
+    };
+    delete (this.clienteActual as any).id;
     this.clienteOriginal = JSON.stringify(this.clienteActual);
     this.enviando = false;
     this.clienteDialog = true;
@@ -85,6 +105,8 @@ export class ClientesComponent implements OnInit {
   }
 
   async buscarDocumento() {
+    if (this.buscandoApi) return;
+
     const doc = String(this.clienteActual.documento_identidad || '').trim();
 
     if (!doc) {
@@ -97,7 +119,7 @@ export class ClientesComponent implements OnInit {
     }
 
     const clienteExistente = this.clientes.find(
-      c => String(c.documento_identidad) === doc
+      c => String(c.documento_identidad || '').trim() === doc
     );
 
     if (clienteExistente) {
@@ -119,23 +141,11 @@ export class ClientesComponent implements OnInit {
     }
 
     this.buscandoApi = true;
-
-    const token = 'sk_14670.Rl3QC2eRGOShBSsUP3HL63QbRl8PmOYd';
-    const tipo = doc.length === 8 ? 'reniec/dni' : 'sunat/ruc';
-    const url = `/api-peru/v1/${tipo}?numero=${doc}`;
+    this.cdr.markForCheck();
 
     try {
-      const respuesta = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      const datosCrudos = await respuesta.json();
-
-      if (!respuesta.ok || !datosCrudos) {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'No encontrado',
-          detail: 'El documento no existe en SUNAT/RENIEC.'
-        });
-        return;
-      }
+      const datosCrudos = await this.apiPeru.buscarDocumento(doc);
+      if (!datosCrudos) throw new Error('No encontrado');
 
       const datos = datosCrudos.data || datosCrudos.result || datosCrudos;
       let nombreFinal = '';
@@ -162,6 +172,7 @@ export class ClientesComponent implements OnInit {
       if (!this.clienteActual.telefono) this.clienteActual.telefono = '';
       if (!this.clienteActual.correo) this.clienteActual.correo = '';
 
+      this.messageService.add({ severity: 'success', summary: 'API', detail: 'Datos obtenidos de SUNAT/RENIEC.' });
       this.cdr.markForCheck();
 
     } catch (e) {
@@ -169,15 +180,30 @@ export class ClientesComponent implements OnInit {
       this.messageService.add({
         severity: 'error',
         summary: 'Error de conexión',
-        detail: 'Fallo al conectar con la API.'
+        detail: 'No se pudo obtener datos de SUNAT/RENIEC.'
       });
     } finally {
       this.buscandoApi = false;
+      this.cdr.markForCheck();
     }
   }
 
   async guardarCliente() {
-    if (!this.clienteActual.documento_identidad || !this.clienteActual.nombre_razon_social) {
+    const empresa = this.empresaActiva || this.session.empresaActiva();
+    if (!empresa?.id) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Empresa no seleccionada',
+        detail: 'Por favor selecciona una empresa activa.'
+      });
+      return;
+    }
+    this.empresaActiva = empresa;
+
+    const docTrim = String(this.clienteActual.documento_identidad || '').trim();
+    const nombreTrim = String(this.clienteActual.nombre_razon_social || '').trim();
+
+    if (!docTrim || !nombreTrim) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Campos obligatorios',
@@ -187,38 +213,48 @@ export class ClientesComponent implements OnInit {
     }
 
     const docDuplicado = this.clientes.some(
-      c => c.documento_identidad === this.clienteActual.documento_identidad && c.id !== this.clienteActual.id
+      c => String(c.documento_identidad || '').trim() === docTrim && c.id !== this.clienteActual.id
     );
 
     if (docDuplicado) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Documento duplicado',
-        detail: `El cliente con documento ${this.clienteActual.documento_identidad} ya está registrado.`
+        detail: `El cliente con documento "${docTrim}" ya está registrado.`
       });
-      return;
-    }
-
-    if (this.clienteOriginal === JSON.stringify(this.clienteActual)) {
-      this.clienteDialog = false;
       return;
     }
 
     this.enviando = true;
     try {
-      const payload = { ...this.clienteActual, empresa_id: this.empresaActiva.id };
+      const payload: ICliente = {
+        ...this.clienteActual,
+        documento_identidad: docTrim,
+        nombre_razon_social: nombreTrim,
+        direccion: (this.clienteActual.direccion || '').trim(),
+        telefono: (this.clienteActual.telefono || '').trim(),
+        correo: (this.clienteActual.correo || '').trim(),
+        empresa_id: empresa.id
+      };
+
       await this.supabaseSvc.guardarCliente(payload);
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Éxito',
+        detail: 'Cliente guardado correctamente.'
+      });
       this.clienteDialog = false;
       await this.cargarClientes();
-    } catch (error) {
-      console.error('Error al guardar:', error);
+    } catch (error: any) {
+      console.error('Error al guardar cliente:', error);
       this.messageService.add({
         severity: 'error',
         summary: 'Error al guardar',
-        detail: 'Hubo un error al guardar el cliente.'
+        detail: error?.message || 'Hubo un error al guardar el cliente.'
       });
     } finally {
       this.enviando = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -242,6 +278,10 @@ export class ClientesComponent implements OnInit {
 
   ocultarDialog() {
     this.clienteDialog = false;
+    this.enviando = false;
+    this.buscandoApi = false;
+    this.clienteActual = this.clienteVacio();
+    this.clienteOriginal = JSON.stringify(this.clienteActual);
   }
 
   private clienteVacio(): ICliente {

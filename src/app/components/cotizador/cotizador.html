@@ -99,10 +99,13 @@
               <div class="flex gap-2">
                 <input pInputText [(ngModel)]="clienteDocumento"
                        placeholder="20123456789" class="w-full"
+                       [disabled]="buscandoDocumento"
                        (keyup.enter)="buscarDocumento()" />
-                <button pButton icon="pi pi-search"
+                <button pButton [icon]="buscandoDocumento ? 'pi pi-spin pi-spinner' : 'pi pi-search'"
                         class="p-button-primary flex-shrink-0"
                         pTooltip="Buscar en SUNAT / RENIEC"
+                        [disabled]="buscandoDocumento"
+                        [loading]="buscandoDocumento"
                         (click)="buscarDocumento()">
                 </button>
               </div>
@@ -169,6 +172,7 @@
                   <td>
                     <p-autoComplete
                       [(ngModel)]="item.descripcion"
+                      (ngModelChange)="recalcularItem(item)"
                       [suggestions]="nombresProductosFiltrados"
                       (completeMethod)="filtrarNombresProductos($event)"
                       (onSelect)="alElegirProductoSugerido($event, item)"
@@ -180,11 +184,12 @@
                   </td>
                   <td>
                     <input pInputText [(ngModel)]="item.unidad"
+                           (ngModelChange)="recalcularTodo()"
                            class="w-full text-center" placeholder="m3" />
                   </td>
                   <td>
                     <p-inputNumber [(ngModel)]="item.cantidad"
-                                   [min]="1" placeholder="0"
+                                   [min]="0.01" [minFractionDigits]="0" [maxFractionDigits]="2" placeholder="0"
                                    (ngModelChange)="recalcularItem(item)"
                                    inputStyleClass="w-full text-center"></p-inputNumber>
                   </td>
@@ -239,6 +244,7 @@
                   <label class="text-xs font-bold text-color-secondary mb-1 block">Descripción</label>
                   <p-autoComplete
                     [(ngModel)]="item.descripcion"
+                    (ngModelChange)="recalcularItem(item)"
                     [suggestions]="nombresProductosFiltrados"
                     (completeMethod)="filtrarNombresProductos($event)"
                     (onSelect)="alElegirProductoSugerido($event, item)"
@@ -248,11 +254,12 @@
                 <div class="col-4 mb-2">
                   <label class="text-xs font-bold text-color-secondary mb-1 block">Unidad</label>
                   <input pInputText [(ngModel)]="item.unidad"
+                         (ngModelChange)="recalcularTodo()"
                          class="w-full text-center" placeholder="m3" />
                 </div>
                 <div class="col-4 mb-2">
                   <label class="text-xs font-bold text-color-secondary mb-1 block">Cantidad</label>
-                  <p-inputNumber [(ngModel)]="item.cantidad" [min]="1"
+                  <p-inputNumber [(ngModel)]="item.cantidad" [min]="0.01" [minFractionDigits]="0" [maxFractionDigits]="2"
                                  (ngModelChange)="recalcularItem(item)"
                                  inputStyleClass="w-full text-center"></p-inputNumber>
                 </div>
@@ -402,39 +409,32 @@
             <span>{{ carrito.length }} ítem{{ carrito.length !== 1 ? 's' : '' }} en la cotización</span>
           </div>
 
-          <div *ngIf="!clienteNombre || !clienteDocumento"
-               class="flex align-items-start gap-2 p-3 border-round-lg mb-3 text-sm"
-               style="background:#fff7ed;color:#9a3412">
+          <div *ngIf="!puedeGenerar" class="flex align-items-start gap-2 p-3 border-round-lg mb-3 text-sm bg-yellow-50 text-yellow-800 border-1 border-yellow-200">
             <i class="pi pi-exclamation-triangle mt-1 flex-shrink-0"></i>
-            <span>Completa el nombre y documento del cliente para generar</span>
-          </div>
-
-          <div *ngIf="carrito.length === 0 || !tieneItemsValidos()"
-               class="flex align-items-start gap-2 p-3 border-round-lg mb-3 text-sm"
-               style="background:#fff7ed;color:#9a3412">
-            <i class="pi pi-exclamation-triangle mt-1 flex-shrink-0"></i>
-            <span>Agrega al menos un ítem con descripción, cantidad y precio</span>
+            <span>Completa el nombre y documento del cliente y agrega al menos un ítem válido.</span>
           </div>
 
           <button pButton type="button"
                   label="Generar Cotización PDF"
                   icon="pi pi-file-pdf"
                   class="w-full p-button-lg font-bold"
-                  [disabled]="!puedeGenerar"
+                  [disabled]="!puedeGenerar || generandoPDF"
+                  [loading]="generandoPDF"
                   [style.background]="empresaActiva?.color"
                   [style.border-color]="empresaActiva?.color"
                   (click)="generarPDF()">
           </button>
-        </div>
 
+        </div>
       </div>
     </div>
 
-        <p-dialog [(visible)]="modalMaquinariaVisible"
+    <p-dialog [(visible)]="modalMaquinariaVisible"
               header="Agregar maquinaria"
               [modal]="true"
               [style]="{ width: '90vw', maxWidth: '420px' }"
               [draggable]="false"
+              (onHide)="cerrarSelectorMaquinaria()"
               appendTo="body">
       <div class="flex flex-column gap-3 pt-2">
         <div class="flex flex-column gap-1">
@@ -450,7 +450,7 @@
         <div class="grid">
           <div class="col-12 md:col-6 flex flex-column gap-1">
             <label class="text-xs font-semibold text-700">Cantidad</label>
-            <p-inputNumber [(ngModel)]="cantidadMaquina" [min]="1" styleClass="w-full"></p-inputNumber>
+            <p-inputNumber [(ngModel)]="cantidadMaquina" [min]="0.01" [minFractionDigits]="0" [maxFractionDigits]="2" styleClass="w-full"></p-inputNumber>
           </div>
           <div class="col-12 md:col-6 flex flex-column gap-1">
             <label class="text-xs font-semibold text-700">Precio unitario</label>
@@ -459,7 +459,7 @@
         </div>
       </div>
       <ng-template pTemplate="footer">
-        <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="modalMaquinariaVisible = false"></p-button>
+        <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="cerrarSelectorMaquinaria()"></p-button>
         <p-button label="Agregar" icon="pi pi-check" severity="primary" (onClick)="agregarMaquinariaAlCarrito()"></p-button>
       </ng-template>
     </p-dialog>

@@ -1,7 +1,8 @@
-import { Component, inject, HostListener, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, HostListener, ChangeDetectorRef, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
@@ -28,11 +29,12 @@ interface NavItem {
   templateUrl: './admin-layout.html'
 })
 export class AdminLayoutComponent {
-  private auth    = inject(AuthService);
-  private router  = inject(Router);
-  private cdr     = inject(ChangeDetectorRef);
-  private supabase = inject(SupabaseService);
-  private session = inject(SessionContextService); // ✅ nuevo
+  private auth       = inject(AuthService);
+  private router     = inject(Router);
+  private cdr        = inject(ChangeDetectorRef);
+  private supabase   = inject(SupabaseService);
+  private session    = inject(SessionContextService); // ✅ nuevo
+  private destroyRef = inject(DestroyRef);
 
   sidebarAbierto = false;
   cargandoAdmin  = true;
@@ -62,7 +64,10 @@ export class AdminLayoutComponent {
     this.inicializarSesion();
 
     this.router.events
-      .pipe(filter(e => e instanceof NavigationEnd))
+      .pipe(
+        filter(e => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe(() => this.cerrarMenu());
   }
 

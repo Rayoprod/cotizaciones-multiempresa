@@ -1,22 +1,17 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { describe, it, expect } from 'vitest';
+import { ClientesComponent } from './clientes';
 
-import { Clientes } from './clientes';
+describe('ClientesComponent - Client creation logic', () => {
+  it('should initialize empty client without id property when abrirNuevo is called', () => {
+    const mockSession = { empresaActiva: () => ({ id: 'emp-123', nombre: 'Empresa Test' }) };
+    const mockMessage = { add: () => {} };
+    const comp = new ClientesComponent({} as any, {} as any, mockSession as any, {} as any, mockMessage as any);
 
-describe('Clientes', () => {
-  let component: Clientes;
-  let fixture: ComponentFixture<Clientes>;
+    comp.clientes = [];
+    comp.abrirNuevo();
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [Clientes],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(Clientes);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
-  });
-
-  it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(comp.clienteActual.empresa_id).toBe('emp-123');
+    expect(comp.clienteActual.id).toBeUndefined();
+    expect(comp.clienteDialog).toBe(true);
   });
 });

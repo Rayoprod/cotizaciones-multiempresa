@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -10,6 +10,7 @@ import { SessionContextService } from '../../services/session-context.service';
   selector: 'app-selector',
   standalone: true,
   imports: [CommonModule, RouterModule, ButtonModule, ProgressSpinnerModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './selector-empresa.html'
 })
 export class SelectorComponent implements OnInit {
@@ -32,6 +33,7 @@ export class SelectorComponent implements OnInit {
 
     try {
       this.empresas = await this.supabaseSvc.getEmpresasDelUsuario();
+      this.session.setEmpresas(this.empresas);
 
       if (this.empresas.length === 1) {
         this.seleccionar(this.empresas[0]);
@@ -48,5 +50,11 @@ export class SelectorComponent implements OnInit {
   seleccionar(empresa: any) {
     this.session.setEmpresaActiva(empresa);
     this.router.navigate(['/cotizador']);
+  }
+
+  async cerrarSesion() {
+    await this.supabaseSvc.cerrarSesion();
+    this.session.clearAll();
+    this.router.navigate(['/login']);
   }
 }

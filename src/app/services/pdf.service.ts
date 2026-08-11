@@ -1,18 +1,32 @@
 import { Injectable } from '@angular/core';
 import { ICotizacion } from '../models/cotizacion.model';
 import { SupabaseService } from './supabase.service';
-
-import * as pdfMake from 'pdfmake/build/pdfmake';
-import * as pdfFonts from 'pdfmake/build/vfs_fonts';
-
-const fuentes: any = pdfFonts;
-const vfsReal = fuentes.vfs || fuentes.pdfMake?.vfs || fuentes.default?.pdfMake?.vfs;
-Object.assign(pdfMake, { vfs: vfsReal });
+import { extraerNombreClienteTexto, extraerDocumentoClienteTexto } from '../models/cliente.model';
 
 @Injectable({ providedIn: 'root' })
 export class PdfService {
 
+  private pdfMakeInstance: any = null;
+
   constructor(private supabase: SupabaseService) {}
+
+  private async getPdfMake(): Promise<any> {
+    if (this.pdfMakeInstance) {
+      return this.pdfMakeInstance;
+    }
+    const pdfMakeModule = await import('pdfmake/build/pdfmake');
+    const pdfFontsModule = await import('pdfmake/build/vfs_fonts');
+
+    const pdfMake = (pdfMakeModule as any).default || pdfMakeModule;
+    const pdfFonts: any = (pdfFontsModule as any).default || pdfFontsModule;
+    const vfsReal = pdfFonts.vfs || pdfFonts.pdfMake?.vfs || pdfFonts.default?.pdfMake?.vfs;
+
+    if (vfsReal) {
+      Object.assign(pdfMake, { vfs: vfsReal });
+    }
+    this.pdfMakeInstance = pdfMake;
+    return this.pdfMakeInstance;
+  }
 
   // ── Utilidades ───────────────────────────────────────────────────────────
 
@@ -71,7 +85,19 @@ export class PdfService {
     const firmaConvertida = await this.cargarImagen(datosEmpresa.ruta_firma);
 
     // ── Datos comunes ─────────────────────────────────────────────────────
-const fechaFormat = new Date(data.fecha ?? new Date()).toLocaleDateString('es-PE', {        day: '2-digit', month: 'long', year: 'numeric'
+    const fechaRaw = data.fecha;
+    let fechaObj: Date;
+    if ((fechaRaw as any) instanceof Date) {
+      fechaObj = fechaRaw as any;
+    } else if (typeof fechaRaw === 'string' && fechaRaw.includes('T')) {
+      fechaObj = new Date(fechaRaw);
+    } else if (typeof fechaRaw === 'string' && fechaRaw.includes('-')) {
+      fechaObj = new Date(fechaRaw.replace(/-/g, '/'));
+    } else {
+      fechaObj = new Date();
+    }
+    const fechaFormat = fechaObj.toLocaleDateString('es-PE', {
+      day: '2-digit', month: 'long', year: 'numeric'
     });
 
     const entregaRaw = String(lugarEntrega || (data as any).lugar_entrega || '').toUpperCase().trim();
@@ -304,6 +330,16 @@ const fechaFormat = new Date(data.fecha ?? new Date()).toLocaleDateString('es-PE
       ]
     } : { text: '', margin: [0, 0, 0, 0] };
 
+    // ── Extract client info with full property fallbacks ──────────────
+    const rawNombre = data.cliente_nombre || (data as any).clientenombre || (data as any).clienteNombre || (data as any).nombre_razon_social || (data as any).nombre;
+    const clienteNombreVal = extraerNombreClienteTexto(rawNombre) || '—';
+
+    const rawDoc = data.cliente_documento || (data as any).clientedocumento || (data as any).clienteDocumento || (data as any).documento_identidad;
+    const clienteDocVal = extraerDocumentoClienteTexto(rawDoc) || '—';
+    const clienteDirVal = (data as any).cliente_direccion || (data as any).clientedireccion || (data as any).clienteDireccion || (data as any).direccion || '';
+    const clienteTelVal = (data as any).cliente_telefono || (data as any).clientetelefono || (data as any).clienteTelefono || (data as any).telefono || '';
+    const clienteCorreoVal = (data as any).cliente_correo || (data as any).clientecorreo || (data as any).clienteCorreo || (data as any).correo || '';
+
     // ── Caja del cliente (fecha incluida) ────────────────────────────────
     const cajaCliente: any = {
       margin: [0, 0, 0, 16],
@@ -315,10 +351,10 @@ const fechaFormat = new Date(data.fecha ?? new Date()).toLocaleDateString('es-PE
               width: '60%',
               stack: [
                 { text: 'SEÑOR(ES):', fontSize: 7, color: '#9ca3af', margin: [0, 0, 0, 3] },
-                { text: data.cliente_nombre || '—', bold: true, fontSize: 11, color: '#111827', margin: [0, 0, 0, 4] },
-                { text: [{ text: 'RUC / DNI: ', bold: true, fontSize: 8.5 }, { text: data.cliente_documento || '—', fontSize: 8.5 }], margin: [0, 0, 0, 2] },
-                ...(((data as any).cliente_direccion || (data as any).clienteDireccion)
-                  ? [{ text: [{ text: 'Dirección: ', bold: true, fontSize: 8 }, { text: (data as any).cliente_direccion || (data as any).clienteDireccion, fontSize: 8 }], margin: [0, 2, 0, 0] }]
+                { text: clienteNombreVal, bold: true, fontSize: 11, color: '#111827', margin: [0, 0, 0, 4] },
+                { text: [{ text: 'RUC / DNI: ', bold: true, fontSize: 8.5 }, { text: clienteDocVal, fontSize: 8.5 }], margin: [0, 0, 0, 2] },
+                ...(clienteDirVal
+                  ? [{ text: [{ text: 'Dirección: ', bold: true, fontSize: 8 }, { text: clienteDirVal, fontSize: 8 }], margin: [0, 2, 0, 0] }]
                   : [])
               ]
             },
@@ -326,11 +362,11 @@ const fechaFormat = new Date(data.fecha ?? new Date()).toLocaleDateString('es-PE
               width: '40%',
               stack: [
                 { text: [{ text: 'Fecha: ', bold: true, fontSize: 8.5 }, { text: fechaFormat, fontSize: 8.5 }], alignment: 'right', margin: [0, 0, 0, 3] },
-                ...(((data as any).cliente_telefono || (data as any).clienteTelefono)
-                  ? [{ text: [{ text: 'Teléfono: ', bold: true, fontSize: 8 }, { text: (data as any).cliente_telefono || (data as any).clienteTelefono, fontSize: 8 }], alignment: 'right', margin: [0, 0, 0, 2] }]
+                ...(clienteTelVal
+                  ? [{ text: [{ text: 'Teléfono: ', bold: true, fontSize: 8 }, { text: clienteTelVal, fontSize: 8 }], alignment: 'right', margin: [0, 0, 0, 2] }]
                   : []),
-                ...(((data as any).cliente_correo || (data as any).clienteCorreo)
-                  ? [{ text: [{ text: 'Correo: ', bold: true, fontSize: 8 }, { text: (data as any).cliente_correo || (data as any).clienteCorreo, fontSize: 8 }], alignment: 'right' }]
+                ...(clienteCorreoVal
+                  ? [{ text: [{ text: 'Correo: ', bold: true, fontSize: 8 }, { text: clienteCorreoVal, fontSize: 8 }], alignment: 'right' }]
                   : [])
               ]
             }
@@ -395,10 +431,10 @@ const fechaFormat = new Date(data.fecha ?? new Date()).toLocaleDateString('es-PE
     // ── Descarga ──────────────────────────────────────────────────────────
     const nombreEmpresa = (datosEmpresa.nombre_comercial || datosEmpresa.id || 'empresa')
       .replace(/\s+/g, '_');
-    const nombreCliente = (data.cliente_nombre || 'cliente').replace(/\s+/g, '_');
+    const nombreCliente = clienteNombreVal.replace(/\s+/g, '_');
     const nombreArchivo = `${data.folio}_${nombreEmpresa}_${nombreCliente}.pdf`;
 
-    const generadorPdf = (pdfMake as any).default || pdfMake;
+    const generadorPdf = await this.getPdfMake();
     generadorPdf.createPdf(docDefinition).download(nombreArchivo);
   }
 }

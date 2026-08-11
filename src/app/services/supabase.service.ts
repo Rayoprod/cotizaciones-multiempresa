@@ -149,14 +149,18 @@ export class SupabaseService {
   }
 
   async guardarProducto(producto: any) {
-    if (producto.id) {
+    const payload = { ...producto };
+    if (!payload.id || String(payload.id).trim() === '') delete payload.id;
+    if (!payload.created_at || String(payload.created_at).trim() === '') delete payload.created_at;
+
+    if (payload.id) {
       const { data, error } = await this.client
-        .from('productos').update(producto).eq('id', producto.id).select();
+        .from('productos').update(payload).eq('id', payload.id).select();
       if (error) throw error;
       return data ? data[0] : null;
     } else {
       const { data, error } = await this.client
-        .from('productos').insert([producto]).select();
+        .from('productos').insert([payload]).select();
       if (error) throw error;
       return data ? data[0] : null;
     }
@@ -178,14 +182,18 @@ export class SupabaseService {
   }
 
   async guardarCliente(cliente: any) {
-    if (cliente.id) {
+    const payload = { ...cliente };
+    if (!payload.id || String(payload.id).trim() === '') delete payload.id;
+    if (!payload.created_at || String(payload.created_at).trim() === '') delete payload.created_at;
+
+    if (payload.id) {
       const { data, error } = await this.client
-        .from('clientes').update(cliente).eq('id', cliente.id).select();
+        .from('clientes').update(payload).eq('id', payload.id).select();
       if (error) throw error;
       return data ? data[0] : null;
     } else {
       const { data, error } = await this.client
-        .from('clientes').insert([cliente]).select();
+        .from('clientes').insert([payload]).select();
       if (error) throw error;
       return data ? data[0] : null;
     }
@@ -223,8 +231,12 @@ export class SupabaseService {
   }
 
   async guardarCotizacion(cotizacion: ICotizacion): Promise<ICotizacion> {
+    const payload: any = { ...cotizacion };
+    if (!payload.id || payload.id === '') delete payload.id;
+    if (!payload.created_at || payload.created_at === '') delete payload.created_at;
+
     const { data, error } = await this.client
-      .from('cotizaciones').insert([cotizacion]).select().single();
+      .from('cotizaciones').insert([payload]).select().single();
     if (error) throw error;
     return data;
   }
@@ -237,14 +249,14 @@ export class SupabaseService {
     return data;
   }
 
-  async obtenerSiguienteFolio(empresaId: string): Promise<string> {
+  async obtenerSiguienteFolio(empresaId: string, prefijoFallback?: string): Promise<string> {
     const { data, error } = await this.client.rpc('getnextfolioempresa', {
       empresaid: empresaId
     });
 
     if (error || !data) {
       console.error('Error al obtener folio:', error);
-      const prefijo = (empresaId || 'EMP').substring(0, 3).toUpperCase();
+      const prefijo = (prefijoFallback || (empresaId || 'EMP').substring(0, 3)).toUpperCase();
       const seq = String(Date.now() % 100000000).padStart(8, '0');
       return `${prefijo}-${seq}`;
     }

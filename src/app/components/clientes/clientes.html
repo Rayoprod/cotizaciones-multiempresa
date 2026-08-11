@@ -141,6 +141,7 @@
 </div>
 
 <p-dialog [(visible)]="clienteDialog"
+          (onHide)="ocultarDialog()"
           [style]="{width: '500px', maxWidth: '90vw'}"
           header="Ficha del Cliente"
           [modal]="true"
@@ -153,8 +154,8 @@
             <div class="flex flex-column gap-2">
                 <label for="doc" class="font-bold text-700">DNI o RUC <span class="text-red-500">*</span></label>
                 <div class="flex gap-2">
-                    <input pInputText id="doc" [(ngModel)]="clienteActual.documento_identidad" placeholder="Ej. 20123456789" class="w-full" autofocus />
-                    <button pButton icon="pi pi-search" [loading]="buscandoApi" (click)="buscarDocumento()" class="p-button-primary px-3" pTooltip="Buscar en SUNAT/RENIEC"></button>
+                    <input pInputText id="doc" [(ngModel)]="clienteActual.documento_identidad" (keyup.enter)="buscarDocumento()" [disabled]="buscandoApi" placeholder="Ej. 20123456789" class="w-full" autofocus />
+                    <button pButton [icon]="buscandoApi ? 'pi pi-spin pi-spinner' : 'pi pi-search'" [loading]="buscandoApi" [disabled]="buscandoApi" (click)="buscarDocumento()" class="p-button-primary px-3" pTooltip="Buscar en SUNAT/RENIEC"></button>
                 </div>
             </div>
 

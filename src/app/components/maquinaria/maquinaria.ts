@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../services/supabase.service';
@@ -20,6 +20,8 @@ import { CalendarModule } from 'primeng/calendar';
 import { TableModule } from 'primeng/table';
 import { MessageService, ConfirmationService } from 'primeng/api';
 
+import { SessionContextService } from '../../services/session-context.service';
+
 @Component({
   selector: 'app-maquinaria',
   standalone: true,
@@ -31,6 +33,7 @@ import { MessageService, ConfirmationService } from 'primeng/api';
     DropdownModule, CalendarModule, TableModule
   ],
   providers: [MessageService, ConfirmationService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './maquinaria.html'
 })
 export class MaquinariaComponent implements OnInit {
@@ -124,14 +127,14 @@ export class MaquinariaComponent implements OnInit {
 
   constructor(
     private supabase: SupabaseService,
+    private session: SessionContextService,
     private msg: MessageService,
     private confirm: ConfirmationService,
     private cdr: ChangeDetectorRef
   ) {}
 
   async ngOnInit() {
-    const data = sessionStorage.getItem('empresa_activa');
-    if (data) this.empresaActiva = JSON.parse(data);
+    this.empresaActiva = this.session.empresaActiva();
     await this.cargar();
   }
 
@@ -294,7 +297,10 @@ export class MaquinariaComponent implements OnInit {
       await this.cargar();
     } catch (e: any) {
       this.msg.add({ severity: 'error', summary: 'Error', detail: e.message });
-    } finally { this.guardando = false; }
+    } finally {
+      this.guardando = false;
+      this.cdr.markForCheck();
+    }
   }
 
   confirmarEliminar(item: IMaquinaria) {
@@ -518,6 +524,7 @@ export class MaquinariaComponent implements OnInit {
       this.msg.add({ severity: 'error', summary: 'Error', detail: e.message });
     } finally {
       this.guardandoLectura = false;
+      this.cdr.markForCheck();
     }
   }
 

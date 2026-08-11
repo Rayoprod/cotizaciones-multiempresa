@@ -19,6 +19,7 @@
       <div class="flex align-items-center gap-2">
         <p-togglebutton
           [(ngModel)]="mostrarOcultas"
+          (onChange)="onToggleOcultas()"
           onLabel="Ocultas" offLabel="Todas"
           inputId="toggleOcultas">
         </p-togglebutton>
@@ -146,8 +147,8 @@
               </span>
             </td>
             <td>
-              <p class="font-semibold text-900 text-sm m-0">{{ cot.cliente_nombre }}</p>
-              <p class="text-xs text-color-secondary m-0">{{ cot.cliente_documento }}</p>
+              <p class="font-semibold text-900 text-sm m-0">{{ obtenerNombreCliente(cot) }}</p>
+              <p class="text-xs text-color-secondary m-0">{{ obtenerDocumentoCliente(cot) }}</p>
             </td>
             <td class="text-right font-bold text-900">
               S/ {{ cot.total | number:'1.2-2' }}
@@ -217,6 +218,7 @@
   [draggable]="false"
   [resizable]="false"
   [style]="{ width: '34rem' }"
+  (onHide)="cerrarModalEditar()"
   appendTo="body">
 
   <ng-template pTemplate="header">

@@ -144,6 +144,7 @@
 </div>
 
 <p-dialog [(visible)]="productoDialog"
+          (onHide)="ocultarDialog()"
           [style]="{width: '450px', maxWidth: '90vw'}"
           header="Detalles del Producto"
           [modal]="true"
@@ -155,8 +156,9 @@
 
             <div class="flex flex-column gap-2">
                 <label for="sku" class="font-bold text-700">Código SKU (Opcional)</label>
-                <span class="p-input-icon-left">
-                    <input pInputText id="sku" [(ngModel)]="productoActual.codigo_sku" placeholder="Ej. PIEDRA-001" autofocus />
+                <span class="p-input-icon-left w-full">
+                    <i class="pi pi-barcode"></i>
+                    <input pInputText id="sku" [(ngModel)]="productoActual.codigo_sku" placeholder="Ej. PIEDRA-001" class="w-full" autofocus />
                 </span>
             </div>
 
@@ -173,7 +175,7 @@
                 
                 <div class="col-12 md:col-6 p-0 md:pl-2 flex flex-column gap-2">
                     <label for="precio" class="font-bold text-700">Precio Base <span class="text-red-500">*</span></label>
-                    <p-inputNumber id="precio" [(ngModel)]="productoActual.precio_unitario_base" mode="currency" currency="PEN" locale="es-PE" class="w-full"></p-inputNumber>
+                    <p-inputNumber id="precio" [(ngModel)]="productoActual.precio_unitario_base" mode="currency" currency="PEN" locale="es-PE" styleClass="w-full"></p-inputNumber>
                 </div>
             </div>
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy, Inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -24,7 +24,7 @@ import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { InputNumberModule } from 'primeng/inputnumber';
 
-import { Observable, Subject, of, timer } from 'rxjs';
+import { Observable, Subject, Subscription, of, timer } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 
 import { SessionContextService } from '../../services/session-context.service';
@@ -40,6 +40,7 @@ import { SessionContextService } from '../../services/session-context.service';
     ProgressSpinnerModule, InputTextareaModule
   ],
   providers: [MessageService, ConfirmationService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './empresas.html',
   styleUrls: ['./empresas.scss']
 })
@@ -62,6 +63,7 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   
   private destroy$ = new Subject<void>();
   private autoSaveTimer$ = new Subject<void>();
+  private autoSaveSub?: Subscription;
   
   constructor(
     private supabase: SupabaseService,
@@ -79,11 +81,13 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   this.esAdminGeneral = rol === 'admin';
   this.esAdminEmpresa = rol === 'admin_empresa';
   this.inicializarFormularios();
-  this.configurarAutosave();
   this.cargarEmpresas();
 }
   
   ngOnDestroy() {
+    if (this.autoSaveSub) {
+      this.autoSaveSub.unsubscribe();
+    }
     this.destroy$.next();
     this.destroy$.complete();
     this.autoSaveTimer$.next();
@@ -116,10 +120,14 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     });
     
     this.cuentasFormArray = this.empresaForm.get('cuentas_bancarias') as FormArray;
+    this.configurarAutosave();
   }
   
   private configurarAutosave() {
-    this.empresaForm.valueChanges
+    if (this.autoSaveSub) {
+      this.autoSaveSub.unsubscribe();
+    }
+    this.autoSaveSub = this.empresaForm.valueChanges
       .pipe(
         takeUntil(this.destroy$),
         debounceTime(2000),
