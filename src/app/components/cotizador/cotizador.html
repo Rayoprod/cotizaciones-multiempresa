@@ -1,8 +1,8 @@
 <p-toast></p-toast>
+<p-confirmDialog appendTo="body" styleClass="max-w-28rem border-round-2xl"></p-confirmDialog>
 
-<!-- Spinner de carga inicial -->
-<div *ngIf="cargando"
-     class="flex justify-content-center align-items-center py-8">
+<!-- Spinner / Skeleton de carga inicial -->
+<div *ngIf="cargando" class="flex justify-content-center align-items-center py-8">
   <p-progressSpinner strokeWidth="4" [style]="{ width: '60px', height: '60px' }">
   </p-progressSpinner>
 </div>
@@ -23,7 +23,7 @@
         </p>
       </div>
       <button pButton icon="pi pi-times" class="p-button-text p-button-secondary p-button-sm flex-shrink-0"
-              pTooltip="Limpiar formulario" (click)="limpiarFormulario()"></button>
+              pTooltip="Limpiar formulario" (click)="confirmarLimpiarFormulario()"></button>
     </div>
 
     <div *ngIf="borradorModo === 'duplicar'"
@@ -37,7 +37,7 @@
         </p>
       </div>
       <button pButton icon="pi pi-times" class="p-button-text p-button-secondary p-button-sm flex-shrink-0"
-              pTooltip="Limpiar formulario" (click)="limpiarFormulario()"></button>
+              pTooltip="Limpiar formulario" (click)="confirmarLimpiarFormulario()"></button>
     </div>
 
   </div>
@@ -101,6 +101,7 @@
               </label>
               <div class="flex gap-2">
                 <input pInputText [(ngModel)]="clienteDocumento"
+                       (ngModelChange)="alCambiarDocumentoInput()"
                        placeholder="20123456789" class="w-full font-semibold"
                        [disabled]="buscandoDocumento"
                        (keyup.enter)="buscarDocumento()" />

@@ -1,13 +1,17 @@
 {
   "name": "Sistema de Cotizaciones Multiempresa",
   "short_name": "Cotizador",
-  "theme_color": "#0284c7",
+  "id": "com.cotizaciones.multiempresa",
+  "lang": "es-PE",
+  "dir": "ltr",
+  "theme_color": "#0f172a",
   "background_color": "#f8fafc",
   "display": "standalone",
   "orientation": "any",
   "scope": "/",
   "start_url": "/",
-  "description": "Sistema de Gestión de Cotizaciones Multiempresa con emisión instantánea de PDF y funcionamiento offline.",
+  "description": "Sistema de Gestión de Cotizaciones Multiempresa con emisión instantánea de PDF en tiempo real.",
+  "categories": ["business", "productivity", "finance"],
   "icons": [
     {
       "src": "assets/icons/icon-72x72.png",
@@ -56,6 +60,36 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nueva Cotización",
+      "short_name": "Cotizar",
+      "description": "Crear una nueva cotización de venta",
+      "url": "/cotizador",
+      "icons": [{ "src": "assets/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Historial de Ventas",
+      "short_name": "Historial",
+      "description": "Ver historial de cotizaciones guardadas",
+      "url": "/historial",
+      "icons": [{ "src": "assets/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Directorio de Clientes",
+      "short_name": "Clientes",
+      "description": "Gestionar la cartera de clientes",
+      "url": "/clientes",
+      "icons": [{ "src": "assets/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Catálogo de Productos",
+      "short_name": "Productos",
+      "description": "Consultar catálogo de productos y servicios",
+      "url": "/productos",
+      "icons": [{ "src": "assets/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

@@ -20,7 +20,8 @@ import { DropdownModule } from 'primeng/dropdown';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { InputTextareaModule } from 'primeng/inputtextarea';
-import { MessageService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { SessionContextService } from '../../services/session-context.service';
 import { extraerNombreClienteTexto, extraerDocumentoClienteTexto } from '../../models';
 
@@ -33,9 +34,9 @@ import { extraerNombreClienteTexto, extraerDocumentoClienteTexto } from '../../m
     InputNumberModule, InputTextModule,
     ToggleButtonModule, SelectButtonModule, AutoCompleteModule,
     DialogModule, DropdownModule, TooltipModule, ToastModule, InputTextareaModule,
-    ProgressSpinnerModule,
+    ProgressSpinnerModule, ConfirmDialogModule
   ],
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
   templateUrl: './cotizador.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -110,6 +111,7 @@ export class CotizadorComponent implements OnInit {
     private pdfSvc: PdfService,
     private router: Router,
     private messageService: MessageService,
+    private confirmationSvc: ConfirmationService,
     private apiPeru: ApiPeruService,
     private session: SessionContextService
   ) { }
@@ -248,6 +250,13 @@ export class CotizadorComponent implements OnInit {
       this.clienteNombre = nombreElegido;
     }
     this.cdr.markForCheck();
+  }
+
+  alCambiarDocumentoInput() {
+    const doc = this.clienteDocumentoTexto;
+    if ((doc.length === 8 || doc.length === 11) && !this.buscandoDocumento && !this.clienteNombre) {
+      this.buscarDocumento();
+    }
   }
 
   async buscarDocumento() {
@@ -802,6 +811,22 @@ export class CotizadorComponent implements OnInit {
     } catch (e) {
       sessionStorage.removeItem('cotizador-borrador');
       return false;
+    }
+  }
+
+  confirmarLimpiarFormulario() {
+    if (this.clienteNombre || this.tieneItemsValidos) {
+      this.confirmationSvc.confirm({
+        message: '¿Deseas restablecer la cotización actual? Se borrarán los datos e ítems ingresados.',
+        header: 'Limpiar Formulario',
+        icon: 'pi pi-refresh',
+        acceptLabel: 'Sí, limpiar',
+        rejectLabel: 'Cancelar',
+        acceptButtonStyleClass: 'p-button-warning border-round-xl',
+        accept: () => this.limpiarFormulario()
+      });
+    } else {
+      this.limpiarFormulario();
     }
   }
 
