@@ -1,26 +1,28 @@
-<div class="flex align-items-center justify-content-center min-h-screen p-3 relative overflow-hidden"
-     style="background-image: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.65)),
+<div class="flex align-items-center justify-content-center min-h-screen p-3 relative overflow-hidden select-none"
+     style="background-image: radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.92)),
                               url('https://rgnebklwuxpuuzappavx.supabase.co/storage/v1/object/public/recursos/fondo_login.png');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;">
 
-  <div class="p-5 shadow-6 border-round-3xl w-full sm:w-26rem mx-3 bg-black-alpha-50 relative fadein"
-       style="backdrop-filter: blur(12px);">
+  <!-- Tarjeta Glassmorphism -->
+  <div class="p-5 border-round-3xl w-full sm:w-26rem mx-3 relative fadein animation-duration-500 shadow-8"
+       style="background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12);">
 
     <div class="text-center mb-5">
-      <div class="mb-4 inline-flex align-items-center justify-content-center border-circle bg-white-alpha-20"
-           style="width: 70px; height: 70px;">
+      <div class="mb-3 inline-flex align-items-center justify-content-center border-circle shadow-4"
+           style="width: 76px; height: 76px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
         <i class="pi pi-building text-white text-4xl"></i>
       </div>
-      <h1 class="text-white text-3xl font-bold m-0 mb-2">Bienvenido</h1>
-      <p class="font-medium m-0" style="color: #cbd5e1;">Gestión de Empresas</p>
+      <h1 class="text-white text-3xl font-bold m-0 mb-1 tracking-tight">Bienvenido</h1>
+      <p class="font-medium m-0 text-sm" style="color: #94a3b8;">Sistema de Gestión de Cotizaciones</p>
     </div>
 
+    <!-- Mensaje de Error -->
     <div *ngIf="mensajeError"
-         class="p-3 mb-4 border-left-3 text-sm border-round-md flex align-items-center fadein"
-         style="background-color: #fef2f2; border-color: #ef4444; color: #b91c1c;">
-      <i class="pi pi-exclamation-circle mr-2 text-lg"></i>
+         class="p-3 mb-4 border-left-3 text-sm border-round-xl flex align-items-center fadein shadow-2"
+         style="background-color: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fca5a5;">
+      <i class="pi pi-exclamation-circle mr-2 text-lg flex-shrink-0"></i>
       <span class="font-semibold">{{ mensajeError }}</span>
     </div>
 
@@ -28,23 +30,30 @@
       <div class="flex flex-column gap-4">
 
         <div class="flex flex-column gap-2 p-fluid">
-          <label for="email" class="font-bold text-white text-sm pl-1">Correo Electrónico</label>
-          <input pInputText id="email" type="email" [(ngModel)]="correo" name="correo"
-                 class="w-full p-inputtext-lg border-round-xl"
-                 placeholder="usuario@empresa.com" required autofocus autocomplete="email" />
+          <label for="email" class="font-semibold text-white text-xs uppercase tracking-wider pl-1">Correo Electrónico</label>
+          <div class="relative flex align-items-center">
+            <i class="pi pi-envelope absolute pl-3 text-slate-400 z-2"></i>
+            <input pInputText id="email" type="email" [(ngModel)]="correo" name="correo"
+                   class="w-full p-inputtext-lg border-round-xl pl-6 bg-white-alpha-10 text-white border-white-alpha-20 focus:border-sky-400"
+                   placeholder="usuario@empresa.com" required autofocus autocomplete="email" />
+          </div>
         </div>
 
         <div class="flex flex-column gap-2 p-fluid">
-          <label for="password" class="font-bold text-white text-sm pl-1">Contraseña</label>
-          <p-password id="password" [(ngModel)]="contrasena" name="contrasena"
-                      [toggleMask]="true" [feedback]="false"
-                      styleClass="w-full" inputStyleClass="w-full p-inputtext-lg border-round-xl"
-                      placeholder="••••••••" required autocomplete="current-password">
-          </p-password>
+          <label for="password" class="font-semibold text-white text-xs uppercase tracking-wider pl-1">Contraseña</label>
+          <div class="relative flex align-items-center">
+            <p-password id="password" [(ngModel)]="contrasena" name="contrasena"
+                        [toggleMask]="true" [feedback]="false"
+                        styleClass="w-full" inputStyleClass="w-full p-inputtext-lg border-round-xl bg-white-alpha-10 text-white border-white-alpha-20 focus:border-sky-400"
+                        placeholder="••••••••" required autocomplete="current-password">
+            </p-password>
+          </div>
         </div>
 
-        <button pButton pRipple type="submit" label="Ingresar"
-                class="p-button-primary w-full p-button-lg mt-3 border-round-xl font-bold shadow-2"
+        <button pButton pRipple type="submit" label="Ingresar al Sistema"
+                icon="pi pi-sign-in"
+                class="p-button-primary w-full p-button-lg mt-2 border-round-xl font-bold shadow-4 transition-all transition-duration-200"
+                style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;"
                 [loading]="cargando">
         </button>
 

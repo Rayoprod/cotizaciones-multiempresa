@@ -19,6 +19,10 @@ export class SelectorComponent implements OnInit {
   empresas: any[] = [];
   cargando: boolean = true;
 
+  get esAdmin(): boolean {
+    return this.session.esAdmin();
+  }
+
   constructor(
     private router: Router,
     private supabaseSvc: SupabaseService,

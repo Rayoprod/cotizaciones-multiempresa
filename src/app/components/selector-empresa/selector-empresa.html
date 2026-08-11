@@ -1,17 +1,17 @@
-<div class="min-h-screen flex p-3 md:p-5" style="background-color: #f8f9fa;">
+<div class="min-h-screen flex p-3 md:p-5 surface-ground">
 
-  <div class="m-auto w-full py-4" style="max-width: 900px;">
+  <div class="m-auto w-full py-4" style="max-width: 960px;">
 
     <!-- ENCABEZADO -->
-    <div class="text-center mb-5 mt-4 md:mt-0 fadeindown animation-duration-500">
-      <div class="inline-flex align-items-center justify-content-center bg-white p-3 border-circle shadow-2 mb-3">
-        <i class="pi pi-user text-4xl text-primary"></i>
+    <div class="text-center mb-5 mt-2 md:mt-0 fadeindown animation-duration-500">
+      <div class="inline-flex align-items-center justify-content-center bg-white p-3 border-circle shadow-3 mb-3 text-sky-600">
+        <i class="pi pi-user text-4xl"></i>
       </div>
-      <h1 class="text-900 font-bold text-3xl md:text-5xl mb-2 capitalize">
+      <h1 class="text-900 font-bold text-3xl md:text-5xl mb-2 capitalize tracking-tight">
         ¡Hola, {{ nombreUsuario }}!
       </h1>
       <p class="text-600 text-base md:text-xl m-0 font-medium px-2">
-        ¿Qué empresa vas a gestionar hoy?
+        Selecciona la empresa con la que deseas operar hoy
       </p>
     </div>
 
@@ -19,37 +19,27 @@
     <ng-container *ngIf="cargando">
       <div class="flex flex-column align-items-center justify-content-center gap-4 py-8 fadein animation-duration-300">
 
-        <div class="relative flex align-items-center justify-content-center"
-             style="width: 80px; height: 80px;">
-          <p-progressSpinner
-            strokeWidth="4"
-            animationDuration=".8s"
-            styleClass="w-full h-full"
-            [style]="{ width: '80px', height: '80px' }">
+        <div class="relative flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+          <p-progressSpinner strokeWidth="4" animationDuration=".8s" styleClass="w-full h-full" [style]="{ width: '80px', height: '80px' }">
           </p-progressSpinner>
         </div>
 
         <div class="text-center">
-          <p class="text-900 font-semibold text-xl m-0 mb-2">Cargando empresas</p>
-          <p class="text-500 text-base m-0">Por favor espera un momento...</p>
+          <p class="text-900 font-semibold text-xl m-0 mb-1">Cargando empresas asignadas...</p>
+          <p class="text-500 text-sm m-0">Verificando tus permisos de acceso</p>
         </div>
 
-        <!-- Skeleton -->
+        <!-- Skeleton Loader Cards -->
         <div class="grid formgrid m-0 justify-content-center w-full mt-3">
           <div class="col-12 md:col-6 p-2 md:p-3" *ngFor="let s of [1,2]">
-            <div class="bg-white border-round-2xl shadow-1 p-4 md:p-5">
+            <div class="bg-white border-round-2xl shadow-1 p-4 md:p-5 border-1 surface-border">
               <div class="flex justify-content-between align-items-start mb-4">
-                <div class="border-round-xl animation-pulse"
-                     style="width:70px; height:70px; background-color:#e9ecef;"></div>
-                <div class="border-round animation-pulse"
-                     style="width:24px; height:24px; background-color:#e9ecef;"></div>
+                <div class="border-round-xl animation-pulse" style="width:70px; height:70px; background-color:#e2e8f0;"></div>
+                <div class="border-round animation-pulse" style="width:24px; height:24px; background-color:#e2e8f0;"></div>
               </div>
-              <div class="border-round animation-pulse mb-3"
-                   style="height:28px; width:70%; background-color:#e9ecef;"></div>
-              <div class="border-round animation-pulse mb-2"
-                   style="height:16px; width:50%; background-color:#e9ecef;"></div>
-              <div class="border-round animation-pulse"
-                   style="height:14px; width:80%; background-color:#e9ecef;"></div>
+              <div class="border-round animation-pulse mb-3" style="height:28px; width:70%; background-color:#e2e8f0;"></div>
+              <div class="border-round animation-pulse mb-2" style="height:16px; width:50%; background-color:#e2e8f0;"></div>
+              <div class="border-round animation-pulse" style="height:14px; width:80%; background-color:#e2e8f0;"></div>
             </div>
           </div>
         </div>
@@ -59,19 +49,17 @@
 
     <!-- ESTADO: SIN EMPRESAS -->
     <ng-container *ngIf="!cargando && empresas.length === 0">
-      <div class="flex flex-column align-items-center justify-content-center gap-3 py-8 fadein animation-duration-500">
-        <div class="inline-flex align-items-center justify-content-center bg-orange-50 p-4 border-circle">
-          <i class="pi pi-building text-5xl text-orange-400"></i>
+      <div class="flex flex-column align-items-center justify-content-center gap-3 py-8 fadein animation-duration-500 surface-card border-round-2xl shadow-1 p-5 border-1 surface-border text-center">
+        <div class="inline-flex align-items-center justify-content-center bg-amber-50 p-4 border-circle mb-2">
+          <i class="pi pi-building text-5xl text-amber-500"></i>
         </div>
-        <p class="text-900 font-bold text-xl m-0">Sin empresas asignadas</p>
-        <p class="text-500 text-base m-0 text-center" style="max-width: 360px;">
-          Tu cuenta aún no tiene acceso a ninguna empresa.<br>
-          Contacta al administrador del sistema.
+        <h2 class="text-900 font-bold text-2xl m-0">Sin empresas asignadas</h2>
+        <p class="text-500 text-base m-0" style="max-width: 420px;">
+          Tu cuenta aún no tiene empresas habilitadas para gestionar.<br>
+          Por favor, solicita la asignación al administrador general del sistema.
         </p>
-        <button pButton
-                label="Volver al inicio de sesión"
-                icon="pi pi-sign-out"
-                class="p-button-outlined p-button-secondary mt-2"
+        <button pButton label="Volver al inicio de sesión" icon="pi pi-sign-out"
+                class="p-button-outlined p-button-secondary mt-3 border-round-xl font-bold"
                 routerLink="/login">
         </button>
       </div>
@@ -82,47 +70,46 @@
       <div class="grid formgrid m-0 justify-content-center fadein animation-duration-500">
         <div class="col-12 md:col-6 p-2 md:p-3" *ngFor="let emp of empresas">
 
-          <div class="h-full bg-white border-round-2xl shadow-2 p-4 md:p-5 cursor-pointer
-                      transition-all transition-duration-300 hover:shadow-6
-                      border-top-3 surface-border {{ emp.border_hover }}"
+          <div class="h-full bg-white border-round-2xl shadow-2 p-4 md:p-5 cursor-pointer card-hover-effect border-1 surface-border relative flex flex-column justify-content-between overflow-hidden"
+               [style.border-top]="'5px solid ' + (emp.color || 'var(--p-primary-color)')"
                (click)="seleccionar(emp)">
 
-            <div class="flex justify-content-between align-items-start mb-4">
-              <div class="p-2 border-round-xl {{ emp.bg_class }} flex align-items-center justify-content-center"
-                   style="width: 70px; height: 70px;">
-                <ng-container *ngIf="emp.ruta_logo; else noLogo">
-                  <img [src]="emp.ruta_logo"
-                       (error)="emp.ruta_logo = ''"
-                       [alt]="emp.nombre_comercial"
-                       style="max-width:100%; max-height:100%; object-fit:contain;">
-                </ng-container>
-                <ng-template #noLogo>
-                  <i class="{{ emp.icono }} text-4xl {{ emp.text_class }}"></i>
-                </ng-template>
+            <div>
+              <div class="flex justify-content-between align-items-start mb-4">
+                <div class="p-2 border-round-2xl flex align-items-center justify-content-center shadow-1 overflow-hidden"
+                     [style.background]="emp.color || 'var(--p-primary-color)'"
+                     style="width: 72px; height: 72px; color: #ffffff;">
+                  <ng-container *ngIf="emp.ruta_logo; else noLogo">
+                    <img [src]="emp.ruta_logo" (error)="emp.ruta_logo = ''" [alt]="emp.nombre_comercial" style="max-width:90%; max-height:90%; object-fit:contain;">
+                  </ng-container>
+                  <ng-template #noLogo>
+                    <i class="pi pi-building text-3xl"></i>
+                  </ng-template>
+                </div>
+
+                <div class="w-2rem h-2rem border-circle surface-100 flex align-items-center justify-content-center text-500">
+                  <i class="pi pi-arrow-up-right text-base"></i>
+                </div>
               </div>
-              <i class="pi pi-arrow-up-right text-300 text-2xl
-                        transition-colors transition-duration-300 hover:text-700"></i>
+
+              <h2 class="text-2xl md:text-3xl font-bold text-900 m-0 mb-3 tracking-tight">
+                {{ emp.nombre_comercial }}
+              </h2>
+
+              <div class="flex flex-column gap-2 mb-4">
+                <span class="text-700 font-semibold flex align-items-center text-sm md:text-base">
+                  <i class="pi pi-id-card mr-2 text-sky-600"></i>
+                  RUC: {{ emp.ruc }}
+                </span>
+                <span class="text-500 text-xs md:text-sm flex align-items-center line-height-3">
+                  <i class="pi pi-briefcase mr-2 text-400"></i>
+                  {{ emp.razon_social || 'Razón social no especificada' }}
+                </span>
+              </div>
             </div>
 
-            <h2 class="text-2xl md:text-3xl font-bold text-900 m-0 mb-3">
-              {{ emp.nombre_comercial }}
-            </h2>
-
-            <div class="flex flex-column gap-2">
-              <span class="text-700 font-medium flex align-items-center text-sm md:text-base">
-                <i class="pi pi-id-card mr-2 text-500"></i>
-                RUC: {{ emp.ruc }}
-              </span>
-              <span class="text-500 text-xs md:text-sm flex align-items-center line-height-3">
-                <i class="pi pi-building mr-2 text-500"></i>
-                {{ emp.razon_social }}
-              </span>
-            </div>
-
-            <div class="mt-5 pt-3 border-top-1 surface-border
-                        flex align-items-center justify-content-between
-                        text-sm font-bold text-500">
-              <span>Ingresar al sistema</span>
+            <div class="pt-3 border-top-1 surface-border flex align-items-center justify-content-between text-sm font-bold text-primary">
+              <span>Ingresar a cotizar</span>
               <i class="pi pi-chevron-right text-xs"></i>
             </div>
 
@@ -131,12 +118,14 @@
       </div>
     </ng-container>
 
-    <!-- BOTÓN CERRAR SESIÓN -->
-    <div class="text-center mt-5 mb-4 fadein animation-duration-1000 animation-delay-300">
-      <button pButton
-              label="Cambiar de Usuario"
-              icon="pi pi-sign-out"
-              class="p-button-text p-button-secondary font-bold"
+    <!-- BOTÓN CERRAR SESIÓN & ADMIN -->
+    <div class="flex flex-column sm:flex-row align-items-center justify-content-center gap-3 mt-5 mb-4 fadein animation-duration-1000">
+      <button *ngIf="esAdmin" pButton label="Ir al Panel Admin" icon="pi pi-shield"
+              class="p-button-outlined p-button-secondary font-bold border-round-xl"
+              routerLink="/admin/empresas">
+      </button>
+      <button pButton label="Cerrar sesión" icon="pi pi-sign-out"
+              class="p-button-text p-button-secondary font-semibold border-round-xl"
               (click)="cerrarSesion()">
       </button>
     </div>

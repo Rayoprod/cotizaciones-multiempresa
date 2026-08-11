@@ -1,121 +1,149 @@
 <p-toast />
 <p-confirmDialog />
-<!-- Spinner de carga -->
-<div *ngIf="cargando" class="flex justify-content-center align-items-center py-8">
-  <p-progressSpinner strokeWidth="4" [style]="{ width: '60px', height: '60px' }"></p-progressSpinner>
-</div>
 
-<div class="empresas-container" *ngIf="!cargando">
+<div class="p-3 md:p-5">
+
   <!-- Header Superior -->
-  <div class="empresas-header">
-    <div class="header-content">
-      <div class="header-info">
-        <h1 class="header-title">
-          <i class="pi pi-building"></i>
-          Gestión de Empresas
-        </h1>
-        <p class="header-subtitle">Administra la información corporativa y cuentas bancarias</p>
-      </div>
-      <div class="header-actions">
-        <p-button *ngIf="esAdminGeneral" label="Nueva Empresa" icon="pi pi-plus" class="btn-primary" (click)="abrirNuevo()" />
-      </div>
+  <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-bold text-900 m-0 tracking-tight flex align-items-center gap-2">
+        <i class="pi pi-building text-sky-600"></i>Gestión de Empresas
+      </h1>
+      <p class="text-500 text-sm mt-1 mb-0 font-medium">
+        Administra la información corporativa, identidad visual y cuentas bancarias asociadas
+      </p>
+    </div>
+    <div>
+      <p-button *ngIf="esAdminGeneral" label="Nueva Empresa" icon="pi pi-plus"
+                class="border-round-xl font-bold" (click)="abrirNuevo()" />
     </div>
   </div>
 
-  <!-- Tarjeta de Estadísticas -->
-    <div class="stats-card">
-      <div class="stats-grid">
-        <div class="stat-item">
-          <div class="stat-number">{{ empresas.length }}</div>
-          <div class="stat-label">Empresas Totales</div>
+  <!-- Spinner de Carga -->
+  <div *ngIf="cargando" class="flex flex-column align-items-center justify-content-center gap-4 py-8">
+    <p-progressSpinner strokeWidth="4" animationDuration=".8s" [style]="{ width: '60px', height: '60px' }" />
+    <p class="text-500 text-sm m-0 font-medium">Cargando empresas...</p>
+  </div>
+
+  <div *ngIf="!cargando">
+
+    <!-- KPI Cards -->
+    <div class="grid mb-4">
+      <div class="col-12 md:col-4">
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-sky-500 h-full card-hover-effect">
+          <div class="flex align-items-center justify-content-between mb-2">
+            <span class="text-500 text-xs font-bold uppercase tracking-wider">Empresas Totales</span>
+            <div class="w-2rem h-2rem border-circle bg-sky-100 text-sky-600 flex align-items-center justify-content-center">
+              <i class="pi pi-building text-sm"></i>
+            </div>
+          </div>
+          <p class="text-3xl font-bold text-sky-600 m-0">{{ empresas.length }}</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">registradas en la plataforma</p>
         </div>
-        <div class="stat-item">
-          <div class="stat-number">{{ empresasActivasCount }}</div>
-          <div class="stat-label">Empresas Activas</div>
+      </div>
+
+      <div class="col-6 md:col-4">
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-emerald-500 h-full card-hover-effect">
+          <div class="flex align-items-center justify-content-between mb-2">
+            <span class="text-500 text-xs font-bold uppercase tracking-wider">Empresas Activas</span>
+            <div class="w-2rem h-2rem border-circle bg-emerald-100 text-emerald-600 flex align-items-center justify-content-center">
+              <i class="pi pi-check-circle text-sm"></i>
+            </div>
+          </div>
+          <p class="text-3xl font-bold text-emerald-600 m-0">{{ empresasActivasCount }}</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">habilitadas para operar</p>
         </div>
-        <div class="stat-item">
-          <div class="stat-number">{{ empresasInactivasCount }}</div>
-          <div class="stat-label">Empresas Inactivas</div>
+      </div>
+
+      <div class="col-6 md:col-4">
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-rose-500 h-full card-hover-effect">
+          <div class="flex align-items-center justify-content-between mb-2">
+            <span class="text-500 text-xs font-bold uppercase tracking-wider">Inactivas</span>
+            <div class="w-2rem h-2rem border-circle bg-rose-100 text-rose-600 flex align-items-center justify-content-center">
+              <i class="pi pi-ban text-sm"></i>
+            </div>
+          </div>
+          <p class="text-3xl font-bold text-rose-600 m-0">{{ empresasInactivasCount }}</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">deshabilitadas temporalmente</p>
         </div>
       </div>
     </div>
 
-
-  <!-- -- Tabla de Empresas ----------------------------------------------------─ -->
-  <div class="table-card">
-    <div class="table-header">
-      <h2 class="table-title">Lista de Empresas</h2>
-      <div class="table-actions">
-        <span class="p-input-icon-left">
-          <i class="pi pi-search"></i>
-          <input pInputText type="text" #searchInput placeholder="Buscar empresa..."
-            (input)="dt.filterGlobal($any($event.target).value, 'contains')" class="search-input" />
-        </span>
-      </div>
-    </div>
-
-    <div class="table-container">
+    <!-- Tabla de Empresas -->
+    <div class="bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
       <p-table #dt [value]="empresas" [rows]="15" [paginator]="true" [rowsPerPageOptions]="[10, 15, 25, 50]"
         [rowHover]="true" responsiveLayout="scroll" scrollable="true" scrollHeight="flex"
-        [globalFilterFields]="['id','nombre_comercial','razon_social','ruc']" styleClass="empresas-table">
+        [globalFilterFields]="['id','nombre_comercial','razon_social','ruc']" styleClass="p-datatable-sm">
+
+        <ng-template pTemplate="caption">
+          <div class="flex align-items-center justify-content-between gap-3 p-3 flex-wrap bg-white border-bottom-1 surface-border">
+            <span class="font-bold text-900 text-base">
+              Empresas (<span class="text-sky-600">{{ empresas.length }}</span>)
+            </span>
+            <div class="relative flex align-items-center w-full md:w-auto">
+              <i class="pi pi-search absolute pl-3 text-400"></i>
+              <input pInputText type="text" #searchInput placeholder="Buscar por nombre, RUC o código..."
+                     class="w-full md:w-20rem border-round-xl pl-6"
+                     (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
+            </div>
+          </div>
+        </ng-template>
 
         <ng-template pTemplate="header">
           <tr>
-            <th style="width: 80px; text-align: center;">Logo</th>
-            <th style="width: 100px;">ID</th>
-            <th>Empresa</th>
+            <th style="width: 80px;" class="text-center">Logo</th>
+            <th style="width: 110px;">ID</th>
+            <th>Empresa / Razón Social</th>
             <th style="width: 140px;">RUC</th>
-            <th style="width: 120px;">Estado</th>
-            <th style="width: 140px; text-align: center;">Acciones</th>
+            <th style="width: 120px;" class="text-center">Estado</th>
+            <th style="width: 120px;" class="text-center">Acciones</th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-emp>
           <tr>
-            <!-- Logo -->
             <td class="text-center">
-              <div class="company-logo">
-                <img *ngIf="emp.ruta_logo" [src]="emp.ruta_logo" [alt]="emp.nombre_comercial">
-                <i *ngIf="!emp.ruta_logo" class="pi pi-building"></i>
+              <div class="flex align-items-center justify-content-center border-round-lg overflow-hidden mx-auto surface-100 border-1 surface-border" style="width: 44px; height: 44px;">
+                <img *ngIf="emp.ruta_logo" [src]="emp.ruta_logo" [alt]="emp.nombre_comercial" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                <i *ngIf="!emp.ruta_logo" class="pi pi-building text-500 text-xl"></i>
               </div>
             </td>
 
-            <!-- ID -->
             <td>
-              <span class="company-id">{{ emp.id }}</span>
-            </td>
-
-            <!-- Empresa -->
-            <td>
-              <div class="company-info">
-                <div class="company-name">{{ emp.nombre_comercial }}</div>
-                <div class="company-details" *ngIf="emp.razon_social">
-                  <i class="pi pi-briefcase"></i> {{ emp.razon_social }}
-                </div>
-                <div class="company-details" *ngIf="emp.direccion">
-                  <i class="pi pi-map-marker"></i> {{ emp.direccion }}
-                </div>
-              </div>
-            </td>
-
-            <!-- RUC -->
-            <td>
-              <span class="company-ruc">{{ emp.ruc }}</span>
-            </td>
-
-            <!-- Estado -->
-            <td>
-              <span class="status-badge" [class.active]="emp.activa" [class.inactive]="!emp.activa">
-                {{ emp.activa ? 'Activa' : 'Inactiva' }}
+              <span class="font-mono text-xs font-bold bg-sky-50 text-sky-700 px-2 py-1 border-round-md">
+                {{ emp.id }}
               </span>
             </td>
 
-            <!-- Acciones -->
+            <td>
+              <div>
+                <p class="font-bold text-900 m-0 text-base">{{ emp.nombre_comercial }}</p>
+                <p class="text-xs text-500 m-0 mt-1 flex align-items-center gap-1" *ngIf="emp.razon_social">
+                  <i class="pi pi-briefcase text-xs"></i> {{ emp.razon_social }}
+                </p>
+                <p class="text-xs text-400 m-0 mt-1 flex align-items-center gap-1" *ngIf="emp.direccion">
+                  <i class="pi pi-map-marker text-xs"></i> {{ emp.direccion }}
+                </p>
+              </div>
+            </td>
+
+            <td>
+              <span class="font-mono text-xs font-semibold text-700 surface-100 px-2 py-1 border-round-md">
+                {{ emp.ruc }}
+              </span>
+            </td>
+
             <td class="text-center">
-              <div class="action-buttons">
-                <p-button *ngIf="esAdminGeneral || esAdminEmpresa" icon="pi pi-pencil" class="btn-edit" severity="info" size="small" pTooltip="Editar empresa"
+              <p-tag [value]="emp.activa ? 'Activa' : 'Inactiva'"
+                     [severity]="emp.activa ? 'success' : 'danger'"
+                     styleClass="font-bold border-round-md" />
+            </td>
+
+            <td class="text-center">
+              <div class="flex gap-1 justify-content-center">
+                <p-button *ngIf="esAdminGeneral || esAdminEmpresa" icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" size="small" pTooltip="Editar empresa"
                   (click)="editarEmpresa(emp)" />
-                <p-button *ngIf="esAdminGeneral" icon="pi pi-trash" class="btn-delete" severity="danger" size="small"
+                <p-button *ngIf="esAdminGeneral" icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" size="small"
                   pTooltip="Eliminar empresa" (click)="eliminarEmpresa(emp.id)" />
               </div>
             </td>
@@ -125,11 +153,11 @@
         <ng-template pTemplate="emptymessage">
           <tr>
             <td colspan="6">
-              <div class="empty-state">
-                <i class="pi pi-inbox"></i>
-                <h3>No hay empresas registradas</h3>
-                <p>Comienza agregando tu primera empresa para comenzar a gestionar tus cotizaciones</p>
-                <p-button *ngIf="esAdminGeneral" label="Agregar Empresa" icon="pi pi-plus" class="btn-primary" (click)="abrirNuevo()" />
+              <div class="flex flex-column align-items-center py-8 text-500">
+                <i class="pi pi-building text-5xl mb-3 opacity-30"></i>
+                <p class="font-bold text-900 m-0 text-lg">No hay empresas registradas</p>
+                <p class="text-sm m-0 mt-1 mb-3">Comienza agregando tu primera empresa corporativa</p>
+                <p-button *ngIf="esAdminGeneral" label="Agregar Empresa" icon="pi pi-plus" class="border-round-xl font-bold" (click)="abrirNuevo()" />
               </div>
             </td>
           </tr>
@@ -137,268 +165,205 @@
 
       </p-table>
     </div>
-  </div>
 
+  </div>
 </div>
 
-<!-- -- Modal de Formulario --------------------------------------------------------─ -->
+<!-- Modal Formulario Empresa -->
 <p-dialog header="{{ esEdicion ? 'Editar Empresa' : 'Nueva Empresa' }}" [(visible)]="empresaDialog" [modal]="true"
-  [resizable]="false" [style]="{'width':'90vw','max-width':'800px'}" (onHide)="cerrarModal()" appendTo="body" >
+  [resizable]="false" [style]="{'width':'95vw','max-width':'800px'}" (onHide)="cerrarModal()" appendTo="body">
 
-  <form [formGroup]="empresaForm" class="form-container">
+  <form [formGroup]="empresaForm" class="flex flex-column gap-4 pt-2">
 
-    <!-- -- Sección: Información Principal --------------------------------------─ -->
-    <div class="form-section">
-      <div class="section-header">
-        <h3 class="section-title">
-          <i class="pi pi-info-circle"></i>
-          Información Principal
-        </h3>
+    <!-- Sección: Información Principal -->
+    <div class="surface-card border-round-xl p-4 border-1 surface-border">
+      <div class="flex align-items-center gap-2 mb-3 text-sky-600 font-bold text-lg border-bottom-1 surface-border pb-2">
+        <i class="pi pi-info-circle"></i>
+        <span>Información Principal</span>
       </div>
 
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">ID de Empresa <span class="required">*</span></label>
-          <input pInputText type="text" formControlName="id" class="form-input" placeholder="Ej: EMP001" maxlength="10"
+      <div class="grid">
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label class="font-semibold text-900 text-sm">ID de Empresa <span class="text-red-500">*</span></label>
+          <input pInputText type="text" formControlName="id" class="w-full border-round-xl font-mono" placeholder="Ej: EMP001" maxlength="10"
             style="text-transform:uppercase" (input)="forzarMayusculas('id')">
-          <small class="form-error" *ngIf="empresaForm.get('id')?.invalid && empresaForm.get('id')?.dirty">
-            {{ getErrorMensaje('id', 'required') || getErrorMensaje('id', 'pattern') || getErrorMensaje('id',
-            'idDuplicado') }}
+          <small class="text-red-500 text-xs" *ngIf="empresaForm.get('id')?.invalid && empresaForm.get('id')?.dirty">
+            {{ getErrorMensaje('id', 'required') || getErrorMensaje('id', 'pattern') || getErrorMensaje('id', 'idDuplicado') }}
           </small>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Nombre Comercial <span class="required">*</span></label>
-          <input pInputText type="text" formControlName="nombre_comercial" class="form-input"
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label class="font-semibold text-900 text-sm">Nombre Comercial <span class="text-red-500">*</span></label>
+          <input pInputText type="text" formControlName="nombre_comercial" class="w-full border-round-xl"
             placeholder="Nombre visible para clientes">
-          <small class="form-error"
-            *ngIf="empresaForm.get('nombre_comercial')?.invalid && empresaForm.get('nombre_comercial')?.dirty">
+          <small class="text-red-500 text-xs" *ngIf="empresaForm.get('nombre_comercial')?.invalid && empresaForm.get('nombre_comercial')?.dirty">
             {{ getErrorMensaje('nombre_comercial', 'required') || getErrorMensaje('nombre_comercial', 'minlength') }}
           </small>
         </div>
 
-        <div class="form-group full-width">
-          <label class="form-label">Razón Social</label>
-          <input pInputText type="text" formControlName="razon_social" class="form-input"
-            placeholder="Nombre legal de la empresa">
+        <div class="col-12 flex flex-column gap-2">
+          <label class="font-semibold text-900 text-sm">Razón Social</label>
+          <input pInputText type="text" formControlName="razon_social" class="w-full border-round-xl"
+            placeholder="Nombre legal completo de la empresa">
         </div>
 
-        <div class="form-group">
-          <label class="form-label">RUC <span class="required">*</span></label>
-          <div class="input-group">
-            <input pInputText type="text" formControlName="ruc" class="form-input" placeholder="11 dígitos"
-              maxlength="11">
-            <p-button icon="pi pi-search" class="btn-search" [disabled]="empresaForm.get('ruc')?.invalid"
-              (click)="consultarRUC()" />
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label class="font-semibold text-900 text-sm">RUC <span class="text-red-500">*</span></label>
+          <div class="flex gap-2">
+            <input pInputText type="text" formControlName="ruc" class="w-full border-round-xl font-mono" placeholder="11 dígitos" maxlength="11">
+            <p-button icon="pi pi-search" [disabled]="empresaForm.get('ruc')?.invalid" (click)="consultarRUC()" />
           </div>
-          <small class="form-error" *ngIf="empresaForm.get('ruc')?.invalid && empresaForm.get('ruc')?.dirty">
-            {{ getErrorMensaje('ruc', 'required') || getErrorMensaje('ruc', 'pattern') || getErrorMensaje('ruc',
-            'rucDuplicado') }}
+          <small class="text-red-500 text-xs" *ngIf="empresaForm.get('ruc')?.invalid && empresaForm.get('ruc')?.dirty">
+            {{ getErrorMensaje('ruc', 'required') || getErrorMensaje('ruc', 'pattern') || getErrorMensaje('ruc', 'rucDuplicado') }}
           </small>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Prefijo <span class="required">*</span></label>
-          <input pInputText type="text" formControlName="prefijo" class="form-input"
-            placeholder="Se genera automáticamente" maxlength="5" style="text-transform:uppercase"
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label class="font-semibold text-900 text-sm">Prefijo de Cotización <span class="text-red-500">*</span></label>
+          <input pInputText type="text" formControlName="prefijo" class="w-full border-round-xl font-mono"
+            placeholder="Autogenerado o personalizable" maxlength="5" style="text-transform:uppercase"
             (input)="forzarMayusculas('prefijo')">
-          <small class="form-hint" *ngIf="!empresaForm.get('prefijo')?.errors">Ejemplo: {{ prefijoEjemplo }}</small>
-          <small class="form-error" *ngIf="empresaForm.get('prefijo')?.hasError('prefijoDuplicado')">
+          <small class="text-500 text-xs" *ngIf="!empresaForm.get('prefijo')?.errors">Ejemplo correlativo: {{ prefijoEjemplo }}</small>
+          <small class="text-red-500 text-xs" *ngIf="empresaForm.get('prefijo')?.hasError('prefijoDuplicado')">
             {{ empresaForm.get('prefijo')?.getError('prefijoDuplicado') }}
           </small>
-          <small class="form-error"
-            *ngIf="empresaForm.get('prefijo')?.hasError('pattern') && empresaForm.get('prefijo')?.dirty">
-            Solo letras mayúsculas y números (1-5 caracteres)
-          </small>
         </div>
       </div>
     </div>
 
-    <!-- -- Sección: Contacto ----------------------------------------------------─ -->
-    <div class="form-section">
-      <div class="section-header">
-        <h3 class="section-title">
-          <i class="pi pi-phone"></i>
-          Información de Contacto
-        </h3>
+    <!-- Sección: Contacto -->
+    <div class="surface-card border-round-xl p-4 border-1 surface-border">
+      <div class="flex align-items-center gap-2 mb-3 text-sky-600 font-bold text-lg border-bottom-1 surface-border pb-2">
+        <i class="pi pi-phone"></i>
+        <span>Contacto y Ubicación</span>
       </div>
 
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Dirección</label>
-          <input pInputText type="text" formControlName="direccion" class="form-input" placeholder="Dirección fiscal">
+      <div class="grid">
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label class="font-semibold text-900 text-sm">Dirección Fiscal</label>
+          <input pInputText type="text" formControlName="direccion" class="w-full border-round-xl" placeholder="Dirección legals">
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Teléfonos</label>
-          <input pInputText type="text" formControlName="telefonos" class="form-input"
-            placeholder="Ej: 01-2345678, 987654321">
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label class="font-semibold text-900 text-sm">Teléfonos de Contacto</label>
+          <input pInputText type="text" formControlName="telefonos" class="w-full border-round-xl" placeholder="Ej: 01-2345678, 987654321">
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Correo Electrónico</label>
-          <input pInputText type="email" formControlName="correo" class="form-input" placeholder="correo@empresa.com">
-          <small class="form-error" *ngIf="empresaForm.get('correo')?.invalid && empresaForm.get('correo')?.dirty">
-            {{ getErrorMensaje('correo', 'pattern') }}
-          </small>
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label class="font-semibold text-900 text-sm">Correo Electrónico</label>
+          <input pInputText type="email" formControlName="correo" class="w-full border-round-xl" placeholder="contacto@empresa.com">
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Contacto de Aprobación</label>
-          <input pInputText type="text" formControlName="contacto_aprobacion" class="form-input"
-            placeholder="Persona autorizada para aprobar">
+        <div class="col-12 md:col-6 flex flex-column gap-2">
+          <label class="font-semibold text-900 text-sm">Contacto de Aprobación</label>
+          <input pInputText type="text" formControlName="contacto_aprobacion" class="w-full border-round-xl" placeholder="Persona autorizada">
         </div>
       </div>
     </div>
 
-    <!-- -- Sección: Identidad Visual --------------------------------------------─ -->
-    <div class="form-section">
-      <div class="section-header">
-        <h3 class="section-title">
-          <i class="pi pi-palette"></i>
-          Identidad Visual
-        </h3>
+    <!-- Sección: Identidad Visual -->
+    <div class="surface-card border-round-xl p-4 border-1 surface-border">
+      <div class="flex align-items-center gap-2 mb-3 text-sky-600 font-bold text-lg border-bottom-1 surface-border pb-2">
+        <i class="pi pi-palette"></i>
+        <span>Identidad Visual</span>
       </div>
 
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Color Corporativo</label>
-          <div class="color-picker-container">
+      <div class="grid align-items-center">
+        <div class="col-12 md:col-4 flex flex-column gap-2">
+          <label class="font-semibold text-900 text-sm">Color Corporativo</label>
+          <div class="flex align-items-center gap-3">
             <p-colorPicker formControlName="color"></p-colorPicker>
-            <div class="color-preview" [style.background]="colorEmpresa"></div>
-            <span class="color-value">{{ colorEmpresa }}</span>
+            <div class="w-2rem h-2rem border-round-md border-1 surface-border shadow-1" [style.background]="colorEmpresa"></div>
+            <span class="font-mono text-sm text-700 font-semibold">{{ colorEmpresa }}</span>
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Logo</label>
-          <div class="file-upload-container">
+        <div class="col-12 md:col-4 flex flex-column gap-2">
+          <label class="font-semibold text-900 text-sm">Logo Corporativo</label>
+          <div class="flex align-items-center gap-3">
             <input type="file" #logoInput (change)="subirLogo($event)" accept="image/*" style="display:none">
-            <p-button label="Seleccionar Logo" icon="pi pi-upload" class="btn-upload" outlined
-              (click)="logoInput.click()" />
-            <div class="image-preview" *ngIf="empresaForm.get('ruta_logo')?.value">
-              <img [src]="empresaForm.get('ruta_logo')?.value" alt="Logo">
+            <p-button label="Subir Logo" icon="pi pi-upload" [outlined]="true" size="small" (click)="logoInput.click()" />
+            <div class="w-3rem h-3rem border-round-lg overflow-hidden border-1 surface-border flex align-items-center justify-content-center bg-white" *ngIf="empresaForm.get('ruta_logo')?.value">
+              <img [src]="empresaForm.get('ruta_logo')?.value" alt="Logo" style="max-width:100%;max-height:100%;object-fit:contain">
             </div>
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Firma Digital</label>
-          <div class="file-upload-container">
+        <div class="col-12 md:col-4 flex flex-column gap-2">
+          <label class="font-semibold text-900 text-sm">Firma Digital</label>
+          <div class="flex align-items-center gap-3">
             <input type="file" #firmaInput (change)="subirFirma($event)" accept="image/*" style="display:none">
-            <p-button label="Seleccionar Firma" icon="pi pi-upload" class="btn-upload" outlined
-              (click)="firmaInput.click()" />
-            <div class="image-preview" *ngIf="empresaForm.get('ruta_firma')?.value">
-              <img [src]="empresaForm.get('ruta_firma')?.value" alt="Firma">
+            <p-button label="Subir Firma" icon="pi pi-upload" [outlined]="true" size="small" (click)="firmaInput.click()" />
+            <div class="w-3rem h-3rem border-round-lg overflow-hidden border-1 surface-border flex align-items-center justify-content-center bg-white" *ngIf="empresaForm.get('ruta_firma')?.value">
+              <img [src]="empresaForm.get('ruta_firma')?.value" alt="Firma" style="max-width:100%;max-height:100%;object-fit:contain">
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- -- Sección: Cuentas Bancarias --------------------------------------------─ -->
-    <div class="form-section">
-      <div class="section-header">
-        <h3 class="section-title">
+    <!-- Sección: Cuentas Bancarias -->
+    <div class="surface-card border-round-xl p-4 border-1 surface-border">
+      <div class="flex align-items-center justify-content-between mb-3 border-bottom-1 surface-border pb-2">
+        <div class="flex align-items-center gap-2 text-sky-600 font-bold text-lg">
           <i class="pi pi-credit-card"></i>
-          Cuentas Bancarias
-        </h3>
-        <p-button icon="pi pi-plus" label="Agregar Cuenta" class="btn-add-account" outlined
-          (click)="agregarCuenta()" />
+          <span>Cuentas Bancarias</span>
+        </div>
+        <p-button icon="pi pi-plus" label="Agregar Cuenta" [outlined]="true" size="small" (click)="agregarCuenta()" />
       </div>
 
-      <div class="accounts-container" formArrayName="cuentas_bancarias">
-
+      <div formArrayName="cuentas_bancarias" class="flex flex-column gap-3">
         <ng-container *ngIf="tieneCuentas">
-          <div *ngFor="let cuenta of cuentasBancarias.controls; let i = index" [formGroupName]="i" class="account-card">
-
-            <div class="account-header">
-              <span class="account-title">Cuenta Bancaria {{ i + 1 }}</span>
-              <p-button icon="pi pi-times" class="btn-remove-account" severity="danger" [text]="true" size="small"
-                (click)="eliminarCuenta(i)" />
+          <div *ngFor="let cuenta of cuentasBancarias.controls; let i = index" [formGroupName]="i" class="p-3 border-round-xl border-1 surface-border surface-50">
+            <div class="flex justify-content-between align-items-center mb-3">
+              <span class="font-bold text-900 text-sm">Cuenta Bancaria #{{ i + 1 }}</span>
+              <p-button icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true" size="small" (click)="eliminarCuenta(i)" />
             </div>
 
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">Banco <span class="required">*</span></label>
-                <input pInputText type="text" formControlName="banco" class="form-input" placeholder="Nombre del banco">
-                <small class="form-error"
-                  *ngIf="cuentasBancarias.at(i).get('banco')?.invalid && cuentasBancarias.at(i).get('banco')?.dirty">
-                  {{ getCuentaErrorMensaje(i, 'banco', 'required') }}
-                </small>
+            <div class="grid">
+              <div class="col-12 md:col-3 flex flex-column gap-1">
+                <label class="text-xs font-semibold text-700">Banco *</label>
+                <input pInputText type="text" formControlName="banco" class="w-full border-round-lg p-inputtext-sm" placeholder="Ej: BCP">
               </div>
-
-              <div class="form-group">
-                <label class="form-label">Tipo de Cuenta <span class="required">*</span></label>
-                <input pInputText type="text" formControlName="tipo_cuenta" class="form-input"
-                  placeholder="Corriente/Ahorros">
-                <small class="form-error"
-                  *ngIf="cuentasBancarias.at(i).get('tipo_cuenta')?.invalid && cuentasBancarias.at(i).get('tipo_cuenta')?.dirty">
-                  {{ getCuentaErrorMensaje(i, 'tipo_cuenta', 'required') }}
-                </small>
+              <div class="col-12 md:col-3 flex flex-column gap-1">
+                <label class="text-xs font-semibold text-700">Tipo *</label>
+                <input pInputText type="text" formControlName="tipo_cuenta" class="w-full border-round-lg p-inputtext-sm" placeholder="Corriente/Ahorros">
               </div>
-
-              <div class="form-group">
-                <label class="form-label">Número de Cuenta <span class="required">*</span></label>
-                <input pInputText type="text" formControlName="numero" class="form-input"
-                  placeholder="Número de cuenta">
-                <small class="form-error"
-                  *ngIf="cuentasBancarias.at(i).get('numero')?.invalid && cuentasBancarias.at(i).get('numero')?.dirty">
-                  {{ getCuentaErrorMensaje(i, 'numero', 'required') || getCuentaErrorMensaje(i, 'numero', 'minlength')
-                  }}
-                </small>
+              <div class="col-12 md:col-3 flex flex-column gap-1">
+                <label class="text-xs font-semibold text-700">Número *</label>
+                <input pInputText type="text" formControlName="numero" class="w-full border-round-lg p-inputtext-sm font-mono" placeholder="N° de Cuenta">
               </div>
-
-              <div class="form-group">
-                <label class="form-label">CCI</label>
-                <input pInputText type="text" formControlName="cci" class="form-input"
-                  placeholder="Código Interbancario (20 dígitos)">
-                <small class="form-error"
-                  *ngIf="cuentasBancarias.at(i).get('cci')?.invalid && cuentasBancarias.at(i).get('cci')?.dirty">
-                  {{ getCuentaErrorMensaje(i, 'cci', 'minlength') }}
-                </small>
+              <div class="col-12 md:col-3 flex flex-column gap-1">
+                <label class="text-xs font-semibold text-700">CCI</label>
+                <input pInputText type="text" formControlName="cci" class="w-full border-round-lg p-inputtext-sm font-mono" placeholder="20 dígitos CCI">
               </div>
             </div>
-
           </div>
         </ng-container>
 
-        <div class="no-accounts" *ngIf="!tieneCuentas">
-          <i class="pi pi-credit-card"></i>
-          <p>No hay cuentas bancarias agregadas</p>
-          <p-button label="Agregar Primera Cuenta" icon="pi pi-plus" class="btn-add-account" outlined
-            (click)="agregarCuenta()" />
+        <div *ngIf="!tieneCuentas" class="text-center py-4 text-500">
+          <i class="pi pi-credit-card text-3xl mb-2 opacity-30"></i>
+          <p class="text-sm m-0">No se han registrado cuentas bancarias para esta empresa</p>
         </div>
-
       </div>
     </div>
-    <!-- -- Sección: Configuración ------------------------------------------------─ -->
-    <div class="form-section">
-      <div class="section-header">
-        <h3 class="section-title">
-          <i class="pi pi-cog"></i>
-          Configuración
-        </h3>
-      </div>
 
-      <div class="form-grid">
-        <div class="form-group">
-          <div class="toggle-container">
-            <p-toggleButton formControlName="activa"></p-toggleButton>
-            <div class="toggle-info">
-              <label class="toggle-label">Empresa Activa</label>
-              <small class="toggle-description">Permite que esta empresa genere cotizaciones</small>
-            </div>
+    <!-- Sección: Estado y Visibilidad -->
+    <div class="surface-card border-round-xl p-4 border-1 surface-border">
+      <div class="grid">
+        <div class="col-12 md:col-6 flex align-items-center gap-3">
+          <p-toggleButton formControlName="activa"></p-toggleButton>
+          <div>
+            <label class="font-bold text-900 text-sm block">Empresa Activa</label>
+            <small class="text-500">Habilita esta empresa para emitir cotizaciones</small>
           </div>
         </div>
 
-        <div class="form-group">
-          <div class="toggle-container">
-            <p-toggleButton formControlName="mostrar_cuentas"></p-toggleButton>
-            <div class="toggle-info">
-              <label class="toggle-label">Mostrar Cuentas</label>
-              <small class="toggle-description">Muestra cuentas bancarias en cotizaciones</small>
-            </div>
+        <div class="col-12 md:col-6 flex align-items-center gap-3">
+          <p-toggleButton formControlName="mostrar_cuentas"></p-toggleButton>
+          <div>
+            <label class="font-bold text-900 text-sm block">Mostrar Cuentas Bancarias</label>
+            <small class="text-500">Incluye los datos bancarios en el PDF imprimible</small>
           </div>
         </div>
       </div>
@@ -407,11 +372,9 @@
   </form>
 
   <ng-template pTemplate="footer">
-    <div class="dialog-footer">
-      <p-button label="Cancelar" icon="pi pi-times" class="btn-secondary" outlined (click)="cerrarModal()"
-        [disabled]="enviando" />
-      <p-button [label]="getBotonLabel()" icon="pi pi-check" class="btn-primary"
-        [loading]="enviando" (click)="guardarEmpresa()" />
+    <div class="flex gap-2 pt-2">
+      <p-button label="Cancelar" severity="secondary" [text]="true" (click)="cerrarModal()" [disabled]="enviando" />
+      <p-button [label]="getBotonLabel()" icon="pi pi-check" class="border-round-xl font-bold" [loading]="enviando" (click)="guardarEmpresa()" />
     </div>
   </ng-template>
 

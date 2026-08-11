@@ -1,18 +1,17 @@
 <p-toast />
 <div class="p-3 md:p-5">
 
-  <!-- Header -->
-  <div class="flex flex-column md:flex-row align-items-start md:align-items-center
-              justify-content-between gap-3 mb-4">
+  <!-- Header Superior -->
+  <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
     <div>
-      <h2 class="text-xl md:text-3xl font-bold text-900 m-0">
-        <i class="pi pi-users text-primary mr-2"></i>Directorio de Clientes
-      </h2>
-      <p class="text-color-secondary mt-1 mb-0 text-sm">
-        Administra tu cartera de clientes
+      <h1 class="text-2xl md:text-3xl font-bold text-900 m-0 tracking-tight flex align-items-center gap-2">
+        <i class="pi pi-users text-sky-600"></i>Directorio de Clientes
+      </h1>
+      <p class="text-500 text-sm mt-1 mb-0 font-medium">
+        Gestión centralizada de contactos y clientes corporativos
       </p>
     </div>
-    <p-button label="Nuevo Cliente" icon="pi pi-user-plus" styleClass="w-full md:w-auto" (onClick)="abrirNuevo()" />
+    <p-button label="Nuevo Cliente" icon="pi pi-user-plus" class="w-full md:w-auto border-round-xl font-bold" (onClick)="abrirNuevo()" />
   </div>
 
   <!-- Loading State -->
@@ -20,17 +19,8 @@
     <div class="flex flex-column align-items-center justify-content-center gap-4 py-6">
       <p-progressSpinner strokeWidth="4" animationDuration=".8s" [style]="{ width: '60px', height: '60px' }" />
       <div class="text-center">
-        <p class="text-900 font-semibold text-lg m-0 mb-1">Cargando clientes</p>
-        <p class="text-500 text-sm m-0">Obteniendo directorio...</p>
-      </div>
-      <div class="grid w-full mt-2">
-        <div class="col-12 md:col-4" *ngFor="let s of [1,2,3]">
-          <div class="surface-card border-round-xl p-4 shadow-1">
-            <div class="border-round animation-pulse mb-3" style="height:14px;width:40%;background:#e9ecef;"></div>
-            <div class="border-round animation-pulse mb-2" style="height:22px;width:70%;background:#e9ecef;"></div>
-            <div class="border-round animation-pulse" style="height:12px;width:50%;background:#e9ecef;"></div>
-          </div>
-        </div>
+        <p class="text-900 font-bold text-lg m-0 mb-1">Cargando directorio...</p>
+        <p class="text-500 text-sm m-0">Sincronizando información de clientes</p>
       </div>
     </div>
   </ng-container>
@@ -41,63 +31,71 @@
     <!-- KPI Cards -->
     <div class="grid mb-4">
       <div class="col-6 md:col-4">
-        <div class="surface-card border-round-xl p-3 md:p-4 shadow-1 border-left-3 border-primary h-full">
-          <div class="flex align-items-center gap-2 mb-2">
-            <i class="pi pi-users text-primary text-lg"></i>
-            <span class="text-color-secondary text-xs font-semibold uppercase">Total</span>
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-sky-500 h-full card-hover-effect">
+          <div class="flex align-items-center justify-content-between mb-2">
+            <span class="text-500 text-xs font-bold uppercase tracking-wider">Total Registrados</span>
+            <div class="w-2rem h-2rem border-circle bg-sky-100 text-sky-600 flex align-items-center justify-content-center">
+              <i class="pi pi-users text-sm"></i>
+            </div>
           </div>
-          <p class="text-2xl md:text-3xl font-bold text-900 m-0">{{ clientes.length }}</p>
-          <p class="text-xs text-500 m-0 mt-1">clientes registrados</p>
+          <p class="text-3xl font-bold text-sky-600 m-0">{{ clientes.length }}</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">clientes activos en cartera</p>
         </div>
       </div>
+
       <div class="col-6 md:col-4">
-        <div class="surface-card border-round-xl p-3 md:p-4 shadow-1 border-left-3 border-green-500 h-full">
-          <div class="flex align-items-center gap-2 mb-2">
-            <i class="pi pi-phone text-green-500 text-lg"></i>
-            <span class="text-color-secondary text-xs font-semibold uppercase">Con Teléfono</span>
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-emerald-500 h-full card-hover-effect">
+          <div class="flex align-items-center justify-content-between mb-2">
+            <span class="text-500 text-xs font-bold uppercase tracking-wider">Con Teléfono</span>
+            <div class="w-2rem h-2rem border-circle bg-emerald-100 text-emerald-600 flex align-items-center justify-content-center">
+              <i class="pi pi-phone text-sm"></i>
+            </div>
           </div>
-          <p class="text-2xl md:text-3xl font-bold text-900 m-0">{{ clientesConTelefono }}</p>
-          <p class="text-xs text-500 m-0 mt-1">contacto directo</p>
+          <p class="text-3xl font-bold text-emerald-600 m-0">{{ clientesConTelefono }}</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">contactos habilitados</p>
         </div>
       </div>
+
       <div class="col-12 md:col-4">
-        <div class="surface-card border-round-xl p-3 md:p-4 shadow-1 border-left-3 border-blue-500 h-full">
-          <div class="flex align-items-center gap-2 mb-2">
-            <i class="pi pi-envelope text-blue-500 text-lg"></i>
-            <span class="text-color-secondary text-xs font-semibold uppercase">Con Correo</span>
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-indigo-500 h-full card-hover-effect">
+          <div class="flex align-items-center justify-content-between mb-2">
+            <span class="text-500 text-xs font-bold uppercase tracking-wider">Con Correo</span>
+            <div class="w-2rem h-2rem border-circle bg-indigo-100 text-indigo-600 flex align-items-center justify-content-center">
+              <i class="pi pi-envelope text-sm"></i>
+            </div>
           </div>
-          <p class="text-2xl md:text-3xl font-bold text-900 m-0">{{ clientesConCorreo }}</p>
-          <p class="text-xs text-500 m-0 mt-1">para envío digital</p>
+          <p class="text-3xl font-bold text-indigo-600 m-0">{{ clientesConCorreo }}</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">para cotizaciones digitales</p>
         </div>
       </div>
     </div>
 
     <!-- Table -->
-    <div class="surface-card border-round-xl shadow-1 overflow-hidden">
+    <div class="bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
       <p-table #dt [value]="clientes" [rows]="10" [paginator]="true"
                [globalFilterFields]="['documento_identidad', 'nombre_razon_social', 'correo']"
                [rowHover]="true" styleClass="p-datatable-sm">
 
         <ng-template pTemplate="caption">
-          <div class="flex align-items-center justify-content-between gap-3 p-2 flex-wrap">
-            <span class="font-bold text-900">
-              Total: <span class="text-primary">{{ clientes.length }}</span> clientes
+          <div class="flex align-items-center justify-content-between gap-3 p-3 flex-wrap bg-white border-bottom-1 surface-border">
+            <span class="font-bold text-900 text-base">
+              Clientes (<span class="text-sky-600">{{ clientes.length }}</span>)
             </span>
-            <span class="p-input-icon-left w-full md:w-auto">
-              <i class="pi pi-search"></i>
-              <input pInputText type="text" class="w-full md:w-20rem"
+            <div class="relative flex align-items-center w-full md:w-auto">
+              <i class="pi pi-search absolute pl-3 text-400"></i>
+              <input pInputText type="text" class="w-full md:w-20rem border-round-xl pl-6"
                      (input)="dt.filterGlobal($any($event.target).value, 'contains')"
                      placeholder="Buscar DNI, RUC o nombre..." />
-            </span>
+            </div>
           </div>
         </ng-template>
 
         <ng-template pTemplate="header">
           <tr>
-            <th pSortableColumn="documento_identidad" style="width:140px">DNI / RUC <p-sortIcon field="documento_identidad" /></th>
+            <th pSortableColumn="documento_identidad" style="width:160px">DNI / RUC <p-sortIcon field="documento_identidad" /></th>
             <th pSortableColumn="nombre_razon_social">Razón Social / Nombres <p-sortIcon field="nombre_razon_social" /></th>
-            <th style="width:130px">Teléfono</th>
-            <th>Correo</th>
+            <th style="width:150px">Teléfono</th>
+            <th>Correo Electrónico</th>
             <th class="text-center" style="width:110px">Acciones</th>
           </tr>
         </ng-template>
@@ -105,14 +103,13 @@
         <ng-template pTemplate="body" let-cliente>
           <tr>
             <td>
-              <span class="font-mono text-xs font-bold text-primary border-round px-2 py-1"
-                    style="background: color-mix(in srgb, var(--primary-color) 10%, white);">
+              <span class="font-mono text-xs font-bold text-sky-700 bg-sky-50 px-2 py-1 border-round-md">
                 {{ cliente.documento_identidad }}
               </span>
             </td>
-            <td class="font-semibold text-900">{{ cliente.nombre_razon_social }}</td>
-            <td class="text-sm text-700">{{ cliente.telefono || '—' }}</td>
-            <td class="text-sm text-700">{{ cliente.correo || '—' }}</td>
+            <td class="font-bold text-900">{{ cliente.nombre_razon_social }}</td>
+            <td class="text-sm font-medium text-700">{{ cliente.telefono || '—' }}</td>
+            <td class="text-sm font-medium text-700">{{ cliente.correo || '—' }}</td>
             <td class="text-center">
               <div class="flex gap-1 justify-content-center">
                 <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" size="small"
@@ -127,10 +124,10 @@
         <ng-template pTemplate="emptymessage">
           <tr>
             <td colspan="5">
-              <div class="flex flex-column align-items-center py-8 text-color-secondary">
-                <i class="pi pi-users text-5xl mb-3 opacity-40"></i>
-                <p class="font-semibold m-0">No hay clientes registrados</p>
-                <p class="text-sm m-0 mt-1">Agrega tu primer cliente al directorio</p>
+              <div class="flex flex-column align-items-center py-8 text-500">
+                <i class="pi pi-users text-5xl mb-3 opacity-30"></i>
+                <p class="font-bold text-900 m-0">No hay clientes registrados</p>
+                <p class="text-sm m-0 mt-1">Agrega tu primer cliente para iniciar</p>
               </div>
             </td>
           </tr>
@@ -140,10 +137,11 @@
   </ng-container>
 </div>
 
+<!-- Modal Cliente -->
 <p-dialog [(visible)]="clienteDialog"
           (onHide)="ocultarDialog()"
-          [style]="{width: '500px', maxWidth: '90vw'}"
-          header="Ficha del Cliente"
+          [style]="{width: '520px', maxWidth: '90vw'}"
+          header="Ficha de Cliente"
           [modal]="true"
           appendTo="body"
           styleClass="p-fluid">
@@ -152,32 +150,32 @@
         <div class="flex flex-column gap-4 mt-2">
 
             <div class="flex flex-column gap-2">
-                <label for="doc" class="font-bold text-700">DNI o RUC <span class="text-red-500">*</span></label>
+                <label for="doc" class="font-bold text-800 text-xs uppercase">DNI o RUC <span class="text-red-500">*</span></label>
                 <div class="flex gap-2">
-                    <input pInputText id="doc" [(ngModel)]="clienteActual.documento_identidad" (keyup.enter)="buscarDocumento()" [disabled]="buscandoApi" placeholder="Ej. 20123456789" class="w-full" autofocus />
-                    <button pButton [icon]="buscandoApi ? 'pi pi-spin pi-spinner' : 'pi pi-search'" [loading]="buscandoApi" [disabled]="buscandoApi" (click)="buscarDocumento()" class="p-button-primary px-3" pTooltip="Buscar en SUNAT/RENIEC"></button>
+                    <input pInputText id="doc" [(ngModel)]="clienteActual.documento_identidad" (keyup.enter)="buscarDocumento()" [disabled]="buscandoApi" placeholder="Ej. 20123456789" class="w-full border-round-xl font-bold" autofocus />
+                    <button pButton [icon]="buscandoApi ? 'pi pi-spin pi-spinner' : 'pi pi-search'" [loading]="buscandoApi" [disabled]="buscandoApi" (click)="buscarDocumento()" class="p-button-primary px-3 border-round-xl" pTooltip="Consultar SUNAT/RENIEC"></button>
                 </div>
             </div>
 
             <div class="flex flex-column gap-2">
-                <label for="nombre" class="font-bold text-700">Razón Social / Nombres <span class="text-red-500">*</span></label>
-                <input pInputText id="nombre" [(ngModel)]="clienteActual.nombre_razon_social" required placeholder="Nombre legal del cliente" />
+                <label for="nombre" class="font-bold text-800 text-xs uppercase">Razón Social / Nombres <span class="text-red-500">*</span></label>
+                <input pInputText id="nombre" [(ngModel)]="clienteActual.nombre_razon_social" required placeholder="Nombre o Razón social..." class="border-round-xl" />
             </div>
 
             <div class="flex flex-column gap-2">
-                <label for="direccion" class="font-bold text-700">Dirección</label>
-                <input pInputText id="direccion" [(ngModel)]="clienteActual.direccion" placeholder="Av. Principal 123" />
+                <label for="direccion" class="font-bold text-800 text-xs uppercase">Dirección Fiscal / Domicilio</label>
+                <input pInputText id="direccion" [(ngModel)]="clienteActual.direccion" placeholder="Av. Principal 123..." class="border-round-xl" />
             </div>
 
             <div class="grid m-0">
                 <div class="col-12 md:col-6 p-0 md:pr-2 mb-3 md:mb-0 flex flex-column gap-2">
-                    <label for="telefono" class="font-bold text-700">Teléfono</label>
-                    <input pInputText id="telefono" [(ngModel)]="clienteActual.telefono" placeholder="Celular o Fijo" />
+                    <label for="telefono" class="font-bold text-800 text-xs uppercase">Teléfono / Celular</label>
+                    <input pInputText id="telefono" [(ngModel)]="clienteActual.telefono" placeholder="987 654 321" class="border-round-xl" />
                 </div>
-                
+
                 <div class="col-12 md:col-6 p-0 md:pl-2 flex flex-column gap-2">
-                    <label for="correo" class="font-bold text-700">Correo Electrónico</label>
-                    <input pInputText id="correo" [(ngModel)]="clienteActual.correo" placeholder="correo@empresa.com" />
+                    <label for="correo" class="font-bold text-800 text-xs uppercase">Correo Electrónico</label>
+                    <input pInputText id="correo" [(ngModel)]="clienteActual.correo" placeholder="contacto@empresa.com" class="border-round-xl" />
                 </div>
             </div>
 
@@ -187,7 +185,7 @@
     <ng-template pTemplate="footer">
         <div class="flex justify-content-end gap-2 pt-3">
             <button pButton pRipple label="Cancelar" icon="pi pi-times" class="p-button-text p-button-secondary" (click)="ocultarDialog()"></button>
-            <button pButton pRipple label="Guardar" icon="pi pi-save" class="p-button-primary px-4" (click)="guardarCliente()" [disabled]="enviando"></button>
+            <button pButton pRipple label="Guardar Cliente" icon="pi pi-save" class="p-button-primary px-4 border-round-xl font-bold" (click)="guardarCliente()" [disabled]="enviando"></button>
         </div>
     </ng-template>
 </p-dialog>

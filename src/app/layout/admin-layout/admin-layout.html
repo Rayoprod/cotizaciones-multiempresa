@@ -1,73 +1,116 @@
-<div class="flex h-screen overflow-hidden relative">
+<div class="flex h-screen overflow-hidden relative surface-ground">
 
+  <!-- Backdrop para móvil -->
   <div *ngIf="sidebarAbierto"
-       class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-50 z-4"
+       class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-60 z-4 backdrop-blur"
        (click)="cerrarMenu()">
   </div>
 
-  <aside class="fixed md:static top-0 left-0 z-5 h-full shadow-2 flex flex-column transition-transform transition-duration-300"
-         style="width: 18rem; background: #1f2937; color: white;"
+  <!-- Sidebar Admin Principal -->
+  <aside class="fixed md:static top-0 left-0 z-5 h-full shadow-4 flex flex-column transition-transform transition-duration-300 select-none"
+         style="width: 18.5rem; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color: #f8fafc;"
          [ngClass]="sidebarAbierto ? 'translate-x-0' : '-translate-x-100 md:translate-x-0'">
 
-    <div class="p-4 flex align-items-center gap-3" style="border-bottom: 1px solid rgba(255,255,255,.08);">
-      <p-avatar icon="pi pi-shield-check" shape="circle" [style]="{ background: '#3b82f6', color: '#ffffff' }"></p-avatar>
-      <div class="flex flex-column">
-        <span class="font-bold text-lg text-white">Panel Admin</span>
-        <span style="color: rgba(255,255,255,.7); font-size: .85rem;">Administración</span>
+    <!-- Header Sidebar Admin -->
+    <div class="p-4 flex align-items-center gap-3" style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+      <div class="w-2.5rem h-2.5rem border-circle flex align-items-center justify-content-center shadow-2"
+           style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff;">
+        <i class="pi pi-shield text-xl"></i>
+      </div>
+      <div class="flex flex-column overflow-hidden">
+        <span class="font-bold text-base text-white text-overflow-ellipsis overflow-hidden white-space-nowrap">
+          Consola Admin
+        </span>
+        <span class="text-xs text-sky-400 font-semibold tracking-wider uppercase mt-1">
+          Supervisión Global
+        </span>
       </div>
     </div>
 
+    <!-- Navegación Menú Admin -->
     <div class="flex-1 overflow-y-auto p-3">
-      <div class="mb-3" style="color: rgba(255,255,255,.6); font-size: .75rem; font-weight: 700; text-transform: uppercase;">
-        Gestión
+      <div class="mb-3 px-2" style="color: rgba(255,255,255,0.45); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;">
+        Módulos de Gestión
       </div>
+
       <div class="flex flex-column gap-2">
         <a *ngFor="let item of navItemsFiltrados" [routerLink]="item.path"
-           routerLinkActive="bg-blue-500 text-white font-bold shadow-2" [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
+           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-sky-400"
+           [routerLinkActiveOptions]="{ exact: false }"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
            (click)="cerrarMenu()">
-          <i [class]="item.icon"></i><span>{{ item.label }}</span>
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-sky-500-alpha-20 text-sky-400">
+            <i [class]="item.icon + ' text-base'"></i>
+          </div>
+          <span>{{ item.label }}</span>
         </a>
 
-        <p-divider styleClass="border-white-alpha-20"></p-divider>
-        <button pButton type="button" icon="pi pi-briefcase" label="Operar empresa"
-                severity="success" class="w-full justify-content-start"
+        <p-divider styleClass="border-white-alpha-10 my-2"></p-divider>
+
+        <div class="mb-2 px-2" style="color: rgba(255,255,255,0.45); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;">
+          Acceso Rápido
+        </div>
+
+        <button pButton type="button" icon="pi pi-shopping-bag" label="Operar / Cotizar"
+                severity="info" class="w-full justify-content-start border-round-xl py-3 px-3 text-white font-bold"
                 (click)="operarEmpresa()">
         </button>
       </div>
     </div>
 
-    <div class="p-3 mt-auto" style="border-top: 1px solid rgba(255,255,255,.08);">
-      <div class="flex align-items-center gap-3 mb-3 p-2 border-round" style="background: rgba(255,255,255,.06);">
-        <p-avatar icon="pi pi-user" shape="circle" [style]="{ background: '#3b82f6', color: '#ffffff' }"></p-avatar>
-        <div class="flex flex-column overflow-hidden">
-          <!-- ✅ Muestra rol real desde signal -->
-          <span class="font-medium text-white">{{ esAdminGeneral ? 'Admin General' : 'Administrador' }}</span>
-          <span class="white-space-nowrap overflow-hidden text-overflow-ellipsis text-xs text-white-alpha-70">
+    <!-- Perfil Admin & Logout -->
+    <div class="p-3 mt-auto" style="border-top: 1px solid rgba(255,255,255,0.08);">
+      <div class="flex align-items-center gap-3 mb-3 p-3 border-round-xl" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.05);">
+        <p-avatar icon="pi pi-shield" shape="circle" [style]="{ background: '#0284c7', color: '#ffffff' }"></p-avatar>
+        <div class="flex flex-column overflow-hidden flex-1">
+          <span class="font-bold text-sm text-white flex align-items-center gap-2">
+            {{ esAdminGeneral ? 'Super Admin' : 'Admin Empresa' }}
+          </span>
+          <span class="white-space-nowrap overflow-hidden text-overflow-ellipsis text-xs text-white-alpha-70 mt-1">
             {{ usuarioNombre }}
           </span>
         </div>
       </div>
       <button pButton type="button" icon="pi pi-sign-out" label="Cerrar sesión"
-              severity="danger" class="w-full" (click)="logout()">
+              severity="danger" class="w-full border-round-xl" (click)="logout()">
       </button>
     </div>
 
   </aside>
 
+  <!-- Contenedor Principal Admin (Top Header + Outlet) -->
   <div class="flex-1 flex flex-column min-w-0 overflow-hidden z-1">
-    <div class="md:hidden flex align-items-center gap-2 px-3 shadow-1"
-         style="height: 4rem; background: #1f2937; color: white;">
-      <button pButton type="button" icon="pi pi-bars" text class="text-white" (click)="toggleSidebar()"></button>
-      <span class="font-bold text-lg">Panel Admin</span>
-    </div>
 
+    <!-- Top Header Bar Executive Admin -->
+    <header class="flex align-items-center justify-content-between px-3 md:px-4 py-2 border-bottom-1 surface-border bg-white shadow-1 z-2" style="height: 4.25rem;">
+      <div class="flex align-items-center gap-3">
+        <button pButton type="button" icon="pi pi-bars" text class="md:hidden text-700" (click)="toggleSidebar()"></button>
+        <div>
+          <h1 class="text-lg md:text-xl font-bold text-900 m-0 tracking-tight flex align-items-center gap-2">
+            <i class="pi pi-shield-check text-sky-600 hidden sm:inline-block"></i>
+            {{ tituloPagina }}
+          </h1>
+          <span class="text-xs text-500 font-medium hidden md:inline-block">Consola de Control Multi-Empresa & RLS Security</span>
+        </div>
+      </div>
+
+      <div class="flex align-items-center gap-3">
+        <p-tag value="RLS Activo" severity="success" styleClass="font-bold text-xs px-2 py-1 border-round-md hidden sm:inline-flex"></p-tag>
+        <p-tag value="Super Admin" severity="danger" styleClass="font-bold text-xs px-2 py-1 border-round-md"></p-tag>
+        <p-button icon="pi pi-external-link" label="Modo Operación" severity="secondary" [outlined]="true" size="small"
+                  styleClass="border-round-lg font-bold hidden md:inline-flex" (onClick)="operarEmpresa()"></p-button>
+      </div>
+    </header>
+
+    <!-- Main Content Outlet -->
     <main class="flex-1 overflow-auto p-2 md:p-4" style="background: #f8fafc;">
-      <div *ngIf="cargandoAdmin" class="flex justify-content-center align-items-center h-full">
-        <p-progressSpinner strokeWidth="4" [style]="{ width: '60px', height: '60px' }"></p-progressSpinner>
+      <div *ngIf="cargandoAdmin" class="flex flex-column align-items-center justify-content-center h-full gap-3">
+        <p-progressSpinner strokeWidth="4" [style]="{ width: '50px', height: '50px' }"></p-progressSpinner>
+        <p class="text-500 font-medium text-sm m-0">Sincronizando datos administrativos...</p>
       </div>
       <router-outlet *ngIf="!cargandoAdmin"></router-outlet>
     </main>
+
   </div>
 
 </div>

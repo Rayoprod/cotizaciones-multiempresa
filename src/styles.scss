@@ -2,28 +2,260 @@
 @import "primeng/resources/themes/lara-light-blue/theme.css";
 @import "primeng/resources/primeng.min.css";
 
-// Evita cargar Inter var del tema Lara (WOFF2 variable incompatible con OTS en Chrome/macOS).
+/* ── SGI Global Design System ────────────────────────────── */
 :root {
-  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --p-primary-color: #0284c7;
+  --p-primary-hover: #0369a1;
+  --surface-ground-bg: #f8fafc;
+  --card-border-radius: 1rem;
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(226, 232, 240, 0.8);
   font-family: var(--font-family);
-  font-feature-settings: normal;
-  font-variation-settings: normal;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   margin: 0;
   font-family: var(--font-family);
+  background-color: var(--surface-ground-bg);
+  color: #1e293b;
 }
 
+/* ── Typography & Headings Polish ────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family);
+  letter-spacing: -0.02em;
+}
+
+/* ── Micro-animations & Utility Classes ──────────────────── */
 @keyframes shimmer {
   0%   { background-position: -800px 0; }
   100% { background-position:  800px 0; }
 }
+
+@keyframes floatSubtle {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-4px); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.4); }
+  50%      { shadow: 0 0 0 10px rgba(2, 132, 199, 0); }
+}
+
 .skeleton-row td {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
   background-size: 800px 100%;
   animation: shimmer 1.4s ease-in-out infinite;
-  border-radius: 4px;
+  border-radius: 6px;
   color: transparent !important;
   pointer-events: none;
+}
+
+/* Glassmorphism Cards & Elevations */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+.card-hover-effect {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-hover-effect:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.08);
+}
+
+.step-badge {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+}
+
+/* ── Interactive Company Selector Pill ──────────────────── */
+.company-selector-pill {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  padding: 0.35rem 0.85rem 0.35rem 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.company-selector-pill:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+
+.company-selector-pill:active {
+  transform: translateY(0);
+}
+
+.company-dropdown-panel .p-overlaypanel-content {
+  padding: 0.5rem !important;
+  border-radius: 1rem !important;
+}
+
+.company-option-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.company-option-item:hover {
+  background-color: #f1f5f9;
+}
+
+.company-option-item.active-company {
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+}
+
+/* ── Executive Admin Top Header ──────────────────────────── */
+.admin-top-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* ── PrimeNG Component Enhancements ───────────────────────── */
+/* Dialog Polish */
+.p-dialog {
+  border-radius: 1.25rem !important;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.p-dialog-mask {
+  backdrop-filter: blur(4px);
+  background-color: rgba(15, 23, 42, 0.45) !important;
+}
+
+.p-dialog .p-dialog-header {
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding: 1.25rem 1.5rem !important;
+  background: #ffffff !important;
+}
+
+.p-dialog .p-dialog-content {
+  padding: 1.5rem !important;
+}
+
+.p-dialog .p-dialog-footer {
+  border-top: 1px solid #f1f5f9 !important;
+  padding: 1rem 1.5rem !important;
+  background: #f8fafc !important;
+}
+
+/* Input Fields & Focus Rings */
+.p-inputtext, .p-dropdown, .p-autocomplete-input {
+  border-radius: 0.625rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.p-inputtext:enabled:focus, .p-dropdown:not(.p-disabled).p-focus {
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+/* Buttons Polish */
+.p-button {
+  border-radius: 0.625rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.p-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.p-button:active:not(:disabled) {
+  transform: translateY(0px);
+}
+
+/* Tables Polish */
+.p-datatable .p-datatable-thead > tr > th {
+  background: #f8fafc !important;
+  color: #475569 !important;
+  font-weight: 700 !important;
+  font-size: 0.8125rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  padding: 0.875rem 1rem !important;
+}
+
+.p-datatable .p-datatable-tbody > tr {
+  transition: background-color 0.15s ease !important;
+}
+
+.p-datatable .p-datatable-tbody > tr:hover {
+  background-color: #f1f5f9 !important;
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+  padding: 0.875rem 1rem !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+/* Paginator Polish */
+.p-paginator {
+  background: #ffffff !important;
+  border-top: 1px solid #e2e8f0 !important;
+  border-radius: 0 0 1rem 1rem !important;
+  padding: 0.5rem 1rem !important;
+}
+
+.p-paginator .p-paginator-page,
+.p-paginator .p-paginator-next,
+.p-paginator .p-paginator-last,
+.p-paginator .p-paginator-first,
+.p-paginator .p-paginator-prev {
+  border-radius: 0.5rem !important;
+  min-width: 2.25rem !important;
+  height: 2.25rem !important;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

@@ -1,111 +1,221 @@
-<div class="flex h-screen overflow-hidden relative">
+<div class="flex h-screen overflow-hidden relative surface-ground">
 
+  <!-- Backdrop para móvil -->
   <div *ngIf="menuAbierto"
-       class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-50 z-4"
+       class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-60 z-4 backdrop-blur"
        (click)="cerrarMenu()">
   </div>
 
-  <aside class="fixed md:static top-0 left-0 z-5 h-full shadow-2 flex flex-column transition-transform transition-duration-300"
-         style="width: 18rem; background: #1f2937; color: white;"
+  <!-- Sidebar principal -->
+  <aside class="fixed md:static top-0 left-0 z-5 h-full shadow-4 flex flex-column transition-transform transition-duration-300 select-none"
+         style="width: 18.5rem; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color: #f8fafc;"
          [ngClass]="menuAbierto ? 'translate-x-0' : '-translate-x-100 md:translate-x-0'">
 
-    <div class="p-4 flex align-items-center gap-3" style="border-bottom: 1px solid rgba(255,255,255,.08);">
-      <p-avatar icon="pi pi-briefcase" shape="circle" [style]="{ background: 'var(--p-primary-color)', color: '#ffffff' }"></p-avatar>
-      <div class="flex flex-column">
-        <span class="font-bold text-lg text-white">SGI</span>
-        <span style="color: rgba(255,255,255,.7); font-size: .85rem;">
-          {{ empresaActiva?.nombre_comercial || 'Administración' }}
+    <!-- Encabezado de la Empresa -->
+    <div class="p-4 flex align-items-center gap-3" style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+      <div class="flex align-items-center justify-content-center border-round-xl flex-shrink-0 shadow-2 overflow-hidden"
+           [style.background]="empresaActiva?.color || 'var(--p-primary-color)'"
+           style="width: 44px; height: 44px; color: #ffffff;">
+        <ng-container *ngIf="empresaActiva?.ruta_logo; else iconLogo">
+          <img [src]="empresaActiva?.ruta_logo" [alt]="empresaActiva?.nombre_comercial" style="max-width: 90%; max-height: 90%; object-fit: contain;">
+        </ng-container>
+        <ng-template #iconLogo>
+          <i class="pi pi-briefcase text-xl"></i>
+        </ng-template>
+      </div>
+      <div class="flex flex-column overflow-hidden">
+        <span class="font-bold text-base text-white text-overflow-ellipsis overflow-hidden white-space-nowrap">
+          {{ empresaActiva?.nombre_comercial || 'Sistema Cotizaciones' }}
+        </span>
+        <span class="text-xs text-white-alpha-70 text-overflow-ellipsis overflow-hidden white-space-nowrap mt-1 flex align-items-center gap-1">
+          <i class="pi pi-id-card text-xs"></i>
+          {{ empresaActiva?.ruc ? 'RUC: ' + empresaActiva?.ruc : 'Empresa no elegida' }}
         </span>
       </div>
     </div>
 
+    <!-- Navegación de menú -->
     <div class="flex-1 overflow-y-auto p-3">
-      <div class="mb-3" style="color: rgba(255,255,255,.6); font-size: .75rem; font-weight: 700; text-transform: uppercase;">
-        Ventas y cotizaciones
+      <div class="mb-3 px-2" style="color: rgba(255,255,255,0.45); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;">
+        Ventas y Operaciones
       </div>
       <div class="flex flex-column gap-2">
 
-        <a routerLink="/cotizador" routerLinkActive="bg-primary text-white font-bold shadow-2"
+        <a routerLink="/cotizador" routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-sky-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
            (click)="cerrarMenu()">
-          <i class="pi pi-plus-circle"></i><span>Nueva cotización</span>
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-sky-500-alpha-20 text-sky-400">
+            <i class="pi pi-plus-circle text-base"></i>
+          </div>
+          <span>Nueva cotización</span>
         </a>
 
-        <a routerLink="/historial" routerLinkActive="bg-primary text-white font-bold shadow-2"
+        <a routerLink="/historial" routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-indigo-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
            (click)="cerrarMenu()">
-          <i class="pi pi-book"></i><span>Historial de ventas</span>
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-indigo-500-alpha-20 text-indigo-400">
+            <i class="pi pi-history text-base"></i>
+          </div>
+          <span>Historial de ventas</span>
         </a>
 
-        <a routerLink="/productos" routerLinkActive="bg-primary text-white font-bold shadow-2"
+        <a routerLink="/productos" routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-emerald-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
            (click)="cerrarMenu()">
-          <i class="pi pi-box"></i><span>Catálogo / Productos</span>
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-emerald-500-alpha-20 text-emerald-400">
+            <i class="pi pi-box text-base"></i>
+          </div>
+          <span>Catálogo / Productos</span>
         </a>
 
-        <a routerLink="/clientes" routerLinkActive="bg-primary text-white font-bold shadow-2"
+        <a routerLink="/clientes" routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-amber-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
            (click)="cerrarMenu()">
-          <i class="pi pi-users"></i><span>Directorio clientes</span>
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-amber-500-alpha-20 text-amber-400">
+            <i class="pi pi-users text-base"></i>
+          </div>
+          <span>Directorio clientes</span>
         </a>
 
-        <a routerLink="/maquinaria" routerLinkActive="bg-primary text-white font-bold shadow-2"
+        <a routerLink="/maquinaria" routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-purple-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-2 px-3 py-3 border-round-lg transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
            (click)="cerrarMenu()">
-          <i class="pi pi-wrench"></i><span>Maquinaria</span>
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-purple-500-alpha-20 text-purple-400">
+            <i class="pi pi-wrench text-base"></i>
+          </div>
+          <span>Maquinaria</span>
         </a>
 
-        <p-divider styleClass="border-white-alpha-20"></p-divider>
+        <p-divider styleClass="border-white-alpha-10 my-2"></p-divider>
 
-        <!-- ✅ Solo admin_empresa: configurar su empresa -->
+        <div class="mb-2 px-2" style="color: rgba(255,255,255,0.45); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;">
+          Administración
+        </div>
+
+        <!-- Solo admin_empresa: configurar su empresa -->
         <button *ngIf="esAdminEmpresa" pButton type="button"
                 icon="pi pi-cog" label="Configurar empresa"
-                severity="secondary" class="w-full justify-content-start"
+                severity="secondary" class="w-full justify-content-start border-round-xl py-3 px-3 text-white bg-white-alpha-05 hover:bg-white-alpha-15 border-none"
                 (click)="configurarEmpresa()">
         </button>
 
-        <!-- ✅ Solo admin general: volver al panel -->
+        <!-- Solo admin general: volver al panel -->
         <button *ngIf="esAdminGeneral" pButton type="button"
-                icon="pi pi-arrow-left" label="Panel Admin"
-                severity="secondary" class="w-full justify-content-start"
+                icon="pi pi-shield" label="Panel Admin General"
+                severity="secondary" class="w-full justify-content-start border-round-xl py-3 px-3 text-white bg-white-alpha-05 hover:bg-white-alpha-15 border-none"
                 (click)="volverAlAdmin()">
         </button>
 
       </div>
     </div>
 
-    <div class="p-3 mt-auto" style="border-top: 1px solid rgba(255,255,255,.08);">
-      <div class="flex align-items-center gap-3 mb-3 p-2 border-round" style="background: rgba(255,255,255,.06);">
+    <!-- Perfil de usuario y Logout -->
+    <div class="p-3 mt-auto" style="border-top: 1px solid rgba(255,255,255,0.08);">
+      <div class="flex align-items-center gap-3 mb-3 p-3 border-round-xl" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.05);">
         <p-avatar icon="pi pi-user" shape="circle" [style]="{ background: 'var(--p-primary-color)', color: '#ffffff' }"></p-avatar>
-        <div class="flex flex-column overflow-hidden">
-          <!-- ✅ Label dinámico por rol -->
-          <span class="font-medium text-white">
+        <div class="flex flex-column overflow-hidden flex-1">
+          <span class="font-bold text-sm text-white flex align-items-center gap-2">
             {{ esAdminGeneral ? 'Admin General' : esAdminEmpresa ? 'Admin Empresa' : 'Vendedor' }}
           </span>
-          <span class="white-space-nowrap overflow-hidden text-overflow-ellipsis text-xs text-white-alpha-70">
+          <span class="white-space-nowrap overflow-hidden text-overflow-ellipsis text-xs text-white-alpha-70 mt-1">
             {{ usuarioActivo }}
           </span>
         </div>
       </div>
       <button pButton type="button" icon="pi pi-sign-out" label="Cerrar sesión"
-              severity="danger" class="w-full" (click)="cerrarSesion()">
+              severity="danger" class="w-full border-round-xl" (click)="cerrarSesion()">
       </button>
     </div>
 
   </aside>
 
+  <!-- Contenedor Principal (Header superior + Main Content) -->
   <div class="flex-1 flex flex-column min-w-0 overflow-hidden z-1">
-    <div class="md:hidden flex align-items-center gap-2 px-3 shadow-1"
-         style="height: 4rem; background: #1f2937; color: white;">
-      <button pButton type="button" icon="pi pi-bars" text class="text-white" (click)="toggleMenu()"></button>
-      <span class="font-bold text-lg">{{ empresaActiva?.nombre_comercial || 'Cotizador' }}</span>
-    </div>
 
+    <!-- Top Header Bar (Desktop & Mobile) -->
+    <header class="flex align-items-center justify-content-between px-3 md:px-4 py-2 border-bottom-1 surface-border bg-white shadow-1 z-2" style="height: 4.25rem;">
+      <div class="flex align-items-center gap-3">
+        <button pButton type="button" icon="pi pi-bars" text class="md:hidden text-700" (click)="toggleMenu()"></button>
+
+        <!-- Company Switcher Pill -->
+        <div class="company-selector-pill" (click)="opCompany.toggle($event)" pTooltip="Haz clic para cambiar de empresa" tooltipPosition="bottom">
+          <div class="w-2rem h-2rem border-circle flex align-items-center justify-content-center shadow-1 overflow-hidden"
+               [style.background]="empresaActiva?.color || 'var(--p-primary-color)'" style="color: #ffffff;">
+            <ng-container *ngIf="empresaActiva?.ruta_logo; else topLogo">
+              <img [src]="empresaActiva?.ruta_logo" [alt]="empresaActiva?.nombre_comercial" style="max-width: 90%; max-height: 90%; object-fit: contain;">
+            </ng-container>
+            <ng-template #topLogo>
+              <i class="pi pi-building text-xs"></i>
+            </ng-template>
+          </div>
+          <div class="flex flex-column text-left">
+            <span class="font-bold text-sm text-900 line-height-1 flex align-items-center gap-1">
+              {{ empresaActiva?.nombre_comercial || 'Seleccionar Empresa' }}
+              <i class="pi pi-chevron-down text-xs text-500 ml-1"></i>
+            </span>
+            <span class="text-xs text-500 font-medium line-height-1 mt-1" *ngIf="empresaActiva?.ruc">
+              RUC: {{ empresaActiva?.ruc }}
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Quick Status & Action -->
+      <div class="flex align-items-center gap-3">
+        <p-tag [value]="esAdminGeneral ? 'Super Admin' : esAdminEmpresa ? 'Admin Empresa' : 'Vendedor'"
+               [severity]="esAdminGeneral ? 'danger' : esAdminEmpresa ? 'warning' : 'info'"
+               styleClass="font-bold text-xs px-2 py-1 border-round-md hidden sm:inline-flex"></p-tag>
+      </div>
+    </header>
+
+    <!-- Overlay Panel de Selección Rápida de Empresa -->
+    <p-overlayPanel #opCompany styleClass="company-dropdown-panel shadow-4" [style]="{ width: '320px' }">
+      <div class="p-2 border-bottom-1 surface-border mb-2 flex align-items-center justify-content-between">
+        <span class="font-bold text-xs text-700 uppercase tracking-wider">Cambiar Empresa</span>
+        <span class="text-xs bg-sky-100 text-sky-700 font-bold px-2 py-1 border-round-pill">
+          {{ empresasDisponibles.length }} asignada(s)
+        </span>
+      </div>
+
+      <div class="flex flex-column gap-1 max-h-15rem overflow-y-auto">
+        <div *ngFor="let emp of empresasDisponibles"
+             class="company-option-item"
+             [class.active-company]="emp.id === empresaActiva?.id"
+             (click)="seleccionarEmpresaRapida(emp, opCompany)">
+          <div class="w-2rem h-2rem border-circle flex align-items-center justify-content-center flex-shrink-0 overflow-hidden shadow-1"
+               [style.background]="emp.color || 'var(--p-primary-color)'" style="color: #ffffff;">
+            <img *ngIf="emp.ruta_logo" [src]="emp.ruta_logo" [alt]="emp.nombre_comercial" style="max-width: 90%; max-height: 90%; object-fit: contain;">
+            <i *ngIf="!emp.ruta_logo" class="pi pi-building text-xs"></i>
+          </div>
+          <div class="flex flex-column flex-1 overflow-hidden">
+            <span class="font-bold text-sm text-900 text-overflow-ellipsis overflow-hidden white-space-nowrap">
+              {{ emp.nombre_comercial }}
+            </span>
+            <span class="text-xs text-500 font-mono">RUC: {{ emp.ruc }}</span>
+          </div>
+          <i *ngIf="emp.id === empresaActiva?.id" class="pi pi-check-circle text-sky-600 font-bold text-base"></i>
+        </div>
+
+        <div *ngIf="empresasDisponibles.length === 0" class="p-3 text-center text-500 text-xs">
+          No hay empresas disponibles
+        </div>
+      </div>
+
+      <div class="pt-2 mt-2 border-top-1 surface-border text-center">
+        <button pButton type="button" label="Selector de Empresas Completo" icon="pi pi-th-large"
+                class="p-button-text p-button-secondary p-button-sm w-full border-round-lg font-bold"
+                (click)="irASelector(opCompany)">
+        </button>
+      </div>
+    </p-overlayPanel>
+
+    <!-- Main View Outlet -->
     <main class="flex-1 overflow-auto p-2 md:p-4" style="background: #f8fafc;">
       <router-outlet></router-outlet>
     </main>

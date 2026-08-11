@@ -3,25 +3,23 @@
 <!-- Spinner de carga inicial -->
 <div *ngIf="cargando"
      class="flex justify-content-center align-items-center py-8">
-  <p-progressSpinner strokeWidth="4"
-                     [style]="{ width: '60px', height: '60px' }">
+  <p-progressSpinner strokeWidth="4" [style]="{ width: '60px', height: '60px' }">
   </p-progressSpinner>
 </div>
 
-<!-- Contenido del formulario (solo visible cuando no está cargando) -->
+<!-- Contenido del formulario -->
 <ng-container *ngIf="!cargando">
 
-  <div *ngIf="borradorModo" class="px-3 pt-3 md:px-5 md:pt-5">
+  <div *ngIf="borradorModo" class="px-3 pt-3 md:px-5 md:pt-4">
 
     <div *ngIf="borradorModo === 'revision'"
-         class="flex align-items-start gap-3 p-3 border-round-xl border-1 border-orange-300 mb-0"
+         class="flex align-items-center gap-3 p-3 border-round-xl border-1 border-orange-300 mb-0 shadow-1"
          style="background:#fff7ed">
-      <i class="pi pi-refresh text-orange-500 text-xl flex-shrink-0 mt-1"></i>
+      <i class="pi pi-refresh text-orange-500 text-xl flex-shrink-0"></i>
       <div class="flex-1">
         <p class="font-bold text-orange-800 m-0 text-sm">✏️ Revisión de {{ borradorFolioPadre }}</p>
         <p class="text-orange-700 m-0 text-xs mt-1">
-          La cotización original fue marcada como <strong>Anulada</strong>.
-          Al guardar se generará un folio nuevo.
+          La cotización original fue marcada como <strong>Anulada</strong>. Al guardar se generará un folio nuevo.
         </p>
       </div>
       <button pButton icon="pi pi-times" class="p-button-text p-button-secondary p-button-sm flex-shrink-0"
@@ -29,9 +27,9 @@
     </div>
 
     <div *ngIf="borradorModo === 'duplicar'"
-         class="flex align-items-start gap-3 p-3 border-round-xl border-1 border-blue-300 mb-0"
+         class="flex align-items-center gap-3 p-3 border-round-xl border-1 border-blue-300 mb-0 shadow-1"
          style="background:#eff6ff">
-      <i class="pi pi-copy text-blue-500 text-xl flex-shrink-0 mt-1"></i>
+      <i class="pi pi-copy text-blue-500 text-xl flex-shrink-0"></i>
       <div class="flex-1">
         <p class="font-bold text-blue-800 m-0 text-sm">📋 Cotización duplicada</p>
         <p class="text-blue-700 m-0 text-xs mt-1">
@@ -46,39 +44,37 @@
 
   <div class="p-3 md:p-5">
 
-    <!-- Header -->
-    <div class="flex flex-column md:flex-row align-items-start md:align-items-center
-                justify-content-between gap-3 mb-4">
+    <!-- Header Principal de la Vista -->
+    <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
       <div>
-        <h2 class="text-xl md:text-3xl font-bold text-900 m-0">
-          <i class="pi pi-file-edit text-primary mr-2"></i>Nueva Cotización
-        </h2>
-        <p class="text-color-secondary mt-1 mb-0 text-sm">
-          {{ empresaActiva?.nombre_comercial || 'Empresa no seleccionada' }}
+        <h1 class="text-2xl md:text-3xl font-bold text-900 m-0 tracking-tight flex align-items-center gap-2">
+          <i class="pi pi-file-edit text-sky-600"></i>Nueva Cotización
+        </h1>
+        <p class="text-500 mt-1 mb-0 text-sm font-medium">
+          Emisión de propuesta comercial para <strong class="text-sky-700">{{ empresaActiva?.nombre_comercial || 'Empresa seleccionada' }}</strong>
         </p>
       </div>
-      <button pButton label="Cambiar empresa" icon="pi pi-sync"
-              class="p-button-outlined p-button-secondary p-button-sm w-full md:w-auto"
-              (click)="cambiarEmpresaConDatos()">
-      </button>
     </div>
 
     <div class="grid m-0 gap-4">
 
-      <!-- COLUMNA IZQUIERDA -->
+      <!-- COLUMNA IZQUIERDA (Pasos 1 & 2) -->
       <div class="col-12 lg:col-8 p-0 flex flex-column gap-4">
 
         <!-- SECCIÓN 1: CLIENTE -->
-        <div class="surface-card border-round-xl shadow-1 p-4">
-          <div class="flex align-items-center gap-2 mb-4 border-bottom-1 border-200 pb-3">
-            <div class="step-badge flex-shrink-0">1</div>
-            <span class="font-bold text-900 text-lg">Datos del Cliente</span>
+        <div class="bg-white border-round-2xl shadow-1 p-4 border-1 surface-border">
+          <div class="flex align-items-center gap-3 mb-4 border-bottom-1 surface-border pb-3">
+            <div class="step-badge">1</div>
+            <div>
+              <span class="font-bold text-900 text-lg block line-height-1">Información del Cliente</span>
+              <span class="text-xs text-500 font-medium">Selecciona un cliente registrado o busca por RUC/DNI en SUNAT</span>
+            </div>
           </div>
 
           <div class="grid p-fluid">
 
             <div class="col-12 md:col-8 mb-3">
-              <label class="font-semibold text-900 text-sm mb-2 block">
+              <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">
                 Razón Social / Nombres <span class="text-red-500">*</span>
               </label>
               <p-autoComplete
@@ -89,21 +85,28 @@
                 [dropdown]="true"
                 placeholder="Escribe o busca el cliente..."
                 styleClass="w-full"
-                [inputStyle]="{'font-weight':'600'}"></p-autoComplete>
+                [inputStyle]="{'font-weight':'600'}">
+                <ng-template let-c pTemplate="item">
+                  <div class="flex align-items-center justify-content-between w-full py-1">
+                    <span class="font-bold text-900">{{ c }}</span>
+                    <span class="text-xs bg-sky-100 text-sky-800 font-semibold px-2 py-1 border-round">Cliente</span>
+                  </div>
+                </ng-template>
+              </p-autoComplete>
             </div>
 
             <div class="col-12 md:col-4 mb-3">
-              <label class="font-semibold text-900 text-sm mb-2 block">
+              <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">
                 RUC / DNI <span class="text-red-500">*</span>
               </label>
               <div class="flex gap-2">
                 <input pInputText [(ngModel)]="clienteDocumento"
-                       placeholder="20123456789" class="w-full"
+                       placeholder="20123456789" class="w-full font-semibold"
                        [disabled]="buscandoDocumento"
                        (keyup.enter)="buscarDocumento()" />
                 <button pButton [icon]="buscandoDocumento ? 'pi pi-spin pi-spinner' : 'pi pi-search'"
-                        class="p-button-primary flex-shrink-0"
-                        pTooltip="Buscar en SUNAT / RENIEC"
+                        class="p-button-primary border-round-xl flex-shrink-0"
+                        pTooltip="Consultar en SUNAT / RENIEC"
                         [disabled]="buscandoDocumento"
                         [loading]="buscandoDocumento"
                         (click)="buscarDocumento()">
@@ -112,42 +115,47 @@
             </div>
 
             <div class="col-12 md:col-4 mb-3">
-              <label class="font-semibold text-900 text-sm mb-2 block">Teléfono</label>
+              <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">Teléfono</label>
               <input pInputText [(ngModel)]="clienteTelefono"
                      placeholder="987 654 321" class="w-full" />
             </div>
 
             <div class="col-12 md:col-4 mb-3">
-              <label class="font-semibold text-900 text-sm mb-2 block">Correo</label>
+              <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">Correo Electrónico</label>
               <input pInputText [(ngModel)]="clienteCorreo"
-                     placeholder="correo@empresa.com" class="w-full" />
+                     placeholder="contacto@empresa.com" class="w-full" />
             </div>
 
             <div class="col-12 md:col-4 mb-3 md:mb-0">
-              <label class="font-semibold text-900 text-sm mb-2 block">Dirección</label>
+              <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">Dirección Fiscal / Entrega</label>
               <input pInputText [(ngModel)]="clienteDireccion"
-                     placeholder="Dirección completa" class="w-full" />
+                     placeholder="Dirección fiscal..." class="w-full" />
             </div>
 
           </div>
         </div>
 
         <!-- SECCIÓN 2: ITEMS -->
-        <div class="surface-card border-round-xl shadow-1 p-4">
-          <div class="flex align-items-center justify-content-between mb-4 border-bottom-1 border-200 pb-3">
-            <div class="flex align-items-center gap-2"> 
-              <div class="step-badge flex-shrink-0">2</div>
-              <span class="font-bold text-900 text-lg">Detalle de Cotización</span>
+        <div class="bg-white border-round-2xl shadow-1 p-4 border-1 surface-border">
+          <div class="flex flex-column sm:flex-row align-items-start sm:align-items-center justify-content-between gap-3 mb-4 border-bottom-1 surface-border pb-3">
+            <div class="flex align-items-center gap-3">
+              <div class="step-badge">2</div>
+              <div>
+                <span class="font-bold text-900 text-lg block line-height-1">Detalle de Cotización</span>
+                <span class="text-xs text-500 font-medium">Agrega productos del catálogo o equipos de maquinaria</span>
+              </div>
             </div>
-            <button pButton icon="pi pi-plus" label="Agregar ítem"
-                    class="p-button-outlined p-button-primary p-button-sm"
-                    (click)="agregarFila()">
-            </button>
-            <button pButton icon="pi pi-wrench" label="Agregar maquinaria"
-                    class="p-button-outlined p-button-warning p-button-sm"
-                    (click)="abrirSelectorMaquinaria()"
-                    [disabled]="maquinariaBD.length === 0">
-            </button>
+            <div class="flex gap-2 w-full sm:w-auto">
+              <button pButton icon="pi pi-plus" label="Ítem producto"
+                      class="p-button-outlined p-button-primary p-button-sm border-round-xl font-semibold flex-1 sm:flex-initial"
+                      (click)="agregarFila()">
+              </button>
+              <button pButton icon="pi pi-wrench" label="Maquinaria"
+                      class="p-button-outlined p-button-warning p-button-sm border-round-xl font-semibold flex-1 sm:flex-initial"
+                      (click)="abrirSelectorMaquinaria()"
+                      [disabled]="maquinariaBD.length === 0">
+              </button>
+            </div>
           </div>
 
           <!-- TABLA DESKTOP -->
@@ -157,18 +165,18 @@
               <ng-template pTemplate="header">
                 <tr>
                   <th style="width:3rem" class="text-center">#</th>
-                  <th style="min-width:220px">Descripción</th>
+                  <th style="min-width:240px">Descripción del Producto / Servicio</th>
                   <th style="width:90px">Unid.</th>
                   <th style="width:110px">Cantidad</th>
                   <th style="width:140px">P. Unitario</th>
                   <th style="width:130px" class="text-right">Subtotal</th>
-                  <th style="width:3rem"></th>
+                  <th style="width:3.5rem"></th>
                 </tr>
               </ng-template>
 
               <ng-template pTemplate="body" let-item let-i="rowIndex">
                 <tr>
-                  <td class="text-center text-color-secondary font-bold">{{ i + 1 }}</td>
+                  <td class="text-center text-500 font-bold">{{ i + 1 }}</td>
                   <td>
                     <p-autoComplete
                       [(ngModel)]="item.descripcion"
@@ -177,36 +185,44 @@
                       (completeMethod)="filtrarNombresProductos($event)"
                       (onSelect)="alElegirProductoSugerido($event, item)"
                       [dropdown]="true"
-                      placeholder="Buscar o escribir..."
+                      placeholder="Buscar o escribir producto..."
                       appendTo="body"
                       styleClass="w-full"
-                      [maxlength]="100"></p-autoComplete>
+                      [maxlength]="100">
+                      <ng-template let-p pTemplate="item">
+                        <div class="flex align-items-center justify-content-between w-full py-1">
+                          <span class="font-semibold text-900">{{ p }}</span>
+                          <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-1 border-round">Catálogo</span>
+                        </div>
+                      </ng-template>
+                    </p-autoComplete>
                   </td>
                   <td>
                     <input pInputText [(ngModel)]="item.unidad"
                            (ngModelChange)="recalcularTodo()"
-                           class="w-full text-center" placeholder="m3" />
+                           class="w-full text-center font-medium" placeholder="UNID" />
                   </td>
                   <td>
                     <p-inputNumber [(ngModel)]="item.cantidad"
                                    [min]="0.01" [minFractionDigits]="0" [maxFractionDigits]="2" placeholder="0"
                                    (ngModelChange)="recalcularItem(item)"
-                                   inputStyleClass="w-full text-center"></p-inputNumber>
+                                   inputStyleClass="w-full text-center font-bold"></p-inputNumber>
                   </td>
                   <td>
                     <p-inputNumber [(ngModel)]="item.precio_unitario"
                                    mode="currency" currency="PEN" locale="es-PE"
                                    (ngModelChange)="recalcularItem(item)"
-                                   inputStyleClass="w-full text-right"></p-inputNumber>
+                                   inputStyleClass="w-full text-right font-semibold"></p-inputNumber>
                   </td>
                   <td class="text-right">
-                    <span class="font-bold white-space-nowrap" style="color:#16a34a;">
+                    <span class="font-bold text-base white-space-nowrap text-emerald-600">
                       S/ {{ item.subtotal | number:'1.2-2' }}
                     </span>
                   </td>
                   <td class="text-center">
                     <button pButton icon="pi pi-trash"
                             class="p-button-danger p-button-text p-button-rounded p-button-sm"
+                            pTooltip="Eliminar fila"
                             (click)="eliminarItem(i)">
                     </button>
                   </td>
@@ -216,9 +232,12 @@
               <ng-template pTemplate="emptymessage">
                 <tr>
                   <td colspan="7">
-                    <div class="flex flex-column align-items-center py-6 text-color-secondary">
-                      <i class="pi pi-shopping-cart text-4xl mb-2 opacity-40"></i>
-                      <p class="m-0 text-sm">Aún no hay ítems — agrega el primero</p>
+                    <div class="flex flex-column align-items-center py-6 text-500">
+                      <i class="pi pi-shopping-cart text-5xl mb-2 opacity-30"></i>
+                      <p class="m-0 font-medium text-sm">Tu cotización no tiene ítems agregados.</p>
+                      <button pButton icon="pi pi-plus" label="Agregar primer ítem"
+                              class="p-button-outlined p-button-primary p-button-sm mt-3 border-round-xl"
+                              (click)="agregarFila()"></button>
                     </div>
                   </td>
                 </tr>
@@ -229,10 +248,10 @@
           <!-- CARDS MOBILE -->
           <div class="flex flex-column gap-3 md:hidden">
             <div *ngFor="let item of carrito; let i = index"
-                 class="border-1 border-200 border-round-xl p-3 surface-ground relative">
+                 class="border-1 surface-border border-round-xl p-3 surface-ground relative">
 
-              <div class="flex align-items-center justify-content-between mb-3">
-                <span class="font-bold text-primary">Ítem {{ i + 1 }}</span>
+              <div class="flex align-items-center justify-content-between mb-3 border-bottom-1 surface-border pb-2">
+                <span class="font-bold text-sky-600">Ítem {{ i + 1 }}</span>
                 <button pButton icon="pi pi-trash"
                         class="p-button-danger p-button-text p-button-rounded p-button-sm"
                         (click)="eliminarItem(i)">
@@ -241,7 +260,7 @@
 
               <div class="grid p-fluid">
                 <div class="col-12 mb-2">
-                  <label class="text-xs font-bold text-color-secondary mb-1 block">Descripción</label>
+                  <label class="text-xs font-bold text-500 uppercase mb-1 block">Descripción</label>
                   <p-autoComplete
                     [(ngModel)]="item.descripcion"
                     (ngModelChange)="recalcularItem(item)"
@@ -252,27 +271,27 @@
                     styleClass="w-full" [maxlength]="100"></p-autoComplete>
                 </div>
                 <div class="col-4 mb-2">
-                  <label class="text-xs font-bold text-color-secondary mb-1 block">Unidad</label>
+                  <label class="text-xs font-bold text-500 uppercase mb-1 block">Unidad</label>
                   <input pInputText [(ngModel)]="item.unidad"
                          (ngModelChange)="recalcularTodo()"
                          class="w-full text-center" placeholder="m3" />
                 </div>
                 <div class="col-4 mb-2">
-                  <label class="text-xs font-bold text-color-secondary mb-1 block">Cantidad</label>
+                  <label class="text-xs font-bold text-500 uppercase mb-1 block">Cant.</label>
                   <p-inputNumber [(ngModel)]="item.cantidad" [min]="0.01" [minFractionDigits]="0" [maxFractionDigits]="2"
                                  (ngModelChange)="recalcularItem(item)"
-                                 inputStyleClass="w-full text-center"></p-inputNumber>
+                                 inputStyleClass="w-full text-center font-bold"></p-inputNumber>
                 </div>
                 <div class="col-4 mb-2">
-                  <label class="text-xs font-bold text-color-secondary mb-1 block">P. Unit.</label>
+                  <label class="text-xs font-bold text-500 uppercase mb-1 block">P. Unit.</label>
                   <p-inputNumber [(ngModel)]="item.precio_unitario"
                                  mode="currency" currency="PEN" locale="es-PE"
                                  (ngModelChange)="recalcularItem(item)"
-                                 inputStyleClass="w-full"></p-inputNumber>
+                                 inputStyleClass="w-full text-right"></p-inputNumber>
                 </div>
-                <div class="col-12 pt-2 border-top-1 border-200 flex justify-content-between align-items-center">
-                  <span class="text-sm font-bold text-color-secondary">Subtotal</span>
-                  <span class="font-bold text-lg" style="color:#16a34a;">
+                <div class="col-12 pt-2 border-top-1 surface-border flex justify-content-between align-items-center">
+                  <span class="text-sm font-bold text-600">Subtotal</span>
+                  <span class="font-bold text-lg text-emerald-600">
                     S/ {{ item.subtotal | number:'1.2-2' }}
                   </span>
                 </div>
@@ -280,13 +299,13 @@
             </div>
 
             <div *ngIf="carrito.length === 0"
-                 class="text-center py-6 text-color-secondary surface-ground border-round-xl">
-              <i class="pi pi-shopping-cart text-4xl mb-2 opacity-40 block"></i>
-              <p class="m-0 text-sm">Aún no hay ítems</p>
+                 class="text-center py-6 text-500 surface-ground border-round-xl border-1 surface-border">
+              <i class="pi pi-shopping-cart text-4xl mb-2 opacity-30 block"></i>
+              <p class="m-0 text-sm font-medium">Aún no hay ítems agregados</p>
             </div>
 
             <button pButton icon="pi pi-plus" label="Agregar ítem"
-                    class="p-button-outlined p-button-primary w-full"
+                    class="p-button-outlined p-button-primary w-full border-round-xl font-bold"
                     (click)="agregarFila()">
             </button>
           </div>
@@ -294,134 +313,143 @@
         </div>
       </div>
 
-      <!-- COLUMNA DERECHA -->
+      <!-- COLUMNA DERECHA (Pasos 3 & 4 - Panel Resumen Sticky) -->
       <div class="col-12 lg:col p-0 flex flex-column gap-4">
 
         <!-- SECCIÓN 3: CONFIG -->
-        <div class="surface-card border-round-xl shadow-1 p-4">
-          <div class="flex align-items-center gap-2 mb-4 border-bottom-1 border-200 pb-3">
-            <div class="step-badge flex-shrink-0">3</div>
-            <span class="font-bold text-900 text-lg">Condiciones del PDF</span>
+        <div class="bg-white border-round-2xl shadow-1 p-4 border-1 surface-border">
+          <div class="flex align-items-center gap-3 mb-4 border-bottom-1 surface-border pb-3">
+            <div class="step-badge">3</div>
+            <div>
+              <span class="font-bold text-900 text-lg block line-height-1">Condiciones del PDF</span>
+              <span class="text-xs text-500 font-medium">Configura impuestos y notas visibles</span>
+            </div>
           </div>
 
-          <!-- IGV -->
-          <div class="flex align-items-center justify-content-between p-3 border-round-lg mb-3"
-               [class.surface-ground]="incluyeIgv"
-               [class.bg-white]="!incluyeIgv"
-               style="border:1px solid var(--p-content-border-color)">
+          <!-- IGV Toggle Card -->
+          <div class="flex align-items-center justify-content-between p-3 border-round-xl mb-3 transition-colors"
+               [class.bg-sky-50]="incluyeIgv"
+               [class.surface-ground]="!incluyeIgv"
+               style="border: 1px solid var(--glass-border)">
             <div>
-              <p class="font-semibold text-900 m-0 text-sm">Incluir IGV (18%)</p>
-              <p class="text-xs text-color-secondary m-0 mt-1">
-                {{ incluyeIgv ? 'Precios incluyen impuesto' : 'Precios sin impuesto' }}
+              <p class="font-bold text-900 m-0 text-sm">Incluir IGV (18%)</p>
+              <p class="text-xs text-500 m-0 mt-1">
+                {{ incluyeIgv ? 'Los precios calculan impuesto' : 'Precios exonerados / sin IGV' }}
               </p>
             </div>
-            <p-toggleButton [(ngModel)]="incluyeIgv" [onLabel]="'Incluye IGV'" [offLabel]="'Sin IGV'" (onChange)="recalcularTodo()"></p-toggleButton>
+            <p-toggleButton [(ngModel)]="incluyeIgv" [onLabel]="'Con IGV'" [offLabel]="'Sin IGV'" (onChange)="recalcularTodo()"></p-toggleButton>
           </div>
 
           <!-- Lugar de entrega -->
           <div class="mb-3">
-            <label class="font-semibold text-900 text-sm mb-2 block">Punto de Entrega</label>
+            <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">Punto de Entrega</label>
             <p-selectButton [options]="opcionesLugar" [(ngModel)]="lugarEntrega"
                             optionLabel="label" optionValue="value" styleClass="w-full"
                             [allowEmpty]="false"></p-selectButton>
           </div>
 
-          <!-- Condiciones PDF -->
-          <div class="surface-ground border-round-lg p-3 mb-3">
-            <p class="font-bold text-sm text-900 mb-3 m-0">¿Qué mostrar en el PDF?</p>
-            <div class="flex flex-column gap-2">
+          <!-- Switches PDF -->
+          <div class="surface-ground border-round-xl p-3 mb-3 border-1 surface-border">
+            <p class="font-bold text-xs uppercase tracking-wider text-700 mb-3 m-0">Opciones en el documento PDF</p>
+            <div class="flex flex-column gap-3">
+
               <div class="flex align-items-center justify-content-between">
+                <span class="text-sm text-800 font-medium">Validez de la oferta</span>
                 <div class="flex align-items-center gap-2">
+                  <input *ngIf="condiciones.mostrarValidez" pInputText [(ngModel)]="condiciones.diasValidez"
+                         style="width:54px" class="text-center text-sm font-bold py-1 border-round-md" />
+                  <span *ngIf="condiciones.mostrarValidez" class="text-xs text-500">días</span>
                   <p-toggleButton [(ngModel)]="condiciones.mostrarValidez" [onIcon]="'pi pi-check'" [offIcon]="'pi pi-times'" styleClass="p-button-sm"></p-toggleButton>
-                  <span class="text-sm text-900">Validez de la oferta</span>
-                </div>
-                <div *ngIf="condiciones.mostrarValidez" class="flex align-items-center gap-2">
-                  <input pInputText [(ngModel)]="condiciones.diasValidez"
-                         style="width:60px" class="text-center text-sm" />
-                  <span class="text-sm text-color-secondary">días</span>
                 </div>
               </div>
-              <div class="flex align-items-center gap-2">
+
+              <div class="flex align-items-center justify-content-between">
+                <div>
+                  <span class="text-sm text-800 font-medium block">Cuentas bancarias</span>
+                  <span *ngIf="!empresaActiva?.mostrar_cuentas" class="text-xs text-amber-600 font-semibold">(Desactivado en empresa)</span>
+                </div>
                 <p-toggleButton [(ngModel)]="condiciones.mostrarCuentas" [onIcon]="'pi pi-check'" [offIcon]="'pi pi-times'" styleClass="p-button-sm"></p-toggleButton>
-                <span class="text-sm text-900">Cuentas bancarias</span>
-                <span *ngIf="!empresaActiva?.mostrar_cuentas"
-                      class="text-xs text-orange-500">(desactivado en empresa)</span>
               </div>
-              <div class="flex align-items-center gap-2">
+
+              <div class="flex align-items-center justify-content-between">
+                <span class="text-sm text-800 font-medium">Mensaje de contacto</span>
                 <p-toggleButton [(ngModel)]="condiciones.mostrarContacto" [onIcon]="'pi pi-check'" [offIcon]="'pi pi-times'" styleClass="p-button-sm"></p-toggleButton>
-                <span class="text-sm text-900">Mensaje de contacto</span>
               </div>
-              <div class="flex align-items-center gap-2">
+
+              <div class="flex align-items-center justify-content-between">
+                <span class="text-sm text-800 font-medium">Observaciones personalizadas</span>
                 <p-toggleButton [(ngModel)]="condiciones.mostrarObservaciones" [onIcon]="'pi pi-check'" [offIcon]="'pi pi-times'" styleClass="p-button-sm"></p-toggleButton>
-                <span class="text-sm text-900">Observaciones personalizadas</span>
               </div>
+
             </div>
           </div>
 
           <div *ngIf="condiciones.mostrarObservaciones">
-            <label class="font-semibold text-900 text-sm mb-2 block">Observaciones</label>
-            <textarea pInputTextarea [(ngModel)]="clienteObservaciones" rows="3" class="w-full"
-                      placeholder="Notas adicionales para esta cotización...">
+            <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">Observaciones adicionales</label>
+            <textarea pInputTextarea [(ngModel)]="clienteObservaciones" rows="3" class="w-full border-round-xl text-sm"
+                      placeholder="Notas especiales para esta cotización...">
             </textarea>
           </div>
 
         </div>
 
-        <!-- SECCIÓN 4: TOTALES -->
-        <div class="surface-card border-round-xl shadow-1 p-4">
-          <span class="font-bold text-900 text-lg block mb-4 border-bottom-1 border-200 pb-3">
-            Resumen
-          </span>
+        <!-- SECCIÓN 4: TOTALES (Sticky en Desktop) -->
+        <div class="bg-white border-round-2xl shadow-2 p-4 border-1 surface-border sticky top-3">
+          <div class="flex align-items-center gap-3 mb-4 border-bottom-1 surface-border pb-3">
+            <div class="step-badge">4</div>
+            <div>
+              <span class="font-bold text-900 text-lg block line-height-1">Resumen Total</span>
+              <span class="text-xs text-500 font-medium">Cálculo en tiempo real</span>
+            </div>
+          </div>
 
           <div class="flex justify-content-between align-items-center mb-3">
-            <span class="text-color-secondary font-medium">Subtotal</span>
+            <span class="text-600 font-medium text-sm">Subtotal</span>
             <span class="font-semibold text-900">S/ {{ subtotalGeneral | number:'1.2-2' }}</span>
           </div>
 
           <div class="flex justify-content-between align-items-center mb-3" *ngIf="incluyeIgv">
-            <span class="text-color-secondary font-medium flex align-items-center gap-2">
-              <span class="text-xs border-round px-2 py-1 font-bold"
-                    style="background:#fee2e2;color:#dc2626;">18%</span>
+            <span class="text-600 font-medium text-sm flex align-items-center gap-2">
+              <span class="text-xs border-round-md px-2 py-1 font-bold bg-red-100 text-red-700">18%</span>
               IGV
             </span>
-            <span class="font-semibold text-red-500">+ S/ {{ igvTotal | number:'1.2-2' }}</span>
+            <span class="font-semibold text-red-600">+ S/ {{ igvTotal | number:'1.2-2' }}</span>
           </div>
 
           <div *ngIf="!incluyeIgv"
-               class="flex align-items-center gap-2 p-2 border-round-lg mb-3 text-xs"
-               style="background:#f0fdf4;color:#166534">
+               class="flex align-items-center gap-2 p-2 border-round-lg mb-3 text-xs bg-emerald-50 text-emerald-800 font-medium">
             <i class="pi pi-info-circle"></i>
-            Precio sin IGV aplicado
+            Operación exonerada o sin IGV aplicado
           </div>
 
-          <div class="border-top-1 border-200 my-3"></div>
+          <div class="border-top-1 surface-border my-3"></div>
 
           <div class="flex justify-content-between align-items-center mb-4">
-            <span class="font-bold text-900 text-lg">TOTAL</span>
-            <span class="font-bold text-2xl md:text-3xl"
+            <span class="font-bold text-900 text-lg">TOTAL FINAL</span>
+            <span class="font-bold text-2xl md:text-3xl text-sky-700"
                   [style.color]="empresaActiva?.color || 'var(--p-primary-color)'">
               S/ {{ totalFinal | number:'1.2-2' }}
             </span>
           </div>
 
-          <div class="flex align-items-center gap-2 text-sm text-color-secondary mb-4">
-            <i class="pi pi-list"></i>
-            <span>{{ carrito.length }} ítem{{ carrito.length !== 1 ? 's' : '' }} en la cotización</span>
+          <div class="flex align-items-center gap-2 text-xs text-500 mb-4 font-medium">
+            <i class="pi pi-list text-sky-600"></i>
+            <span>{{ carrito.length }} ítem{{ carrito.length !== 1 ? 's' : '' }} en el detalle</span>
           </div>
 
-          <div *ngIf="!puedeGenerar" class="flex align-items-start gap-2 p-3 border-round-lg mb-3 text-sm bg-yellow-50 text-yellow-800 border-1 border-yellow-200">
-            <i class="pi pi-exclamation-triangle mt-1 flex-shrink-0"></i>
-            <span>Completa el nombre y documento del cliente y agrega al menos un ítem válido.</span>
+          <div *ngIf="!puedeGenerar" class="flex align-items-start gap-2 p-3 border-round-xl mb-3 text-xs bg-amber-50 text-amber-900 border-1 border-amber-200">
+            <i class="pi pi-exclamation-triangle mt-1 flex-shrink-0 text-amber-600"></i>
+            <span>Para generar el PDF, completa los datos del cliente (nombre y documento) y agrega al menos 1 ítem.</span>
           </div>
 
           <button pButton type="button"
                   label="Generar Cotización PDF"
                   icon="pi pi-file-pdf"
-                  class="w-full p-button-lg font-bold"
+                  class="w-full p-button-lg font-bold border-round-xl shadow-3 transition-all transition-duration-200"
                   [disabled]="!puedeGenerar || generandoPDF"
                   [loading]="generandoPDF"
-                  [style.background]="empresaActiva?.color"
-                  [style.border-color]="empresaActiva?.color"
+                  [style.background]="empresaActiva?.color || 'var(--p-primary-color)'"
+                  [style.border-color]="empresaActiva?.color || 'var(--p-primary-color)'"
                   (click)="generarPDF()">
           </button>
 
@@ -429,38 +457,39 @@
       </div>
     </div>
 
+    <!-- MODAL MAQUINARIA -->
     <p-dialog [(visible)]="modalMaquinariaVisible"
-              header="Agregar maquinaria"
+              header="Agregar equipo de maquinaria"
               [modal]="true"
-              [style]="{ width: '90vw', maxWidth: '420px' }"
+              [style]="{ width: '90vw', maxWidth: '440px' }"
               [draggable]="false"
               (onHide)="cerrarSelectorMaquinaria()"
               appendTo="body">
       <div class="flex flex-column gap-3 pt-2">
         <div class="flex flex-column gap-1">
-          <label class="text-xs font-semibold text-700">Equipo</label>
+          <label class="text-xs font-bold text-700 uppercase">Equipo / Maquinaria</label>
           <p-dropdown [options]="maquinariaBD" [(ngModel)]="maquinaSeleccionada"
-            optionLabel="nombre" placeholder="Selecciona un equipo..." styleClass="w-full"></p-dropdown>
+            optionLabel="nombre" placeholder="Selecciona un equipo..." styleClass="w-full border-round-xl"></p-dropdown>
         </div>
         <div class="flex flex-column gap-1">
-          <label class="text-xs font-semibold text-700">Modalidad</label>
+          <label class="text-xs font-bold text-700 uppercase">Modalidad de Alquiler</label>
           <p-selectButton [options]="opcionesModalidad" [(ngModel)]="modalidadMaquina"
             optionLabel="label" optionValue="value" styleClass="w-full text-sm flex-wrap"></p-selectButton>
         </div>
         <div class="grid">
           <div class="col-12 md:col-6 flex flex-column gap-1">
-            <label class="text-xs font-semibold text-700">Cantidad</label>
-            <p-inputNumber [(ngModel)]="cantidadMaquina" [min]="0.01" [minFractionDigits]="0" [maxFractionDigits]="2" styleClass="w-full"></p-inputNumber>
+            <label class="text-xs font-bold text-700 uppercase">Cantidad</label>
+            <p-inputNumber [(ngModel)]="cantidadMaquina" [min]="0.01" [minFractionDigits]="0" [maxFractionDigits]="2" inputStyleClass="w-full font-bold text-center"></p-inputNumber>
           </div>
-          <div class="col-12 md:col-6 flex flex-column gap-1">
-            <label class="text-xs font-semibold text-700">Precio unitario</label>
-            <span class="font-bold text-lg text-primary">S/ {{ precioMaquinaSeleccionada | number:'1.2-2' }}</span>
+          <div class="col-12 md:col-6 flex flex-column gap-1 justify-content-center">
+            <label class="text-xs font-bold text-700 uppercase">P. Unit. Estimado</label>
+            <span class="font-bold text-xl text-emerald-600">S/ {{ precioMaquinaSeleccionada | number:'1.2-2' }}</span>
           </div>
         </div>
       </div>
       <ng-template pTemplate="footer">
         <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="cerrarSelectorMaquinaria()"></p-button>
-        <p-button label="Agregar" icon="pi pi-check" severity="primary" (onClick)="agregarMaquinariaAlCarrito()"></p-button>
+        <p-button label="Agregar al Detalle" icon="pi pi-check" severity="primary" class="border-round-xl" (onClick)="agregarMaquinariaAlCarrito()"></p-button>
       </ng-template>
     </p-dialog>
   </div>

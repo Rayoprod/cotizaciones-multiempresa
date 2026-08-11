@@ -7,17 +7,21 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
 import { DividerModule } from 'primeng/divider';
+import { OverlayPanelModule, OverlayPanel } from 'primeng/overlaypanel';
+import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
 
 import { SupabaseService } from '../services/supabase.service';
 import { SessionContextService } from '../services/session-context.service';
 import { AuthService } from '../services/auth';
+import { IEmpresa } from '../models/empresa.model';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
   imports: [
     CommonModule, RouterLink, RouterLinkActive, RouterOutlet,
-    ButtonModule, AvatarModule, DividerModule,
+    ButtonModule, AvatarModule, DividerModule, OverlayPanelModule, TagModule, TooltipModule
   ],
   templateUrl: './layout.component.html'
 })
@@ -27,7 +31,7 @@ export class LayoutComponent implements OnInit {
   constructor(
     private router: Router,
     private supabaseSvc: SupabaseService,
-    private session: SessionContextService, // ✅ nuevo
+    private session: SessionContextService,
     private auth: AuthService,
     private cdr: ChangeDetectorRef,
     private destroyRef: DestroyRef
@@ -40,13 +44,16 @@ export class LayoutComponent implements OnInit {
       .subscribe(() => this.cerrarMenu());
   }
 
-  // ✅ Todo desde signals — sin propiedades locales duplicadas
   get usuarioActivo(): string {
     return this.session.usuario()?.email ?? 'Usuario';
   }
 
-  get empresaActiva() {
+  get empresaActiva(): IEmpresa | null {
     return this.session.empresaActiva();
+  }
+
+  get empresasDisponibles(): IEmpresa[] {
+    return this.session.empresas();
   }
 
   get esAdmin(): boolean {
@@ -90,9 +97,29 @@ export class LayoutComponent implements OnInit {
 
   // ✅ Abre modal de edición de la empresa activa (para admin_empresa)
   configurarEmpresa() {
-  this.cerrarMenu();
-  this.router.navigate(['/admin/empresas']);
-}
+    this.cerrarMenu();
+    this.router.navigate(['/admin/empresas']);
+  }
+
+  seleccionarEmpresaRapida(empresa: IEmpresa, op?: OverlayPanel) {
+    if (op) {
+      op.hide();
+    }
+    this.session.setEmpresaActiva(empresa);
+    this.cdr.markForCheck();
+    // Si estamos en cotizador o historial, recargamos el estado limpiamente
+    if (this.router.url.includes('/cotizador')) {
+      window.location.reload();
+    }
+  }
+
+  irASelector(op?: OverlayPanel) {
+    if (op) {
+      op.hide();
+    }
+    this.cerrarMenu();
+    this.router.navigate(['/selector']);
+  }
 
   async cerrarSesion() {
     await this.auth.logout(); // ✅ ya llama session.clearAll() internamente

@@ -3,114 +3,139 @@
 
 <div class="p-3 md:p-4">
 
-  <!-- ─── Header ─────────────────────────────────────────────────────── -->
-  <div class="flex flex-column md:flex-row align-items-start md:align-items-center
-              justify-content-between gap-3 mb-4">
+  <!-- Header Superior -->
+  <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
     <div>
-      <h2 class="text-xl font-bold text-900 m-0">
-        <i class="pi pi-history text-primary mr-2"></i>Historial de Cotizaciones
-      </h2>
-      <p class="text-color-secondary text-sm mt-1 mb-0">
-        {{ empresaActiva?.nombre_comercial }}
+      <h1 class="text-2xl md:text-3xl font-bold text-900 m-0 tracking-tight flex align-items-center gap-2">
+        <i class="pi pi-history text-sky-600"></i>Historial de Cotizaciones
+      </h1>
+      <p class="text-500 text-sm mt-1 mb-0 font-medium">
+        Registro general de ventas para {{ empresaActiva?.nombre_comercial || 'Empresa seleccionada' }}
       </p>
     </div>
 
-    <div class="flex align-items-center gap-3 flex-wrap">
-      <div class="flex align-items-center gap-2">
+    <div class="flex align-items-center gap-3 flex-wrap w-full md:w-auto">
+      <div class="flex align-items-center gap-2 surface-card px-3 py-2 border-round-xl border-1 surface-border">
         <p-togglebutton
           [(ngModel)]="mostrarOcultas"
           (onChange)="onToggleOcultas()"
           onLabel="Ocultas" offLabel="Todas"
           inputId="toggleOcultas">
         </p-togglebutton>
-        <label for="toggleOcultas" class="text-sm cursor-pointer select-none">
-          <i class="pi pi-eye-slash mr-1 text-color-secondary"></i>
+        <label for="toggleOcultas" class="text-xs font-semibold cursor-pointer select-none text-700">
+          <i class="pi pi-eye-slash mr-1 text-400"></i>
           Mostrar ocultas
         </label>
       </div>
 
       <p-button label="Exportar CSV" icon="pi pi-download"
-                severity="secondary" outlined
+                severity="secondary" class="border-round-xl font-bold p-button-outlined"
                 (onClick)="exportarCSV()">
       </p-button>
     </div>
   </div>
 
-  <!-- ─── KPIs ────────────────────────────────────────────────────────── -->
+  <!-- KPIs -->
   <ng-container *ngIf="!cargando">
     <div class="grid mb-4">
       <div class="col-6 lg:col-3">
-        <div class="surface-card border-round-xl p-3 shadow-1 h-full">
-          <span class="text-xs text-color-secondary uppercase font-semibold">Vendido</span>
-          <p class="text-xl font-bold text-green-600 m-0 mt-1">
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border h-full card-hover-effect border-left-4 border-emerald-500">
+          <div class="flex align-items-center justify-content-between mb-2">
+            <span class="text-xs text-500 uppercase font-bold tracking-wider">Vendido / Aprobado</span>
+            <div class="w-2rem h-2rem border-circle bg-emerald-100 text-emerald-600 flex align-items-center justify-content-center">
+              <i class="pi pi-check-circle text-sm"></i>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-emerald-600 m-0">
             S/ {{ totalVendido | number:'1.2-2' }}
           </p>
-          <p class="text-xs text-color-secondary m-0">{{ cotizacionesAprobadas }} aprobadas</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">{{ cotizacionesAprobadas }} cotizaciones aprobadas</p>
         </div>
       </div>
+
       <div class="col-6 lg:col-3">
-        <div class="surface-card border-round-xl p-3 shadow-1 h-full">
-          <span class="text-xs text-color-secondary uppercase font-semibold">Por cobrar</span>
-          <p class="text-xl font-bold text-orange-500 m-0 mt-1">
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border h-full card-hover-effect border-left-4 border-amber-500">
+          <div class="flex align-items-center justify-content-between mb-2">
+            <span class="text-xs text-500 uppercase font-bold tracking-wider">Por cobrar / Pendientes</span>
+            <div class="w-2rem h-2rem border-circle bg-amber-100 text-amber-600 flex align-items-center justify-content-center">
+              <i class="pi pi-clock text-sm"></i>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-amber-600 m-0">
             S/ {{ totalPendiente | number:'1.2-2' }}
           </p>
-          <p class="text-xs text-color-secondary m-0">{{ cotizacionesPendientes }} pendientes</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">{{ cotizacionesPendientes }} por confirmar</p>
         </div>
       </div>
+
       <div class="col-6 lg:col-3">
-        <div class="surface-card border-round-xl p-3 shadow-1 h-full">
-          <span class="text-xs text-color-secondary uppercase font-semibold">Tasa conversión</span>
-          <p class="text-xl font-bold text-primary m-0 mt-1">
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border h-full card-hover-effect border-left-4 border-sky-500">
+          <div class="flex align-items-center justify-content-between mb-2">
+            <span class="text-xs text-500 uppercase font-bold tracking-wider">Tasa de Conversión</span>
+            <div class="w-2rem h-2rem border-circle bg-sky-100 text-sky-600 flex align-items-center justify-content-center">
+              <i class="pi pi-percentage text-sm"></i>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-sky-600 m-0">
             {{ tasaConversion | number:'1.0-0' }}%
           </p>
-          <p class="text-xs text-color-secondary m-0">Aprobadas / No anuladas</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">Efectividad de cierre de ventas</p>
         </div>
       </div>
+
       <div class="col-6 lg:col-3">
-        <div class="surface-card border-round-xl p-3 shadow-1 h-full">
-          <span class="text-xs text-color-secondary uppercase font-semibold">Anuladas</span>
-          <p class="text-xl font-bold text-color-secondary m-0 mt-1">{{ cotizacionesAnuladas }}</p>
-          <p class="text-xs text-color-secondary m-0">{{ cotizacionesFiltradas.length }} total</p>
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border h-full card-hover-effect border-left-4 border-slate-400">
+          <div class="flex align-items-center justify-content-between mb-2">
+            <span class="text-xs text-500 uppercase font-bold tracking-wider">Anuladas</span>
+            <div class="w-2rem h-2rem border-circle bg-slate-100 text-slate-600 flex align-items-center justify-content-center">
+              <i class="pi pi-times-circle text-sm"></i>
+            </div>
+          </div>
+          <p class="text-2xl font-bold text-slate-700 m-0">{{ cotizacionesAnuladas }}</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">De {{ cotizacionesFiltradas.length }} cotizaciones emitidas</p>
         </div>
       </div>
     </div>
 
-    <!-- ─── Filtros ──────────────────────────────────────────────────── -->
-    <div class="surface-card border-round-xl p-3 mb-3 shadow-1">
+    <!-- Filtros Toolbar -->
+    <div class="bg-white border-round-2xl p-4 mb-4 shadow-1 border-1 surface-border">
       <div class="grid align-items-end">
         <div class="col-12 md:col-5 flex flex-column gap-1">
-          <label class="text-xs font-semibold text-color-secondary">Buscar</label>
-          <input pInputText
-                 [(ngModel)]="terminoBusqueda"
-                 (ngModelChange)="filtrarCotizaciones($event)"
-                 placeholder="Folio, cliente, RUC/DNI..."
-                 class="w-full" />
+          <label class="text-xs font-bold text-700 uppercase">Buscar Cotización</label>
+          <div class="relative flex align-items-center">
+            <i class="pi pi-search absolute pl-3 text-400"></i>
+            <input pInputText
+                   [(ngModel)]="terminoBusqueda"
+                   (ngModelChange)="filtrarCotizaciones($event)"
+                   placeholder="Folio, cliente, RUC/DNI..."
+                   class="w-full border-round-xl pl-6" />
+          </div>
         </div>
         <div class="col-6 md:col-2 flex flex-column gap-1">
-          <label class="text-xs font-semibold text-color-secondary">Desde</label>
+          <label class="text-xs font-bold text-700 uppercase">Fecha Desde</label>
           <input pInputText type="date"
                  [(ngModel)]="fechaDesde"
                  (change)="aplicarFiltroFecha()"
-                 class="w-full" />
+                 class="w-full border-round-xl" />
         </div>
         <div class="col-6 md:col-2 flex flex-column gap-1">
-          <label class="text-xs font-semibold text-color-secondary">Hasta</label>
+          <label class="text-xs font-bold text-700 uppercase">Fecha Hasta</label>
           <input pInputText type="date"
                  [(ngModel)]="fechaHasta"
                  (change)="aplicarFiltroFecha()"
-                 class="w-full" />
+                 class="w-full border-round-xl" />
         </div>
         <div class="col-12 md:col-3 flex gap-2">
-          <p-button label="Limpiar" icon="pi pi-times"
-                    severity="secondary" outlined styleClass="w-full"
+          <p-button label="Limpiar Filtros" icon="pi pi-filter-slash"
+                    severity="secondary" class="w-full p-button-outlined border-round-xl font-semibold"
                     (onClick)="limpiarFiltros()">
           </p-button>
         </div>
       </div>
     </div>
 
-    <!-- ─── Tabla ────────────────────────────────────────────────────── -->
-    <div class="surface-card border-round-xl shadow-1 overflow-hidden">
+    <!-- Tabla -->
+    <div class="bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
       <p-table
         [value]="cotizacionesFiltradas"
         [paginator]="true"
@@ -122,10 +147,10 @@
 
         <ng-template pTemplate="header">
           <tr>
-            <th pSortableColumn="folio">Folio</th>
-            <th pSortableColumn="fecha">Fecha</th>
-            <th pSortableColumn="cliente_nombre">Cliente</th>
-            <th class="text-right">Total</th>
+            <th pSortableColumn="folio">Folio <p-sortIcon field="folio"></p-sortIcon></th>
+            <th pSortableColumn="fecha">Fecha <p-sortIcon field="fecha"></p-sortIcon></th>
+            <th pSortableColumn="cliente_nombre">Cliente <p-sortIcon field="cliente_nombre"></p-sortIcon></th>
+            <th class="text-right">Total Emitido</th>
             <th>Estado</th>
             <th class="text-center" style="width:160px">Acciones</th>
           </tr>
@@ -135,22 +160,22 @@
           <tr [class.opacity-50]="cot.oculta">
             <td>
               <div class="flex align-items-center gap-2">
-                <span class="font-mono font-semibold text-sm text-900">{{ cot.folio }}</span>
+                <span class="font-mono font-bold text-sm text-sky-700 bg-sky-50 px-2 py-1 border-round-md">{{ cot.folio }}</span>
                 <i *ngIf="cot.oculta"
-                   class="pi pi-eye-slash text-color-secondary text-xs"
+                   class="pi pi-eye-slash text-400 text-xs"
                    pTooltip="Cotización oculta"></i>
               </div>
             </td>
             <td>
-              <span class="text-sm">
+              <span class="text-sm font-medium text-700">
                 {{ formatearFecha(cot.fecha) }}
               </span>
             </td>
             <td>
-              <p class="font-semibold text-900 text-sm m-0">{{ obtenerNombreCliente(cot) }}</p>
-              <p class="text-xs text-color-secondary m-0">{{ obtenerDocumentoCliente(cot) }}</p>
+              <p class="font-bold text-900 text-sm m-0">{{ obtenerNombreCliente(cot) }}</p>
+              <p class="text-xs text-500 m-0 mt-1 font-mono">{{ obtenerDocumentoCliente(cot) }}</p>
             </td>
-            <td class="text-right font-bold text-900">
+            <td class="text-right font-bold text-emerald-600 text-base">
               S/ {{ cot.total | number:'1.2-2' }}
             </td>
             <td>
@@ -160,27 +185,27 @@
                 (onChange)="cambiarEstado(cot, cot.estado)"
                 optionLabel="label"
                 optionValue="value"
-                styleClass="p-inputtext-sm w-full"
+                styleClass="p-inputtext-sm w-full border-round-xl"
                 appendTo="body">
               </p-dropdown>
             </td>
             <td class="text-center">
               <div class="flex justify-content-center gap-1">
                 <p-button icon="pi pi-file-pdf" severity="danger"
-                          styleClass="p-button-text p-button-sm"
+                          styleClass="p-button-text p-button-sm border-circle"
                           pTooltip="Descargar PDF"
                           [loading]="descargando === cot.id"
                           (onClick)="descargarPDF(cot)">
                 </p-button>
                 <p-button icon="pi pi-pencil"
-          styleClass="p-button-text p-button-sm"
-          pTooltip="Editar / Revisar"
-          [loading]="cotizacionCargandoModal === cot.id"
-          (onClick)="abrirModalEditar(cot)">
-</p-button>
+                          styleClass="p-button-text p-button-sm border-circle"
+                          pTooltip="Editar / Revisar"
+                          [loading]="cotizacionCargandoModal === cot.id"
+                          (onClick)="abrirModalEditar(cot)">
+                </p-button>
                 <p-button [icon]="cot.oculta ? 'pi pi-eye' : 'pi pi-eye-slash'"
                           severity="secondary"
-                          styleClass="p-button-text p-button-sm"
+                          styleClass="p-button-text p-button-sm border-circle"
                           [pTooltip]="cot.oculta ? 'Mostrar cotización' : 'Ocultar cotización'"
                           (onClick)="ocultarCotizacion(cot)">
                 </p-button>
@@ -191,9 +216,9 @@
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="6" class="text-center py-6 text-color-secondary">
-              <i class="pi pi-inbox text-4xl mb-2 block"></i>
-              No hay cotizaciones que coincidan con los filtros.
+            <td colspan="6" class="text-center py-6 text-500">
+              <i class="pi pi-inbox text-5xl mb-2 block opacity-30"></i>
+              <span class="font-medium">No se encontraron cotizaciones registradas.</span>
             </td>
           </tr>
         </ng-template>
@@ -201,51 +226,50 @@
     </div>
   </ng-container>
 
-  <!-- Spinner ───────────────────────────────────────────────────────────── -->
+  <!-- Spinner -->
   <div *ngIf="cargando"
        class="flex justify-content-center align-items-center"
        style="min-height:300px">
     <p-progressSpinner strokeWidth="3"></p-progressSpinner>
   </div>
 
-</div><!-- /p-3 -->
+</div>
 
 
-<!-- ═══ MODAL EDITAR ════════════════════════════════════════════════════════ -->
+<!-- MODAL EDITAR -->
 <p-dialog
   [(visible)]="modalEditarVisible"
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
-  [style]="{ width: '34rem' }"
+  [style]="{ width: '90vw', maxWidth: '520px' }"
   (onHide)="cerrarModalEditar()"
   appendTo="body">
 
   <ng-template pTemplate="header">
     <div>
-      <p class="font-bold text-900 m-0">✏️ Editar cotización</p>
-      <p class="text-xs text-color-secondary m-0 mt-1">
-        {{ cotizacionParaEditar?.folio }} · {{ cotizacionParaEditar?.cliente_nombre }}
+      <p class="font-bold text-900 text-lg m-0 flex align-items-center gap-2">
+        <i class="pi pi-file-edit text-sky-600"></i>Editar / Duplicar Cotización
+      </p>
+      <p class="text-xs text-500 m-0 mt-1 font-medium">
+        Folio: {{ cotizacionParaEditar?.folio }} · {{ cotizacionParaEditar?.cliente_nombre }}
       </p>
     </div>
   </ng-template>
 
-  <div class="flex flex-column gap-5 pt-2 pb-1" *ngIf="cotizacionParaEditar">
+  <div class="flex flex-column gap-4 pt-2 pb-1" *ngIf="cotizacionParaEditar">
 
     <!-- Empresa -->
     <div>
-      <p class="text-sm font-bold text-900 mb-3 m-0 flex align-items-center gap-2">
-        <i class="pi pi-building text-primary"></i>
-        ¿Con qué empresa continuar?
+      <p class="text-xs font-bold text-700 uppercase mb-2 m-0 flex align-items-center gap-2">
+        <i class="pi pi-building text-sky-600"></i>
+        Empresa Emisora Destino
       </p>
       <div class="flex flex-column gap-2">
 
         <!-- Misma empresa -->
-        <div class="flex align-items-center gap-3 p-3 border-round-lg cursor-pointer
-                    transition-all transition-duration-150"
-             [class.surface-100]="opcionEditar.empresaOrigen === 'misma'"
-             [style.border]="opcionEditar.empresaOrigen === 'misma'
-               ? '2px solid var(--primary-color)' : '2px solid transparent'"
+        <div class="flex align-items-center gap-3 p-3 border-round-xl cursor-pointer transition-all surface-ground border-1 surface-border"
+             [class.border-sky-500]="opcionEditar.empresaOrigen === 'misma'"
              (click)="opcionEditar.empresaOrigen = 'misma'; onEmpresaOrigenChange()">
           <p-radioButton name="empresaOrigen" value="misma"
                          [(ngModel)]="opcionEditar.empresaOrigen"
@@ -253,19 +277,16 @@
                          inputId="opMisma">
           </p-radioButton>
           <div>
-            <label for="opMisma" class="font-semibold text-sm cursor-pointer">
-              Misma empresa
+            <label for="opMisma" class="font-bold text-sm cursor-pointer text-900">
+              Misma Empresa
             </label>
-            <p class="text-xs text-color-secondary m-0">{{ empresaActiva?.nombre_comercial }}</p>
+            <p class="text-xs text-500 m-0 mt-1">{{ empresaActiva?.nombre_comercial }}</p>
           </div>
         </div>
 
         <!-- Otra empresa -->
-        <div class="flex flex-column gap-2 p-3 border-round-lg cursor-pointer
-                    transition-all transition-duration-150"
-             [class.surface-100]="opcionEditar.empresaOrigen === 'otra'"
-             [style.border]="opcionEditar.empresaOrigen === 'otra'
-               ? '2px solid var(--primary-color)' : '2px solid transparent'">
+        <div class="flex flex-column gap-2 p-3 border-round-xl cursor-pointer transition-all surface-ground border-1 surface-border"
+             [class.border-sky-500]="opcionEditar.empresaOrigen === 'otra'">
 
           <div class="flex align-items-center gap-3"
                (click)="opcionEditar.empresaOrigen = 'otra'; onEmpresaOrigenChange()">
@@ -274,32 +295,31 @@
                            (onClick)="onEmpresaOrigenChange()"
                            inputId="opOtra">
             </p-radioButton>
-            <label for="opOtra" class="font-semibold text-sm cursor-pointer">
-              Cambiar de empresa
+            <label for="opOtra" class="font-bold text-sm cursor-pointer text-900">
+              Transferir a otra Empresa
             </label>
           </div>
 
-          <div *ngIf="opcionEditar.empresaOrigen === 'otra'" class="pl-5 flex flex-column gap-2">
+          <div *ngIf="opcionEditar.empresaOrigen === 'otra'" class="pl-5 flex flex-column gap-2 mt-2">
             <p-progressSpinner *ngIf="cargandoEmpresas"
                                styleClass="w-2rem h-2rem" strokeWidth="4">
             </p-progressSpinner>
             <ng-container *ngIf="!cargandoEmpresas">
               <div *ngFor="let emp of empresasDisponibles"
-                   class="flex align-items-center gap-2 p-2 border-round cursor-pointer
-                          hover:surface-200 transition-duration-150"
-                   [class.surface-200]="opcionEditar.empresaSeleccionadaId === emp.id"
+                   class="flex align-items-center gap-2 p-2 border-round-lg cursor-pointer hover:surface-100 transition-colors"
+                   [class.surface-100]="opcionEditar.empresaSeleccionadaId === emp.id"
                    (click)="opcionEditar.empresaSeleccionadaId = emp.id; $event.stopPropagation()">
                 <p-radioButton name="empresaSeleccionada" [value]="emp.id"
                                [(ngModel)]="opcionEditar.empresaSeleccionadaId"
                                [inputId]="'emp_' + emp.id">
                 </p-radioButton>
-                <label [for]="'emp_' + emp.id" class="text-sm cursor-pointer">
+                <label [for]="'emp_' + emp.id" class="text-sm cursor-pointer font-medium">
                   {{ emp.nombre_comercial }}
                 </label>
               </div>
               <p *ngIf="empresasDisponibles.length === 0"
-                 class="text-xs text-color-secondary">
-                No tienes otras empresas asignadas.
+                 class="text-xs text-500 m-0">
+                No dispones de empresas adicionales asignadas.
               </p>
             </ng-container>
           </div>
@@ -311,47 +331,43 @@
 
     <!-- Acción sobre original -->
     <div>
-      <p class="text-sm font-bold text-900 mb-3 m-0 flex align-items-center gap-2">
-        <i class="pi pi-question-circle text-orange-500"></i>
-        ¿Qué hacemos con la cotización original?
+      <p class="text-xs font-bold text-700 uppercase mb-2 m-0 flex align-items-center gap-2">
+        <i class="pi pi-question-circle text-amber-500"></i>
+        Estado del Registro Original
       </p>
       <div class="flex flex-column gap-2">
 
-        <div class="flex align-items-start gap-3 p-3 border-round-lg cursor-pointer"
-             [class.surface-100]="opcionEditar.accionOriginal === 'anular'"
-             [style.border]="opcionEditar.accionOriginal === 'anular'
-               ? '2px solid var(--orange-400)' : '2px solid transparent'"
+        <div class="flex align-items-start gap-3 p-3 border-round-xl cursor-pointer surface-ground border-1 surface-border"
+             [class.border-amber-500]="opcionEditar.accionOriginal === 'anular'"
              (click)="opcionEditar.accionOriginal = 'anular'">
           <p-radioButton name="accionOriginal" value="anular"
                          [(ngModel)]="opcionEditar.accionOriginal"
                          inputId="opAnular">
           </p-radioButton>
           <div>
-            <label for="opAnular" class="font-semibold text-sm cursor-pointer">
-              Marcar como ANULADA
-              <p-tag value="Recomendado" severity="warning" styleClass="ml-2 text-xs"></p-tag>
+            <label for="opAnular" class="font-bold text-sm cursor-pointer text-900 flex align-items-center gap-2">
+              Marcar original como ANULADA
+              <span class="text-xs bg-amber-100 text-amber-800 font-semibold px-2 py-1 border-round">Recomendado</span>
             </label>
-            <p class="text-xs text-color-secondary m-0 mt-1">
-              La original queda como historial. Se abre el cotizador con los datos precargados.
+            <p class="text-xs text-500 m-0 mt-1">
+              Guarda el historial anterior como anulado y abre la nueva propuesta en el cotizador.
             </p>
           </div>
         </div>
 
-        <div class="flex align-items-start gap-3 p-3 border-round-lg cursor-pointer"
-             [class.surface-100]="opcionEditar.accionOriginal === 'mantener'"
-             [style.border]="opcionEditar.accionOriginal === 'mantener'
-               ? '2px solid var(--primary-color)' : '2px solid transparent'"
+        <div class="flex align-items-start gap-3 p-3 border-round-xl cursor-pointer surface-ground border-1 surface-border"
+             [class.border-sky-500]="opcionEditar.accionOriginal === 'mantener'"
              (click)="opcionEditar.accionOriginal = 'mantener'">
           <p-radioButton name="accionOriginal" value="mantener"
                          [(ngModel)]="opcionEditar.accionOriginal"
                          inputId="opMantener">
           </p-radioButton>
           <div>
-            <label for="opMantener" class="font-semibold text-sm cursor-pointer">
-              Dejar como está
+            <label for="opMantener" class="font-bold text-sm cursor-pointer text-900">
+              Mantener original intacto
             </label>
-            <p class="text-xs text-color-secondary m-0 mt-1">
-              La cotización original no cambia de estado.
+            <p class="text-xs text-500 m-0 mt-1">
+              Conserva el estado de la cotización existente sin modificaciones.
             </p>
           </div>
         </div>
@@ -362,12 +378,13 @@
 
   <ng-template pTemplate="footer">
     <div class="flex gap-2 justify-content-end">
-      <p-button label="Cancelar" severity="secondary" outlined
+      <p-button label="Cancelar" severity="secondary" pButtonText
                 (onClick)="modalEditarVisible = false"
                 [disabled]="procesandoEdicion">
       </p-button>
-      <p-button label="Continuar al cotizador"
+      <p-button label="Continuar al Cotizador"
                 icon="pi pi-arrow-right" iconPos="right"
+                class="border-round-xl font-bold"
                 [loading]="procesandoEdicion"
                 (onClick)="confirmarEdicion()">
       </p-button>

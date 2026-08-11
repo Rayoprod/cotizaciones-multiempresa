@@ -8,6 +8,8 @@ import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
 import { DividerModule } from 'primeng/divider';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
 
 import { AuthService } from '../../services/auth';
 import { SupabaseService } from '../../services/supabase.service';
@@ -24,7 +26,8 @@ interface NavItem {
   standalone: true,
   imports: [
     CommonModule, RouterOutlet, RouterLink, RouterLinkActive,
-    ButtonModule, AvatarModule, DividerModule, ProgressSpinnerModule
+    ButtonModule, AvatarModule, DividerModule, ProgressSpinnerModule,
+    TagModule, TooltipModule
   ],
   templateUrl: './admin-layout.html'
 })
@@ -58,6 +61,14 @@ export class AdminLayoutComponent {
 
   get esAdminGeneral(): boolean {
     return this.session.esAdmin();
+  }
+
+  get tituloPagina(): string {
+    const url = this.router.url;
+    if (url.includes('/admin/empresas')) return 'Gestión de Empresas Corporativas';
+    if (url.includes('/admin/usuarios')) return 'Gestión de Usuarios y Permisos';
+    if (url.includes('/admin/selector')) return 'Selector General de Operación';
+    return 'Panel de Administración';
   }
 
   constructor() {
