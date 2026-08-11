@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, Optional, signal } from '@angular/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter } from 'rxjs/operators';
 import { MessageService } from 'primeng/api';
@@ -10,21 +10,21 @@ export class PwaUpdateService {
   private deferredPrompt: any = null;
 
   constructor(
-    private swUpdate: SwUpdate,
-    private messageService: MessageService
+    @Optional() private swUpdate?: SwUpdate,
+    @Optional() private messageService?: MessageService
   ) {
     this.initUpdateListener();
     this.initInstallPromptListener();
   }
 
   private initUpdateListener(): void {
-    if (!this.swUpdate.isEnabled) return;
+    if (!this.swUpdate?.isEnabled) return;
 
     this.swUpdate.versionUpdates
       .pipe(filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'))
       .subscribe(() => {
         this.updateAvailable.set(true);
-        this.messageService.add({
+        this.messageService?.add({
           severity: 'info',
           summary: '🚀 Actualización disponible',
           detail: 'Una nueva versión del Cotizador está lista. Haz clic aquí para actualizar.',
@@ -46,7 +46,7 @@ export class PwaUpdateService {
     window.addEventListener('appinstalled', () => {
       this.canInstallPwa.set(false);
       this.deferredPrompt = null;
-      this.messageService.add({
+      this.messageService?.add({
         severity: 'success',
         summary: '🎉 Aplicación Instalada',
         detail: 'El Sistema de Cotizaciones ahora está instalado en tu dispositivo.',
@@ -65,7 +65,7 @@ export class PwaUpdateService {
   }
 
   reloadApp(): void {
-    if (this.swUpdate.isEnabled) {
+    if (this.swUpdate?.isEnabled) {
       this.swUpdate.activateUpdate().then(() => {
         window.location.reload();
       });

@@ -151,12 +151,11 @@
       - Carga completa de cotizaciones de la empresa en `HistorialComponent.cargarDatos()`, permitiendo calcular en tiempo real el contador real de cotizaciones archivadas (`cantidadOcultas`).
       - Sustitución de `p-togglebutton` por un botón destacado `<p-button>` en la barra superior con badge dinámico `Ver Ocultas (N)` / `Ocultar Archivadas`, icono reactivo (`pi-eye` / `pi-eye-slash`) y cambio de variante visual (`warning` cuando están activas).
       - Alternancia instantánea en memoria sin esperas de red al hacer clic.
-- Tue Aug 11 07:23:00 -05 2026: Gestión de Versiones Service Worker PWA, Prompt de Instalación Nativa y Eliminación de Advertencias AOT:
-   1. PWA SERVICE WORKER & PROMPT DE INSTALACIÓN (`PwaUpdateService`):
-      - Creado e inyectado `PwaUpdateService` para monitorear `SwUpdate.versionUpdates` y alertar a los usuarios vía Toast interactivo `pwa-update-toast` cuando una nueva versión de la aplicación esté lista en producción, permitiendo actualizar con 1 clic sin perder sesión.
-      - Capturado el evento `beforeinstallprompt` a nivel global para exponer la signal `canInstallPwa()` y renderizar un botón "Instalar App" destacado en la barra superior PWA de `LayoutComponent` y `AdminLayoutComponent`.
-   2. ELIMINACIÓN DE ADVERTENCIAS Y PRESUPUESTOS EN COMPILACIÓN AOT (`angular.json`):
-      - Configurada la opción `allowedCommonJsDependencies: ["pdfmake/build/pdfmake", "pdfmake/build/vfs_fonts"]` en `angular.json`, eliminando las advertencias de optimización de CommonJS/AMD durante el empaquetado de producción.
-      - Ajustados los presupuestos de tamaño inicial a `1.2MB` para alinearse con las bibliotecas corporativas PrimeNG y Supabase, logrando un build AOT con **0 advertencias y 0 errores**.
+- Tue Aug 11 07:34:00 -05 2026: Corrección de Pantalla en Blanco (NullInjectorError: No provider for MessageService!):
+   1. REGISTRO DE PROVEEDORES GLOBALES EN APP.CONFIG.TS:
+      - Añadidos `MessageService` y `ConfirmationService` a la lista `providers` en [app.config.ts](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/app.config.ts), permitiendo que la inyección de dependencias a nivel de Inyector Raíz (`{ providedIn: 'root' }`) entregue las instancias globales necesarias sin fallar en el bootstrap de Angular.
+   2. INYECCIÓN OPCIONAL ROBUSTA EN PWA UPDATE SERVICE:
+      - Configurada la anotación `@Optional()` para `SwUpdate` y `MessageService` en el constructor de [pwa-update.service.ts](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/services/pwa-update.service.ts), previniendo que cualquier fallo de proveedor secundario detenga el arranque de los Layouts principales.
+
 
 
