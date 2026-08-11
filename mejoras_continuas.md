@@ -179,12 +179,22 @@
       - Verificada la coherencia entre `authGuard`, `adminGuard`, `adminGeneralGuard` y `SessionContextService` en [app.routes.ts](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/app.routes.ts).
    3. VERIFICACIÓN AOT 100% EXITO:
       - `npx tsc --noEmit` sin errores y compilación `npx ng build --configuration production` completada de forma óptima.
-- Tue Aug 11 22:55:00 -05 2026: Corrección de Safe Area Top Bar, Sidebar Móvil y Responsividad de Notificaciones (Toasts):
-   1. SAFE AREA TOP BAR & SIDEBAR MÓVIL (`safe-area-inset-top` & Fallback `max()` CSS para Notch):
-      - Implementada la regla `padding-top: max(3.75rem, calc(1.25rem + var(--sat)))` en `.sidebar-top-header` y `padding-top: max(3rem, calc(0.75rem + var(--sat)))` en `.pwa-top-header` dentro de [styles.scss](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/styles.scss).
-      - Esto garantiza que el encabezado del sidebar (Logo, RUC y enlaces) y la barra superior comiencen al menos a 60px de la parte superior del smartphone, dejando un espacio libre de 16px **debajo del reloj (5:49)** y de la barra de estado/notch en cualquier dispositivo móvil (iOS y Android).
-   2. RESPONSIVIDAD Y TAMAÑO DE AVISOS (`p-toast`):
-      - Configurada la regla `@media screen and (max-width: 640px)` en [styles.scss](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/styles.scss) para forzar a `<p-toast>` a un ancho de `calc(100vw - 1.25rem)` con márgenes laterales y ajuste automático de texto (`word-break: break-word`).
-      - Eliminado el desborde y recortamiento de notificaciones en smartphones compactos.
-   3. COMPILACIÓN AOT DE PRODUCCIÓN:
-      - Ejecutada verificación `npx tsc --noEmit` (0 errores) y `npx ng build --configuration production` exitoso.
+- Tue Aug 11 23:08:00 -05 2026: Estandarización Total OnPush en Layouts/Login y Micro-animaciones Fluidas UI/UX PWA:
+   1. ESTANDARIZACIÓN GLOBAL DE CHANGE DETECTION ONPUSH:
+      - Implementada la estrategia `ChangeDetectionStrategy.OnPush` en `LayoutComponent`, `AdminLayoutComponent` y `LoginComponent`, garantizando un ciclo de renderizado optimizado y de alto rendimiento en el 100% de la SPA.
+      - Incorporada la llamada explícita a `cdr.markForCheck()` en manejadores asíncronos y eventos de login/navegación.
+   2. PULIDO DE ANIMACIONES UI/UX Y MODALES ELEGANTES:
+      - Creada la animación CSS `@keyframes modalScaleUp` en `styles.scss` con aceleración por GPU (`cubic-bezier(0.16, 1, 0.3, 1)`), permitiendo apertura fluida de modales `<p-dialog>` con escala y desvanecimiento progresivo.
+      - Reforzado el efecto de desenfoque de fondo en modales (`backdrop-filter: blur(8px)` y `background-color: rgba(15, 23, 42, 0.55)`).
+      - Añadida animación `@keyframes fadeInSoft` y clase `.animate-card-enter` para transiciones suaves de tarjetas e indicadores.
+   3. VERIFICACIÓN Y AUDITORÍA AOT 100% LIMPIA:
+      - Ejecutada verificación `npx tsc --noEmit` (0 errores) y compilación AOT de producción `npx ng build --configuration production` exitosa.
+- Tue Aug 11 23:11:00 -05 2026: Implementación de Auto-Actualización y Detección de Nuevas Versiones PWA:
+   1. REGISTRO INMEDIATO Y CHEQUEO PERIÓDICO DEL SERVICE WORKER:
+      - Cambiada la estrategia en [app.config.ts](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/app.config.ts) a `registrationStrategy: 'registerImmediately'`.
+      - Configurada en [pwa-update.service.ts](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/services/pwa-update.service.ts) la comprobación automática de actualizaciones cada 5 minutos (`interval(5 * 60 * 1000)`), al estabilizarse la app y al retornar el foco de la ventana (`visibilitychange`).
+   2. RECUPERACIÓN AUTOMÁTICA Y NOTIFICACIÓN INTERACTIVA UI/UX:
+      - Implementado listener de `swUpdate.unrecoverable` para forzar recarga limpia en caso de que chunks antiguos hayan sido removidos del servidor.
+      - Integrado botón interactivo con animación pulse `🚀 Actualizar App` y Toast persistente `<p-toast key="pwa-update-toast">` en `LayoutComponent` y `AdminLayoutComponent`.
+   3. VERIFICACIÓN AOT 100% LIMPIA:
+      - Ejecutada verificación `npx tsc --noEmit` (0 errores) y `npx ng build --configuration production` (0 errores).

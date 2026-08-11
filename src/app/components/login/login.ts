@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -14,6 +14,7 @@ import { RippleModule } from 'primeng/ripple';
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, PasswordModule, RippleModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.html'
 })
 export class LoginComponent {
@@ -25,17 +26,20 @@ export class LoginComponent {
   constructor(
     private authService: AuthService,
     private supabaseSvc: SupabaseService,
-    private session: SessionContextService, // ✅ nuevo
-    private router: Router
+    private session: SessionContextService,
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   async iniciarSesion() {
     this.mensajeError = '';
     this.cargando = true;
+    this.cdr.markForCheck();
 
     if (!this.correo || !this.contrasena) {
       this.mensajeError = 'Por favor, ingresa tu correo y contraseña.';
       this.cargando = false;
+      this.cdr.markForCheck();
       return;
     }
 
@@ -52,7 +56,6 @@ export class LoginComponent {
       const perfil = await this.supabaseSvc.obtenerPerfil();
 
       if (perfil) {
-        // ✅ Reemplaza los 2 sessionStorage.setItem anteriores
         this.session.setUsuario({
           id: data.user?.id ?? '',
           email: data.user?.email ?? '',
@@ -73,6 +76,7 @@ export class LoginComponent {
       this.mensajeError = 'Ocurrió un error al intentar conectarse.';
     } finally {
       this.cargando = false;
+      this.cdr.markForCheck();
     }
   }
 }

@@ -256,13 +256,34 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* ── PrimeNG Component Enhancements ───────────────────────── */
+/* ── PrimeNG Component Enhancements & Micro-Animations ───── */
+@keyframes modalScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeInSoft {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-card-enter {
+  animation: fadeInSoft 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Dialog Polish & Mobile Adaptability */
 .p-dialog {
   border-radius: 1.25rem !important;
   overflow: hidden;
   box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
   max-width: 96vw !important;
+  animation: modalScaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) ease-out !important;
 }
 
 @media screen and (max-width: 640px) {
@@ -288,8 +309,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .p-dialog-mask {
-  backdrop-filter: blur(6px);
-  background-color: rgba(15, 23, 42, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  background-color: rgba(15, 23, 42, 0.55) !important;
+  transition: all 0.2s ease !important;
 }
 
 .p-dialog .p-dialog-header {

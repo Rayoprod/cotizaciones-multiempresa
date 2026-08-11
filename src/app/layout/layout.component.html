@@ -184,6 +184,11 @@
 
       <!-- Quick Status & Action -->
       <div class="flex align-items-center gap-2 md:gap-3">
+        <button *ngIf="pwaUpdate.updateAvailable()" pButton type="button" icon="pi pi-refresh" label="Actualizar App"
+                severity="primary" size="small" class="font-bold text-xs border-round-lg shadow-2 px-3 animate-pulse"
+                [pTooltip]="'Una nueva versión está lista. Haz clic para actualizar.'"
+                tooltipPosition="bottom"
+                (click)="reloadPwaApp()"></button>
         <button *ngIf="pwaUpdate.canInstallPwa()" pButton type="button" icon="pi pi-download" label="Instalar App"
                 severity="success" size="small" class="font-bold text-xs border-round-lg shadow-2 px-3"
                 (click)="instalarPwa()"></button>

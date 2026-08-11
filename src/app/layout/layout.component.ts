@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, ChangeDetectorRef, DestroyRef, inject } from '@angular/core';
+import { Component, OnInit, HostListener, ChangeDetectorRef, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -30,6 +30,7 @@ import { InputTextModule } from 'primeng/inputtext';
     ButtonModule, AvatarModule, DividerModule, OverlayPanelModule, TagModule, TooltipModule, InputTextModule, ToastModule
   ],
   providers: [MessageService],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './layout.component.html'
 })
 export class LayoutComponent implements OnInit {

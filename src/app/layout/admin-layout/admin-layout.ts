@@ -1,4 +1,4 @@
-import { Component, inject, HostListener, ChangeDetectorRef, DestroyRef } from '@angular/core';
+import { Component, inject, HostListener, ChangeDetectorRef, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -30,6 +30,7 @@ interface NavItem {
     ButtonModule, AvatarModule, DividerModule, ProgressSpinnerModule,
     TagModule, TooltipModule
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-layout.html'
 })
 export class AdminLayoutComponent {
@@ -114,6 +115,10 @@ export class AdminLayoutComponent {
   async instalarPwa() {
     await this.pwaUpdate.promptInstallPwa();
     this.cdr.markForCheck();
+  }
+
+  reloadPwaApp() {
+    this.pwaUpdate.reloadApp();
   }
 
   logout() {
