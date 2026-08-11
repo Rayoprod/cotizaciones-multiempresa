@@ -461,8 +461,11 @@
     <p-dialog [(visible)]="modalMaquinariaVisible"
               header="Agregar equipo de maquinaria"
               [modal]="true"
+              [breakpoints]="{ '960px': '85vw', '640px': '96vw' }"
               [style]="{ width: '90vw', maxWidth: '440px' }"
               [draggable]="false"
+              [resizable]="false"
+              [dismissableMask]="true"
               (onHide)="cerrarSelectorMaquinaria()"
               appendTo="body">
       <div class="flex flex-column gap-3 pt-2">

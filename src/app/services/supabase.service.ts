@@ -3,7 +3,6 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 import { IEmpresa, ICotizacion, ICuentaBancaria } from '../models';
 
-
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
 
@@ -57,7 +56,7 @@ export class SupabaseService {
 
     if (error) throw error;
     const empresas = data as IEmpresa[];
-    return Promise.all(empresas.map(e => this.enriquecerConCuentasBancarias(e)));
+    return await Promise.all(empresas.map(e => this.enriquecerConCuentasBancarias(e)));
   }
 
   async getEmpresas(): Promise<IEmpresa[]> {
@@ -72,35 +71,34 @@ export class SupabaseService {
   // ─── EMPRESAS CRUD ────────────────────────────────────────────────────────
 
   async guardarEmpresa(empresa: IEmpresa): Promise<IEmpresa> {
-  // Excluir cuentas_bancarias antes de mandar a la tabla empresas
-  const { cuentas_bancarias, ...empresaLimpia } = empresa as any;
+    const { cuentas_bancarias, ...empresaLimpia } = empresa as any;
 
-  const { data: existente } = await this.client
-    .from('empresas')
-    .select('id')
-    .eq('id', empresaLimpia.id)
-    .maybeSingle();
+    const { data: existente } = await this.client
+      .from('empresas')
+      .select('id')
+      .eq('id', empresaLimpia.id)
+      .maybeSingle();
 
-  if (existente) {
-    const { id, ...datos } = empresaLimpia;
-    const { data, error } = await this.client
-      .from('empresas')
-      .update(datos)
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data as IEmpresa;
-  } else {
-    const { data, error } = await this.client
-      .from('empresas')
-      .insert([empresaLimpia])
-      .select()
-      .single();
-    if (error) throw error;
-    return data as IEmpresa;
+    if (existente) {
+      const { id, ...datos } = empresaLimpia;
+      const { data, error } = await this.client
+        .from('empresas')
+        .update(datos)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as IEmpresa;
+    } else {
+      const { data, error } = await this.client
+        .from('empresas')
+        .insert([empresaLimpia])
+        .select()
+        .single();
+      if (error) throw error;
+      return data as IEmpresa;
+    }
   }
-}
 
   async verificarIdExistente(id: string): Promise<boolean> {
     const { data } = await this.client

@@ -86,6 +86,7 @@ export class HistorialComponent implements OnInit {
   cotizacionCargandoModal: string | null = null;
 
   mostrarOcultas = false;
+  cantidadOcultas = 0;
 
   terminoBusqueda = '';
   fechaDesde = '';
@@ -134,16 +135,16 @@ export class HistorialComponent implements OnInit {
   async cargarDatos() {
     this.cargando = true;
     try {
-    this.empresaActiva = this.session.empresaActiva(); // ← desde signal
+      this.empresaActiva = this.session.empresaActiva();
 
-    if (!this.empresaActiva) {
-      this.msg.add({
-        severity: 'warn',
-        summary: 'Empresa no seleccionada',
-        detail: 'Por favor selecciona una empresa para ver el historial'
-      });
-      return;
-    }
+      if (!this.empresaActiva) {
+        this.msg.add({
+          severity: 'warn',
+          summary: 'Empresa no seleccionada',
+          detail: 'Por favor selecciona una empresa para ver el historial'
+        });
+        return;
+      }
       const data = await this.supabase.getHistorial(
         this.empresaActiva.id,
         this.mostrarOcultas
@@ -155,6 +156,7 @@ export class HistorialComponent implements OnInit {
           oculta: c.oculta ?? false
         }));
         this.cotizacionesFiltradas = [...this.cotizaciones];
+        this.cantidadOcultas = this.cotizaciones.filter(c => c.oculta === true).length;
         this.calcularKPIs();
         this.calcularInsights();
       });
@@ -401,32 +403,59 @@ export class HistorialComponent implements OnInit {
   }
 
   async ocultarCotizacion(cot: ICotizacion) {
+    if (!cot?.id) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'ID de cotización no válido' });
+      return;
+    }
+
     const yaOculta = cot.oculta === true;
-    const accion = yaOculta ? 'mostrar' : 'ocultar';
+    const nuevoEstadoOculta = !yaOculta;
+    const accionText = nuevoEstadoOculta ? 'ocultar' : 'restaurar';
 
     this.confirmSvc.confirm({
-      message: `¿Deseas ${accion} la cotización <strong>${cot.folio}</strong>?<br>
-                <small>${yaOculta
-                  ? 'Volverá a aparecer en el historial normal.'
-                  : 'Solo los administradores podrán verla con el toggle activado.'}</small>`,
-      header: yaOculta ? 'Mostrar cotización' : 'Ocultar cotización',
-      icon: yaOculta ? 'pi pi-eye' : 'pi pi-eye-slash',
-      acceptLabel: yaOculta ? 'Sí, mostrar' : 'Sí, ocultar',
+      message: `¿Deseas ${accionText} la cotización <strong>${cot.folio}</strong>?<br>
+                <small class="text-500">${nuevoEstadoOculta
+                  ? 'La cotización se archivará. Podrás consultarla activando el botón "Ver Ocultas".'
+                  : 'La cotización se mostrará de nuevo en la vista principal.'}</small>`,
+      header: nuevoEstadoOculta ? 'Ocultar cotización' : 'Restaurar cotización',
+      icon: nuevoEstadoOculta ? 'pi pi-eye-slash' : 'pi pi-eye',
+      acceptLabel: nuevoEstadoOculta ? 'Sí, ocultar' : 'Sí, restaurar',
       rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-secondary',
+      acceptButtonStyleClass: nuevoEstadoOculta ? 'p-button-warning' : 'p-button-info',
       accept: async () => {
         try {
+          // 1. Actualización inmediata local para OnPush
+          cot.oculta = nuevoEstadoOculta;
+
+          // 2. Persistencia en base de datos Supabase
           const { error } = await this.supabase.client
-            .from('cotizaciones').update({ oculta: !yaOculta }).eq('id', cot.id!);
-          if (error) throw error;
+            .from('cotizaciones')
+            .update({ oculta: nuevoEstadoOculta })
+            .eq('id', cot.id!);
+
+          if (error) {
+            cot.oculta = yaOculta; // revertir en fallo
+            throw error;
+          }
+
           this.msg.add({
-            severity: 'info',
-            summary: yaOculta ? 'Cotización visible' : 'Cotización oculta',
-            detail: cot.folio
+            severity: nuevoEstadoOculta ? 'warn' : 'success',
+            summary: nuevoEstadoOculta ? 'Cotización Ocultada' : 'Cotización Visible',
+            detail: nuevoEstadoOculta
+              ? `${cot.folio} archivada. Activa "Ver Ocultas" para volver a verla.`
+              : `${cot.folio} restaurada al historial principal.`
           });
+
           await this.cargarDatos();
         } catch (e: any) {
-          this.msg.add({ severity: 'error', summary: 'Error', detail: e.message });
+          console.error('Error al ocultar cotización:', e);
+          this.msg.add({
+            severity: 'error',
+            summary: 'Error en BD',
+            detail: e.message || 'No se pudo actualizar la visibilidad en Supabase'
+          });
+        } finally {
+          this.cdr.markForCheck();
         }
       }
     });

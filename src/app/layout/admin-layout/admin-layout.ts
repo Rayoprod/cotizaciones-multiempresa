@@ -36,7 +36,7 @@ export class AdminLayoutComponent {
   private router     = inject(Router);
   private cdr        = inject(ChangeDetectorRef);
   private supabase   = inject(SupabaseService);
-  private session    = inject(SessionContextService); // ✅ nuevo
+  private session    = inject(SessionContextService);
   private destroyRef = inject(DestroyRef);
 
   sidebarAbierto = false;

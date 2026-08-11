@@ -98,4 +98,42 @@
      - Adición de fallbacks en la tabla del historial ([historial.html](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/components/historial/historial.html)) para evitar visualización vacía del cliente.
   3. COMPILACIÓN:
      - Verificación limpia de TypeScript (`npx tsc --noEmit`).
-
+- Tue Aug 11 06:55:00 -05 2026: PWA-ización Completa, Tema Dinámico por Empresa y Optimización Visual Móvil:
+  1. PWA & SERVICE WORKER:
+     - Instalación e integración de `@angular/service-worker` con estrategia de caché offline en `ngsw-config.json`.
+     - Generación de iconos adaptativos PWA (72x72 hasta 512x512) y manifest `manifest.webmanifest`.
+     - Creación e inyección de `NetworkStatusService` para detección en tiempo real de conectividad (online/offline) con banner de aviso dinámico en layouts `LayoutComponent` y `AdminLayoutComponent`.
+  2. TEMA DINÁMICO MULTIEMPRESA:
+     - Integración en `SessionContextService` del método `aplicarTemaEmpresa()` que inyecta dinámicamente la variable CSS `--company-accent-color` a nivel de `:root` según la empresa activa seleccionada.
+  3. PULIDO UI/UX Y MODALES MÓVILES:
+     - Adaptabilidad responsive de modales `<p-dialog>` en todos los componentes con `[breakpoints]="{ '960px': '85vw', '640px': '96vw' }"`, `[resizable]="false"`, `[draggable]="false"` y `[dismissableMask]="true"`.
+     - Definición de blancos táctiles mínimos de 44px para móviles en `src/styles.scss`.
+     - Compilación AOT de producción 100% exitosa (`npx ng build --configuration production`).
+- Tue Aug 11 07:00:00 -05 2026: Arquitectura PWA Offline Resilience, Resguardo Local y Sincronización Automática de Cotizaciones:
+   1. SERVICIO DE SINCRONIZACIÓN OFFLINE (`OfflineSyncService`):
+      - Implementado `src/app/services/offline-sync.service.ts` con signals reactivas (`cotizacionesPendientes`, `sincronizando`, `pendientesSyncCount`).
+      - Capa de caché local de entidades (`productos`, `clientes`, `maquinaria`, `empresas`) respaldada por `localStorage` con aislamiento por `empresaId`.
+      - Cola persistente de cotizaciones offline (`sgi_pending_cotizaciones_sync`) para registrar ventas generadas sin señal de red.
+   2. RESGUARDO Y GENERACIÓN DE PDF OFFLINE (`CotizadorComponent`):
+      - Actualizado `CotizadorComponent.generarPDF()`: si el dispositivo está sin conexión o la petición a Supabase falla por red, genera un folio temporal `OFF-COT-YYYYMMDD-XXXX`, resguarda la cotización localmente y descarga el PDF inmediatamente sin perder trabajo del usuario.
+      - Notificación visual clara al usuario sobre el estado del guardado offline e instrucciones de sincronización.
+   3. RESCATE DE DATOS EN CACHÉ (`SupabaseService`):
+      - Integrado `OfflineSyncService` en `SupabaseService.getProductos()`, `getClientes()` y `getEmpresasDelUsuario()`. Si Supabase no responde o falla la red, el sistema rescata automáticamente los datos desde la caché local sin romper el autocompletado ni las vistas.
+   4. INTERFAZ Y RE-CONEXIÓN AUTOMÁTICA (`LayoutComponent`):
+      - Escuchador reactivo en `window.addEventListener('online')`: al detectar re-conexión a internet, sincroniza automáticamente todas las cotizaciones guardadas offline enviándolas a Supabase con folios oficiales secuenciales (`getnextfolioempresa`).
+      - Incorporado botón/badge animado de Sincronización en la barra superior (`LayoutComponent.html`) para disparar sincronizaciones manuales con feedback instantáneo.
+   5. COMPILACIÓN Y VERIFICACIÓN AOT:
+      - 0 errores TypeScript (`npx tsc --noEmit`) y compilación AOT de producción exitosa (`npx ng build --configuration production`).
+- Tue Aug 11 07:15:00 -05 2026: Operación Estricta Online en Tiempo Real y Diseño de Barra Superior PWA:
+   1. ARQUITECTURA ONLINE EN TIEMPO REAL A SOLICITUD DEL USUARIO (`SupabaseService`, `CotizadorComponent`):
+      - Removida por completo la capa de resguardo local/offline. Todas las operaciones (búsqueda de productos, clientes, empresas, generación de folios y emisión de cotizaciones PDF) se realizan de manera directa y transparente en tiempo real contra la base de datos Supabase.
+      - Removidos los banners de aviso de estado de red offline y botones de sincronización manual de `LayoutComponent` y `AdminLayoutComponent`.
+   2. PWA TOP BAR & NATIVE OS INTEGRATION (`index.html`, `styles.scss`, `layout.component.html`, `admin-layout.html`):
+      - Configurado `viewport-fit=cover` en la meta etiqueta `viewport` y `theme-color: #0f172a` en `index.html`.
+      - Creada la clase CSS `.pwa-top-header` en `styles.scss` incorporando `padding-top: calc(0.35rem + env(safe-area-inset-top, 0px))` para un ajuste perfecto bajo el notch/barra de estado nativa de dispositivos iOS y Android en modo PWA standalone.
+      - Añadido gradiente ejecutivo oscuro (`#0f172a` a `#1e293b`), línea de énfasis dinámico `--company-accent-color` en el borde inferior y selector de empresa translúcido de alta visibilidad (`.pwa-company-pill`).
+   3. REFACTORIZACIÓN COMPLETA DEL BOTÓN OCULTAR COTIZACIONES (`historial.ts`, `historial.html`):
+      - Solucionado problema donde las cotizaciones no cambiaban de visibilidad o generaban confusión al ocultar.
+      - Incorporado `appendTo="body"` en `<p-confirmDialog>` para prevenir bloqueos de overlay y z-index.
+      - Refactorizado `ocultarCotizacion()` en `HistorialComponent` con actualización local reactiva bajo `ChangeDetectionStrategy.OnPush`, invocación garantizada de `cdr.markForCheck()` y notificaciones Toast explicativas (`warn` para archivadas, `success` para restauradas).
+      - Rediseñado el control superior de toggle: etiquetas claras `Ver Ocultas` / `Ocultas Incluidas` y badge animado con contador dinámico `cantidadOcultas` para conocer en todo momento el volumen de registros archivados.

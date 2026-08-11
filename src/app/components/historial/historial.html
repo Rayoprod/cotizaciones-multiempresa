@@ -1,5 +1,5 @@
 <p-toast />
-<p-confirmDialog />
+<p-confirmDialog appendTo="body" />
 
 <div class="p-3 md:p-4">
 
@@ -19,13 +19,16 @@
         <p-togglebutton
           [(ngModel)]="mostrarOcultas"
           (onChange)="onToggleOcultas()"
-          onLabel="Ocultas" offLabel="Todas"
+          onLabel="Ocultas Incluidas" offLabel="Ver Ocultas"
+          onIcon="pi pi-eye" offIcon="pi pi-eye-slash"
           inputId="toggleOcultas">
         </p-togglebutton>
-        <label for="toggleOcultas" class="text-xs font-semibold cursor-pointer select-none text-700">
-          <i class="pi pi-eye-slash mr-1 text-400"></i>
-          Mostrar ocultas
-        </label>
+        <span *ngIf="cantidadOcultas > 0"
+              class="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 border-round-pill flex align-items-center gap-1"
+              pTooltip="Cotizaciones ocultas en esta empresa">
+          <i class="pi pi-eye-slash text-xs"></i>
+          {{ cantidadOcultas }}
+        </span>
       </div>
 
       <p-button label="Exportar CSV" icon="pi pi-download"
@@ -161,9 +164,7 @@
             <td>
               <div class="flex align-items-center gap-2">
                 <span class="font-mono font-bold text-sm text-sky-700 bg-sky-50 px-2 py-1 border-round-md">{{ cot.folio }}</span>
-                <i *ngIf="cot.oculta"
-                   class="pi pi-eye-slash text-400 text-xs"
-                   pTooltip="Cotización oculta"></i>
+                <p-tag *ngIf="cot.oculta" value="Oculta" severity="secondary" styleClass="font-bold text-xs px-2 py-0 border-round-md"></p-tag>
               </div>
             </td>
             <td>
@@ -204,9 +205,9 @@
                           (onClick)="abrirModalEditar(cot)">
                 </p-button>
                 <p-button [icon]="cot.oculta ? 'pi pi-eye' : 'pi pi-eye-slash'"
-                          severity="secondary"
+                          [severity]="cot.oculta ? 'info' : 'secondary'"
                           styleClass="p-button-text p-button-sm border-circle"
-                          [pTooltip]="cot.oculta ? 'Mostrar cotización' : 'Ocultar cotización'"
+                          [pTooltip]="cot.oculta ? 'Restaurar y mostrar cotización' : 'Ocultar cotización'"
                           (onClick)="ocultarCotizacion(cot)">
                 </p-button>
               </div>
@@ -242,6 +243,8 @@
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
+  [dismissableMask]="true"
+  [breakpoints]="{ '960px': '85vw', '640px': '96vw' }"
   [style]="{ width: '90vw', maxWidth: '520px' }"
   (onHide)="cerrarModalEditar()"
   appendTo="body">

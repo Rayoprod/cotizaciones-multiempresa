@@ -171,7 +171,9 @@
 
 <!-- Modal Formulario Empresa -->
 <p-dialog header="{{ esEdicion ? 'Editar Empresa' : 'Nueva Empresa' }}" [(visible)]="empresaDialog" [modal]="true"
-  [resizable]="false" [style]="{'width':'95vw','max-width':'800px'}" (onHide)="cerrarModal()" appendTo="body">
+  [breakpoints]="{ '960px': '85vw', '640px': '96vw' }"
+  [resizable]="false" [draggable]="false" [dismissableMask]="true"
+  [style]="{'width':'95vw','max-width':'800px'}" (onHide)="cerrarModal()" appendTo="body">
 
   <form [formGroup]="empresaForm" class="flex flex-column gap-4 pt-2">
 

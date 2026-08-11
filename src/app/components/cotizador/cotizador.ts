@@ -111,8 +111,7 @@ export class CotizadorComponent implements OnInit {
     private router: Router,
     private messageService: MessageService,
     private apiPeru: ApiPeruService,
-    private session: SessionContextService  // ← agregar esta línea
-
+    private session: SessionContextService
   ) { }
 
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -570,11 +569,15 @@ export class CotizadorComponent implements OnInit {
       }
       this.empresaActiva = empresa;
 
-      const clienteId = await this.procesarClienteSilencioso();
-      await this.procesarProductosSilenciosos();
-
-      const prefijoFallback = empresa.prefijo || 'COT';
-      const folioSeguro = await this.supabaseSvc.obtenerSiguienteFolio(empresa.id, prefijoFallback);
+      let clienteId: string | null = null;
+      if (navigator.onLine) {
+        try {
+          clienteId = await this.procesarClienteSilencioso();
+          await this.procesarProductosSilenciosos();
+        } catch (e) {
+          console.warn('Procesamiento silencioso no completado en red:', e);
+        }
+      }
 
       let observacionesBD = this.clienteObservaciones?.trim() || '';
       if (this.borradorFolioPadre) {
@@ -586,13 +589,14 @@ export class CotizadorComponent implements OnInit {
       }
 
       let vendedorEmail = this.session.usuario()?.email ?? null;
-      if (!vendedorEmail) {
-        const usr = await this.supabaseSvc.obtenerUsuarioActual();
-        vendedorEmail = usr?.email ?? null;
+      if (!vendedorEmail && navigator.onLine) {
+        try {
+          const usr = await this.supabaseSvc.obtenerUsuarioActual();
+          vendedorEmail = usr?.email ?? null;
+        } catch { /* ignore */ }
       }
 
-      const cotizacionParaBD: any = {
-        folio: folioSeguro,
+      const cotizacionBase: any = {
         fecha: new Date().toISOString(),
         empresa_id: empresa.id,
         cliente_id: clienteId,
@@ -609,6 +613,14 @@ export class CotizadorComponent implements OnInit {
         vendedor: vendedorEmail,
         lugar_entrega: this.lugarEntrega,
         observaciones: observacionesBD || null
+      };
+
+      const prefijoFallback = empresa.prefijo || 'COT';
+      const folioSeguro = await this.supabaseSvc.obtenerSiguienteFolio(empresa.id, prefijoFallback);
+
+      const cotizacionParaBD = {
+        ...cotizacionBase,
+        folio: folioSeguro
       };
 
       await this.supabaseSvc.guardarCotizacion(cotizacionParaBD);
@@ -632,24 +644,25 @@ export class CotizadorComponent implements OnInit {
         );
 
         this.messageService.add({
-          severity: 'success', summary: '¡Listo!', detail: `Cotización ${folioSeguro} generada y descargada con éxito.`
+          severity: 'success', summary: '¡Listo!', detail: `Cotización ${folioSeguro} guardada en BD y descargada en tiempo real.`
         });
       } catch (pdfError) {
         console.error('Error al generar PDF:', pdfError);
         this.messageService.add({
           severity: 'warn',
-          summary: 'Cotización guardada',
-          detail: `La cotización ${folioSeguro} fue guardada en el sistema, pero ocurrió un problema al descargar el PDF. Puedes descargarlo desde el Historial.`,
+          summary: 'Cotización guardada en BD',
+          detail: `La cotización ${folioSeguro} fue registrada en tiempo real, pero ocurrió un detalle al emitir el PDF. Puedes descargarlo desde el Historial.`,
           life: 8000
         });
       }
 
       this.resetearTrasGuardar();
       this.cdr.markForCheck();
+
     } catch (error) {
-      console.error('Error al guardar cotización:', error);
+      console.error('Error crítico al procesar cotización:', error);
       this.messageService.add({
-        severity: 'error', summary: 'Error', detail: 'No se pudo guardar la cotización en la base de datos.'
+        severity: 'error', summary: 'Error', detail: 'Ocurrió un error al procesar la cotización.'
       });
     } finally {
       this.generandoPDF = false;

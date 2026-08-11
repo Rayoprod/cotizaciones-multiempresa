@@ -5,8 +5,9 @@
 - **Framework & Arquitectura**: Angular 17.3+ utilizando **Standalone Components** (`standalone: true`, sin NgModules).
 - **Lógica de Estado Central**: Driven by `SessionContextService` utilizando Angular Signals (`signal`, `computed`) respaldado por `sessionStorage` para persisitiendo contexto (`empresaActiva`, `usuario`, `empresas`, `rol`).
 - **Base de Datos & Auth**: Supabase (`@supabase/supabase-js`) con PostgreSQL, Row Level Security (RLS) y RPCs personalizadas (ej. `getnextfolioempresa`).
-- **UI & Componentes**: PrimeNG, PrimeFlex, PrimeIcons, Chart.js para analytics visuales en el historial.
 - **Generación de Reportes**: `pdfmake` optimizado mediante **Lazy Dynamic Import** (`import('pdfmake/build/pdfmake')`) en `PdfService`.
+- **PWA & Offline Capability**: `@angular/service-worker` integrado con `manifest.webmanifest`, assets cacheados (`ngsw-config.json`), `NetworkStatusService` con detección de conectividad en tiempo real y `OfflineSyncService` para almacenamiento local reactivo de entidades (productos, clientes, empresas) y cola persistente de cotizaciones offline con sincronización automática al recuperar la señal de red.
+- **Tema Dinámico Multiempresa**: Inyección reactiva de la variable CSS `--company-accent-color` a nivel de `:root` sincronizada con la empresa activa mediante `SessionContextService.aplicarTemaEmpresa()`.
 
 ---
 
@@ -55,6 +56,8 @@
    - Para obtener la lista de empresas del usuario con sus cuentas bancarias completas, usar `SupabaseService.getEmpresasDelUsuario()`.
 6. **Protección de Consultas Asíncronas en OnPush**:
    - Todas las llamadas asíncronas externas a APIs (ej. SUNAT/RENIEC) deben gestionar una bandera de estado (ej. `buscandoDocumento`), vinculando `[disabled]` y `[loading]` en la plantilla e invocando `cdr.markForCheck()` en `try/finally` para evitar ejecuciones concurrentes o desincronización visual.
+7. **Operación Directa Online en Tiempo Real**:
+   - Todo registro de cotización, consulta de catálogo (productos/clientes/empresas) y generación de PDF opera de forma directa y transparente en tiempo real contra la base de datos de Supabase.
 
 ---
 

@@ -138,12 +138,12 @@
   <div class="flex-1 flex flex-column min-w-0 overflow-hidden z-1">
 
     <!-- Top Header Bar (Desktop & Mobile) -->
-    <header class="flex align-items-center justify-content-between px-3 md:px-4 py-2 border-bottom-1 surface-border bg-white shadow-1 z-2" style="height: 4.25rem;">
+    <header class="pwa-top-header flex align-items-center justify-content-between px-3 md:px-4 z-2">
       <div class="flex align-items-center gap-3">
-        <button pButton type="button" icon="pi pi-bars" text class="md:hidden text-700" (click)="toggleMenu()"></button>
+        <button pButton type="button" icon="pi pi-bars" text class="md:hidden text-white hover:bg-white-alpha-10" (click)="toggleMenu()"></button>
 
         <!-- Company Switcher Pill -->
-        <div class="company-selector-pill" (click)="opCompany.toggle($event)" pTooltip="Haz clic para cambiar de empresa" tooltipPosition="bottom">
+        <div class="pwa-company-pill" (click)="opCompany.toggle($event)" pTooltip="Haz clic para cambiar de empresa" tooltipPosition="bottom">
           <div class="w-2rem h-2rem border-circle flex align-items-center justify-content-center shadow-1 overflow-hidden"
                [style.background]="empresaActiva?.color || 'var(--p-primary-color)'" style="color: #ffffff;">
             <ng-container *ngIf="empresaActiva?.ruta_logo; else topLogo">
@@ -154,11 +154,11 @@
             </ng-template>
           </div>
           <div class="flex flex-column text-left">
-            <span class="font-bold text-sm text-900 line-height-1 flex align-items-center gap-1">
+            <span class="font-bold text-sm text-white line-height-1 flex align-items-center gap-1">
               {{ empresaActiva?.nombre_comercial || 'Seleccionar Empresa' }}
-              <i class="pi pi-chevron-down text-xs text-500 ml-1"></i>
+              <i class="pi pi-chevron-down text-xs text-white-alpha-70 ml-1"></i>
             </span>
-            <span class="text-xs text-500 font-medium line-height-1 mt-1" *ngIf="empresaActiva?.ruc">
+            <span class="text-xs text-sky-300 font-medium line-height-1 mt-1" *ngIf="empresaActiva?.ruc">
               RUC: {{ empresaActiva?.ruc }}
             </span>
           </div>
@@ -167,7 +167,7 @@
       </div>
 
       <!-- Quick Status & Action -->
-      <div class="flex align-items-center gap-3">
+      <div class="flex align-items-center gap-2 md:gap-3">
         <p-tag [value]="esAdminGeneral ? 'Super Admin' : esAdminEmpresa ? 'Admin Empresa' : 'Vendedor'"
                [severity]="esAdminGeneral ? 'danger' : esAdminEmpresa ? 'warning' : 'info'"
                styleClass="font-bold text-xs px-2 py-1 border-round-md hidden sm:inline-flex"></p-tag>

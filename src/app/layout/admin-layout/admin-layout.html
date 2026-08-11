@@ -82,15 +82,15 @@
   <div class="flex-1 flex flex-column min-w-0 overflow-hidden z-1">
 
     <!-- Top Header Bar Executive Admin -->
-    <header class="flex align-items-center justify-content-between px-3 md:px-4 py-2 border-bottom-1 surface-border bg-white shadow-1 z-2" style="height: 4.25rem;">
+    <header class="pwa-top-header flex align-items-center justify-content-between px-3 md:px-4 z-2">
       <div class="flex align-items-center gap-3">
-        <button pButton type="button" icon="pi pi-bars" text class="md:hidden text-700" (click)="toggleSidebar()"></button>
+        <button pButton type="button" icon="pi pi-bars" text class="md:hidden text-white hover:bg-white-alpha-10" (click)="toggleSidebar()"></button>
         <div>
-          <h1 class="text-lg md:text-xl font-bold text-900 m-0 tracking-tight flex align-items-center gap-2">
-            <i class="pi pi-shield-check text-sky-600 hidden sm:inline-block"></i>
+          <h1 class="text-lg md:text-xl font-bold text-white m-0 tracking-tight flex align-items-center gap-2">
+            <i class="pi pi-shield-check text-sky-400 hidden sm:inline-block"></i>
             {{ tituloPagina }}
           </h1>
-          <span class="text-xs text-500 font-medium hidden md:inline-block">Consola de Control Multi-Empresa & RLS Security</span>
+          <span class="text-xs text-sky-200 font-medium hidden md:inline-block">Consola de Control Multi-Empresa & RLS Security</span>
         </div>
       </div>
 
@@ -98,7 +98,7 @@
         <p-tag value="RLS Activo" severity="success" styleClass="font-bold text-xs px-2 py-1 border-round-md hidden sm:inline-flex"></p-tag>
         <p-tag value="Super Admin" severity="danger" styleClass="font-bold text-xs px-2 py-1 border-round-md"></p-tag>
         <p-button icon="pi pi-external-link" label="Modo Operación" severity="secondary" [outlined]="true" size="small"
-                  styleClass="border-round-lg font-bold hidden md:inline-flex" (onClick)="operarEmpresa()"></p-button>
+                  styleClass="border-round-lg font-bold text-white border-white-alpha-40 hidden md:inline-flex" (onClick)="operarEmpresa()"></p-button>
       </div>
     </header>
 

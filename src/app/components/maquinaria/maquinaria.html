@@ -190,8 +190,11 @@
             (visibleChange)="modalVisible = $event"
             [header]="esEdicion ? 'Ficha de Equipo' : 'Nuevo Equipo'"
             [modal]="true"
+            [breakpoints]="{ '960px': '85vw', '640px': '96vw' }"
             [style]="{ width: '90vw', maxWidth: '580px' }"
             [draggable]="false"
+            [resizable]="false"
+            [dismissableMask]="true"
             appendTo="body"
             (onHide)="resetForm()">
     <div class="flex flex-column gap-4 pt-2">
@@ -287,8 +290,11 @@
             (onHide)="resetFormularioOperacion()"
             [header]="maquinaSeleccionada?.nombre || 'Lecturas de Horómetro'"
             [modal]="true"
+            [breakpoints]="{ '960px': '85vw', '640px': '96vw' }"
             [style]="{ width: '90vw', maxWidth: '620px' }"
             [draggable]="false"
+            [resizable]="false"
+            [dismissableMask]="true"
             appendTo="body">
     <div class="flex flex-column gap-4 pt-2">
 

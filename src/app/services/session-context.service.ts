@@ -25,6 +25,7 @@ export class SessionContextService {
   readonly rol = computed(() => this._usuario()?.rol ?? null);
   readonly empresaId = computed(() => this._empresaActiva()?.id ?? null);
   readonly tieneEmpresa = computed(() => !!this._empresaActiva());
+  readonly empresaColor = computed(() => this._empresaActiva()?.color || '#0284c7');
 
   readonly esAdmin = computed(() =>
     this._usuario()?.rol === 'admin'
@@ -33,18 +34,31 @@ export class SessionContextService {
     this._usuario()?.rol === 'admin' || this._usuario()?.rol === 'admin_empresa'
   );
 
+  constructor() {
+    this.aplicarTemaEmpresa(this._empresaActiva()?.color);
+  }
+
   // ── Empresa activa ─────────────────────────────────────────────
 
   setEmpresaActiva(empresa: IEmpresa): void {
     sessionStorage.setItem(KEYS.empresa, JSON.stringify(empresa));
     sessionStorage.setItem(KEYS.empresaId, empresa.id);
     this._empresaActiva.set(empresa);
+    this.aplicarTemaEmpresa(empresa.color);
   }
 
   clearEmpresaActiva(): void {
     sessionStorage.removeItem(KEYS.empresa);
     sessionStorage.removeItem(KEYS.empresaId);
     this._empresaActiva.set(null);
+    this.aplicarTemaEmpresa(null);
+  }
+
+  private aplicarTemaEmpresa(color?: string | null): void {
+    if (typeof document !== 'undefined') {
+      const activeColor = color && color.trim() ? color.trim() : '#0284c7';
+      document.documentElement.style.setProperty('--company-accent-color', activeColor);
+    }
   }
 
   // ── Usuario ────────────────────────────────────────────────────
