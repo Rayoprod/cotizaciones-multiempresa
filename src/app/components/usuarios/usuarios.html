@@ -13,6 +13,9 @@
         Administración de credenciales, roles y asignación de empresas habilitadas
       </p>
     </div>
+    <div>
+      <p-button label="Nuevo Usuario" icon="pi pi-plus" class="border-round-xl font-bold" (onClick)="abrirModal()" />
+    </div>
   </div>
 
   <!-- Loading State -->
@@ -227,6 +230,41 @@
 
   </ng-container>
 </div>
+
+<!-- Modal Nuevo Usuario -->
+<p-dialog header="Crear Nuevo Usuario" [(visible)]="modalVisible" [modal]="true"
+  [breakpoints]="{ '960px': '85vw', '640px': '96vw' }"
+  [resizable]="false" [draggable]="false" [dismissableMask]="true"
+  [style]="{'width':'90vw','max-width':'480px'}" (onHide)="cerrarModal()" appendTo="body">
+
+  <div class="flex flex-column gap-3 pt-2">
+    <div *ngIf="errorModal" class="p-3 bg-red-50 text-red-700 border-round-xl text-sm font-medium border-1 border-red-200">
+      <i class="pi pi-exclamation-triangle mr-2"></i>{{ errorModal }}
+    </div>
+
+    <div class="flex flex-column gap-2">
+      <label class="font-semibold text-900 text-sm">Correo Electrónico <span class="text-red-500">*</span></label>
+      <input pInputText type="email" [(ngModel)]="nuevoEmail" placeholder="usuario@empresa.com" class="w-full border-round-xl" />
+    </div>
+
+    <div class="flex flex-column gap-2">
+      <label class="font-semibold text-900 text-sm">Contraseña Temporal <span class="text-red-500">*</span></label>
+      <p-password [(ngModel)]="nuevoPassword" [toggleMask]="true" [feedback]="false" placeholder="Mínimo 6 caracteres" styleClass="w-full" inputStyleClass="w-full border-round-xl" />
+    </div>
+
+    <div class="flex flex-column gap-2">
+      <label class="font-semibold text-900 text-sm">Rol Asignado <span class="text-red-500">*</span></label>
+      <p-dropdown [options]="rolesOpciones" [(ngModel)]="nuevoRol" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full border-round-xl" />
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex gap-2 pt-3">
+      <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="cerrarModal()" [disabled]="guardando" />
+      <p-button label="Crear Usuario" icon="pi pi-check" class="border-round-xl font-bold" [loading]="guardando" (onClick)="crearUsuario()" />
+    </div>
+  </ng-template>
+</p-dialog>
 
 <!-- Sidebar Empresas -->
 <p-sidebar [(visible)]="drawerVisible"

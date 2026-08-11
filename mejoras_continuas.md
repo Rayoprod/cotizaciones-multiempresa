@@ -156,6 +156,26 @@
       - Añadidos `MessageService` y `ConfirmationService` a la lista `providers` en [app.config.ts](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/app.config.ts), permitiendo que la inyección de dependencias a nivel de Inyector Raíz (`{ providedIn: 'root' }`) entregue las instancias globales necesarias sin fallar en el bootstrap de Angular.
    2. INYECCIÓN OPCIONAL ROBUSTA EN PWA UPDATE SERVICE:
       - Configurada la anotación `@Optional()` para `SwUpdate` y `MessageService` en el constructor de [pwa-update.service.ts](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/services/pwa-update.service.ts), previniendo que cualquier fallo de proveedor secundario detenga el arranque de los Layouts principales.
-
-
-
+- Tue Aug 11 07:45:00 -05 2026: Auditoría Global de Calidad, Respuesta Táctil Móvil y Verificación AOT:
+   1. VERIFICACIÓN Y AUDITORÍA GLOBAL DE COMPONENTES:
+      - Auditoría completa de todos los módulos del sistema (`CotizadorComponent`, `HistorialComponent`, `ClientesComponent`, `ProductosComponent`, `MaquinariaComponent`, `EmpresasComponent`, `UsuariosComponent`, `SelectorComponent`).
+      - Confirmación de cumplimiento de patrones: `ChangeDetectionStrategy.OnPush` en todos los componentes standalone, inyección de `takeUntilDestroyed` en suscripciones de ciclo de vida, reseteo limpio de modales con `(onHide)` y operabilidad 100% online en tiempo real contra Supabase.
+   2. TOUCH TARGETS Y UX PWA:
+      - Blancos táctiles adaptados para dispositivos móviles (mínimo 44px en botones e inputs), experiencia táctil ergonómica y barra PWA ejecutiva integrada con safe-area insets (`env(safe-area-inset-top)`).
+   3. VERIFICACIÓN DE COMPILACIÓN DE PRODUCCIÓN AOT:
+      - Compilación de producción ejecutada con éxito (`ng build --configuration production`), 0 errores de TypeScript y empaquetado optimizado con dynamic `import()` en `PdfService`.
+- Tue Aug 11 08:06:00 -05 2026: Autosuficiencia PWA Offline y Bundling Local de Estilos PrimeFlex:
+   1. BUNDLING LOCAL DE PRIMEFLEX:
+      - Migración de la hoja de estilos PrimeFlex desde CDN externo (`unpkg.com`) a inclusión empaquetada local en `src/styles.scss` (`@import "primeflex/primeflex.css";`), garantizando independencia total de la red y eliminando llamadas a servidores externos durante la carga inicial.
+   2. CONFIGURACIÓN DE PWA Y PRESUPUESTOS DE COMPILACIÓN:
+      - Removida la dependencia remota en `src/index.html` y `ngsw-config.json`.
+      - Ajustado el presupuesto de advertencia inicial en `angular.json` a 1.5MB.
+      - Verificación de compilación de producción AOT (`ng build --configuration production`) con 0 errores y 0 advertencias.
+- Tue Aug 11 21:05:00 -05 2026: Implementación del Modal de Creación de Usuarios y Auditoría de Seguridad:
+   1. GESTIÓN COMPLETA DE USUARIOS:
+      - Implementación del modal interactivo de creación de usuario en [UsuariosComponent](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/components/usuarios/usuarios.ts) con soporte para correo electrónico, contraseña temporal con toggle de visibilidad y selección de rol (`admin`, `admin_empresa`, `vendedor`).
+      - Vinculación con `SupabaseService.registrarUsuario()` y reseteo de campos con `(onHide)` para prevenir memory leaks y datos residuales.
+   2. AUDITORÍA DE SEGURIDAD Y GUARDS DE RUTAS:
+      - Verificada la coherencia entre `authGuard`, `adminGuard`, `adminGeneralGuard` y `SessionContextService` en [app.routes.ts](file:///Users/rwrb/Dev%202/cotizaciones-multiempresa/src/app/app.routes.ts).
+   3. VERIFICACIÓN AOT 100% EXITO:
+      - `npx tsc --noEmit` sin errores y compilación `npx ng build --configuration production` completada de forma óptima.
