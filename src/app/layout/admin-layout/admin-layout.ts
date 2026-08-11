@@ -102,7 +102,11 @@ export class AdminLayoutComponent {
 
   operarEmpresa() {
     this.cerrarMenu();
-    this.router.navigate(['/admin/selector']);
+    if (this.session.tieneEmpresa()) {
+      this.router.navigate(['/cotizador']);
+    } else {
+      this.router.navigate(['/admin/selector']);
+    }
   }
 
   logout() {

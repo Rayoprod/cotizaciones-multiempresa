@@ -16,12 +16,15 @@ import { SessionContextService } from '../services/session-context.service';
 import { AuthService } from '../services/auth';
 import { IEmpresa } from '../models/empresa.model';
 
+import { FormsModule } from '@angular/forms';
+import { InputTextModule } from 'primeng/inputtext';
+
 @Component({
   selector: 'app-layout',
   standalone: true,
   imports: [
-    CommonModule, RouterLink, RouterLinkActive, RouterOutlet,
-    ButtonModule, AvatarModule, DividerModule, OverlayPanelModule, TagModule, TooltipModule
+    CommonModule, FormsModule, RouterLink, RouterLinkActive, RouterOutlet,
+    ButtonModule, AvatarModule, DividerModule, OverlayPanelModule, TagModule, TooltipModule, InputTextModule
   ],
   templateUrl: './layout.component.html'
 })
@@ -44,6 +47,8 @@ export class LayoutComponent implements OnInit {
       .subscribe(() => this.cerrarMenu());
   }
 
+  busquedaEmpresa = '';
+
   get usuarioActivo(): string {
     return this.session.usuario()?.email ?? 'Usuario';
   }
@@ -54,6 +59,15 @@ export class LayoutComponent implements OnInit {
 
   get empresasDisponibles(): IEmpresa[] {
     return this.session.empresas();
+  }
+
+  get empresasFiltradas(): IEmpresa[] {
+    const q = this.busquedaEmpresa.trim().toLowerCase();
+    if (!q) return this.empresasDisponibles;
+    return this.empresasDisponibles.filter(e =>
+      (e.nombre_comercial && e.nombre_comercial.toLowerCase().includes(q)) ||
+      (e.ruc && e.ruc.includes(q))
+    );
   }
 
   get esAdmin(): boolean {
@@ -107,10 +121,12 @@ export class LayoutComponent implements OnInit {
     }
     this.session.setEmpresaActiva(empresa);
     this.cdr.markForCheck();
-    // Si estamos en cotizador o historial, recargamos el estado limpiamente
-    if (this.router.url.includes('/cotizador')) {
-      window.location.reload();
-    }
+    
+    // Recargar vista actual de forma fluida (SPA navigation)
+    const currentUrl = this.router.url;
+    this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => {
+      this.router.navigate([currentUrl]);
+    });
   }
 
   irASelector(op?: OverlayPanel) {
