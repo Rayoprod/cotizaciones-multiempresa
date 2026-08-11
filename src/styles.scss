@@ -145,8 +145,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .pwa-top-header {
-  padding-top: max(3rem, calc(0.75rem + var(--sat))) !important;
-  min-height: max(5.5rem, calc(4.5rem + var(--sat))) !important;
+  padding-top: calc(0.6rem + var(--sat)) !important;
+  padding-bottom: 0.6rem !important;
+  min-height: calc(3.75rem + var(--sat)) !important;
   background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
   color: #ffffff !important;
   border-bottom: 3px solid var(--company-accent-color, #0284c7) !important;
@@ -155,8 +156,8 @@ h1, h2, h3, h4, h5, h6 {
 
 @media screen and (min-width: 768px) {
   .pwa-top-header {
-    padding-top: calc(0.75rem + var(--sat)) !important;
-    min-height: calc(4.25rem + var(--sat)) !important;
+    padding-top: calc(0.6rem + var(--sat)) !important;
+    min-height: calc(3.75rem + var(--sat)) !important;
   }
 }
 

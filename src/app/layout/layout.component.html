@@ -28,26 +28,31 @@
          [ngClass]="menuAbierto ? 'translate-x-0' : '-translate-x-100 md:translate-x-0'">
 
     <!-- Encabezado de la Empresa -->
-    <div class="sidebar-top-header flex align-items-center gap-3">
-      <div class="flex align-items-center justify-content-center border-round-xl flex-shrink-0 shadow-2 overflow-hidden"
-           [style.background]="empresaActiva?.color || 'var(--p-primary-color)'"
-           style="width: 44px; height: 44px; color: #ffffff;">
-        <ng-container *ngIf="empresaActiva?.ruta_logo; else iconLogo">
-          <img [src]="empresaActiva?.ruta_logo" [alt]="empresaActiva?.nombre_comercial" style="max-width: 90%; max-height: 90%; object-fit: contain;">
-        </ng-container>
-        <ng-template #iconLogo>
-          <i class="pi pi-briefcase text-xl"></i>
-        </ng-template>
+    <div class="sidebar-top-header flex align-items-center justify-content-between gap-3">
+      <div class="flex align-items-center gap-3 overflow-hidden flex-1">
+        <div class="flex align-items-center justify-content-center border-round-xl flex-shrink-0 shadow-2 overflow-hidden"
+             [style.background]="empresaActiva?.color || 'var(--p-primary-color)'"
+             style="width: 44px; height: 44px; color: #ffffff;">
+          <ng-container *ngIf="empresaActiva?.ruta_logo; else iconLogo">
+            <img [src]="empresaActiva?.ruta_logo" [alt]="empresaActiva?.nombre_comercial" style="max-width: 90%; max-height: 90%; object-fit: contain;">
+          </ng-container>
+          <ng-template #iconLogo>
+            <i class="pi pi-briefcase text-xl"></i>
+          </ng-template>
+        </div>
+        <div class="flex flex-column overflow-hidden">
+          <span class="font-bold text-base text-white text-overflow-ellipsis overflow-hidden white-space-nowrap">
+            {{ empresaActiva?.nombre_comercial || 'Sistema Cotizaciones' }}
+          </span>
+          <span class="text-xs text-white-alpha-70 text-overflow-ellipsis overflow-hidden white-space-nowrap mt-1 flex align-items-center gap-1">
+            <i class="pi pi-id-card text-xs"></i>
+            {{ empresaActiva?.ruc ? 'RUC: ' + empresaActiva?.ruc : 'Empresa no elegida' }}
+          </span>
+        </div>
       </div>
-      <div class="flex flex-column overflow-hidden">
-        <span class="font-bold text-base text-white text-overflow-ellipsis overflow-hidden white-space-nowrap">
-          {{ empresaActiva?.nombre_comercial || 'Sistema Cotizaciones' }}
-        </span>
-        <span class="text-xs text-white-alpha-70 text-overflow-ellipsis overflow-hidden white-space-nowrap mt-1 flex align-items-center gap-1">
-          <i class="pi pi-id-card text-xs"></i>
-          {{ empresaActiva?.ruc ? 'RUC: ' + empresaActiva?.ruc : 'Empresa no elegida' }}
-        </span>
-      </div>
+      <button pButton type="button" icon="pi pi-times" [text]="true" [rounded]="true"
+              class="p-button-text p-button-rounded text-white-alpha-70 hover:text-white hover:bg-white-alpha-10 flex-shrink-0"
+              (click)="cerrarMenu()" aria-label="Cerrar menú"></button>
     </div>
 
     <!-- Navegación de menú -->
@@ -156,7 +161,11 @@
     <!-- Top Header Bar (Desktop & Mobile) -->
     <header class="pwa-top-header flex align-items-center justify-content-between px-3 md:px-4 z-2">
       <div class="flex align-items-center gap-3">
-        <button pButton type="button" icon="pi pi-bars" text class="md:hidden text-white hover:bg-white-alpha-10" (click)="toggleMenu()"></button>
+        <button pButton type="button" icon="pi pi-bars" [text]="true" [rounded]="true"
+                class="p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all p-2 flex align-items-center justify-content-center border-none cursor-pointer"
+                (click)="toggleMenu()"
+                pTooltip="Alternar menú lateral" tooltipPosition="bottom"
+                aria-label="Menú principal"></button>
 
         <!-- Company Switcher Pill -->
         <div class="pwa-company-pill" (click)="opCompany.toggle($event)" pTooltip="Haz clic para cambiar de empresa" tooltipPosition="bottom">

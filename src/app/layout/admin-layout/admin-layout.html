@@ -12,19 +12,24 @@
          [ngClass]="sidebarAbierto ? 'translate-x-0' : '-translate-x-100 md:translate-x-0'">
 
     <!-- Header Sidebar Admin -->
-    <div class="sidebar-top-header flex align-items-center gap-3">
-      <div class="w-2.5rem h-2.5rem border-circle flex align-items-center justify-content-center shadow-2"
-           style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff;">
-        <i class="pi pi-shield text-xl"></i>
+    <div class="sidebar-top-header flex align-items-center justify-content-between gap-3">
+      <div class="flex align-items-center gap-3 overflow-hidden flex-1">
+        <div class="w-2.5rem h-2.5rem border-circle flex align-items-center justify-content-center shadow-2 flex-shrink-0"
+             style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff;">
+          <i class="pi pi-shield text-xl"></i>
+        </div>
+        <div class="flex flex-column overflow-hidden">
+          <span class="font-bold text-base text-white text-overflow-ellipsis overflow-hidden white-space-nowrap">
+            Consola Admin
+          </span>
+          <span class="text-xs text-sky-400 font-semibold tracking-wider uppercase mt-1">
+            Supervisión Global
+          </span>
+        </div>
       </div>
-      <div class="flex flex-column overflow-hidden">
-        <span class="font-bold text-base text-white text-overflow-ellipsis overflow-hidden white-space-nowrap">
-          Consola Admin
-        </span>
-        <span class="text-xs text-sky-400 font-semibold tracking-wider uppercase mt-1">
-          Supervisión Global
-        </span>
-      </div>
+      <button pButton type="button" icon="pi pi-times" [text]="true" [rounded]="true"
+              class="p-button-text p-button-rounded text-white-alpha-70 hover:text-white hover:bg-white-alpha-10 flex-shrink-0"
+              (click)="cerrarMenu()" aria-label="Cerrar menú"></button>
     </div>
 
     <!-- Navegación Menú Admin -->
@@ -84,7 +89,11 @@
     <!-- Top Header Bar Executive Admin -->
     <header class="pwa-top-header flex align-items-center justify-content-between px-3 md:px-4 z-2">
       <div class="flex align-items-center gap-3">
-        <button pButton type="button" icon="pi pi-bars" text class="md:hidden text-white hover:bg-white-alpha-10" (click)="toggleSidebar()"></button>
+        <button pButton type="button" icon="pi pi-bars" [text]="true" [rounded]="true"
+                class="p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all p-2 flex align-items-center justify-content-center border-none cursor-pointer"
+                (click)="toggleSidebar()"
+                pTooltip="Alternar menú lateral" tooltipPosition="bottom"
+                aria-label="Menú principal"></button>
         <div>
           <h1 class="text-lg md:text-xl font-bold text-white m-0 tracking-tight flex align-items-center gap-2">
             <i class="pi pi-shield-check text-sky-400 hidden sm:inline-block"></i>

@@ -198,3 +198,12 @@
       - Integrado botón interactivo con animación pulse `🚀 Actualizar App` y Toast persistente `<p-toast key="pwa-update-toast">` en `LayoutComponent` y `AdminLayoutComponent`.
    3. VERIFICACIÓN AOT 100% LIMPIA:
       - Ejecutada verificación `npx tsc --noEmit` (0 errores) y `npx ng build --configuration production` (0 errores).
+- Tue Aug 11 23:25:00 -05 2026: Rediseño Estético del Botón Sandwich (Menú) y Optimización de Encabezados en Layouts:
+   1. REDISEÑO UI/UX Y BOTÓN SANDWICH ELEGANTE:
+      - Removida la restricción `md:hidden` y sustituido el botón plano sin formato por un componente PrimeNG circular transparente con feedback micro-animado: `<button pButton type="button" icon="pi pi-bars" [text]="true" [rounded]="true" class="p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all p-2 flex align-items-center justify-content-center border-none">`.
+      - Incorporado botón de cierre explícito `pi pi-times` en la cabecera del drawer lateral de `LayoutComponent` y `AdminLayoutComponent` para mejor accesibilidad y usabilidad táctil.
+   2. AJUSTE DE RESPONSIVIDAD Y SAFE-AREA INSETS:
+      - Refactorizado el padding y altura de `.pwa-top-header` en `src/styles.scss`, eliminando el padding excesivo de `max(3rem, ...)` y reemplazándolo por `padding-top: calc(0.6rem + var(--sat))` y `min-height: calc(3.75rem + var(--sat))`.
+      - Garantizada la visibilidad y funcionamiento fluido en dispositivos móviles y de escritorio.
+   3. VERIFICACIÓN AOT 100% LIMPIA:
+      - Ejecutada comprobación de tipos `npx tsc --noEmit` (0 errores) y compilación AOT de producción `npx ng build --configuration production` (0 errores).
