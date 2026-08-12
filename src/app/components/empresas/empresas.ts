@@ -141,25 +141,29 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   }
   
   async cargarEmpresas() {
-  this.cargando = true;
-  try {
-    const rol = this.session.usuario()?.rol; // ← cambio
-    let data: any[];
+    this.cargando = true;
+    try {
+      const rol = this.session.usuario()?.rol;
+      let data: any[];
 
-    if (rol === 'admin_empresa') {
-      data = await this.supabase.getEmpresasDelUsuario();
-    } else {
-      data = await this.supabase.getEmpresas();
-    }
+      if (rol === 'admin_empresa') {
+        data = await this.supabase.getEmpresasDelUsuario();
+      } else {
+        data = await this.supabase.getEmpresas();
+        const empresaIds = data.map((e: any) => e.id);
 
-    const empresasConCuentas = await Promise.all(
-      data.map(async (empresa: any) => {
-        try {
-          const cuentasDB = await this.supabase.getCuentasBancarias(empresa.id);
-          if (cuentasDB.length > 0) {
-            return {
-              ...empresa,
-              cuentas_bancarias: cuentasDB.map((c: any) => ({
+        if (empresaIds.length > 0) {
+          const { data: todasCuentas } = await this.supabase.client
+            .from('cuentas_bancarias')
+            .select('*')
+            .in('empresa_id', empresaIds)
+            .order('orden', { ascending: true });
+
+          const cuentasMap = new Map<string, any[]>();
+          if (todasCuentas) {
+            for (const c of todasCuentas) {
+              const list = cuentasMap.get(c.empresa_id) || [];
+              list.push({
                 banco: c.banco,
                 tipo_cuenta: c.tipo_cuenta,
                 moneda: c.moneda,
@@ -168,27 +172,28 @@ export class EmpresasComponent implements OnInit, OnDestroy {
                 titular: c.titular || '',
                 activa: c.activa,
                 orden: c.orden
-              }))
-            };
+              });
+              cuentasMap.set(c.empresa_id, list);
+            }
           }
-        } catch {}
-        return {
-          ...empresa,
-          cuentas_bancarias: Array.isArray(empresa.cuentas_bancarias) ? empresa.cuentas_bancarias : [],
-          mostrar_cuentas: empresa.mostrar_cuentas ?? true,
-          activa: empresa.activa ?? true
-        };
-      })
-    );
 
-    this.empresas = empresasConCuentas;
-  } catch (error: any) {
-    this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas: ' + error.message });
-  } finally {
-    this.cargando = false;
-    this.cdr.markForCheck();
+          data = data.map((empresa: any) => ({
+            ...empresa,
+            cuentas_bancarias: cuentasMap.get(empresa.id) || (Array.isArray(empresa.cuentas_bancarias) ? empresa.cuentas_bancarias : []),
+            mostrar_cuentas: empresa.mostrar_cuentas ?? true,
+            activa: empresa.activa ?? true
+          }));
+        }
+      }
+
+      this.empresas = data;
+    } catch (error: any) {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas: ' + error.message });
+    } finally {
+      this.cargando = false;
+      this.cdr.markForCheck();
+    }
   }
-}
   
   // ── GESTIÓN DEL MODAL ───────────────────────────────────────────────
   

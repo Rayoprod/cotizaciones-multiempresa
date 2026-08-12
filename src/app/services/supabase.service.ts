@@ -47,16 +47,45 @@ export class SupabaseService {
 
     const ids = asignaciones.map((a: any) => a.empresa_id);
 
-    const { data, error } = await this.client
-      .from('empresas')
-      .select('*')
-      .in('id', ids)
-      .eq('activa', true)
-      .order('id');
+    const [empresasRes, cuentasRes] = await Promise.all([
+      this.client
+        .from('empresas')
+        .select('*')
+        .in('id', ids)
+        .eq('activa', true)
+        .order('id'),
+      this.client
+        .from('cuentas_bancarias')
+        .select('*')
+        .in('empresa_id', ids)
+        .order('orden', { ascending: true })
+    ]);
 
-    if (error) throw error;
-    const empresas = data as IEmpresa[];
-    return await Promise.all(empresas.map(e => this.enriquecerConCuentasBancarias(e)));
+    if (empresasRes.error) throw empresasRes.error;
+    const empresas = (empresasRes.data || []) as IEmpresa[];
+
+    const cuentasMap = new Map<string, ICuentaBancaria[]>();
+    if (cuentasRes.data) {
+      for (const c of cuentasRes.data) {
+        const list = cuentasMap.get(c.empresa_id) || [];
+        list.push({
+          banco: c.banco,
+          tipo_cuenta: c.tipo_cuenta,
+          moneda: c.moneda,
+          numero: c.numero,
+          cci: c.cci || '',
+          titular: c.titular || '',
+          activa: c.activa,
+          orden: c.orden
+        });
+        cuentasMap.set(c.empresa_id, list);
+      }
+    }
+
+    return empresas.map(e => ({
+      ...e,
+      cuentas_bancarias: cuentasMap.get(e.id) ?? []
+    }));
   }
 
   async getEmpresas(): Promise<IEmpresa[]> {

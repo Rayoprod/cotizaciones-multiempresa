@@ -127,35 +127,50 @@ export class UsuariosComponent implements OnInit {
 
   async crearUsuario() {
     if (!this.nuevoEmail || !this.nuevoPassword) {
-      this.errorModal = 'Email y contraseña son obligatorios.'; return;
+      this.errorModal = 'Email y contraseña son obligatorios.';
+      this.cdr.markForCheck();
+      return;
     }
     if (this.nuevoPassword.length < 6) {
-      this.errorModal = 'La contraseña debe tener al menos 6 caracteres.'; return;
+      this.errorModal = 'La contraseña debe tener al menos 6 caracteres.';
+      this.cdr.markForCheck();
+      return;
     }
-    this.guardando = true; this.errorModal = '';
+    this.guardando = true;
+    this.errorModal = '';
+    this.cdr.markForCheck();
+
     try {
       // Crear usuario en Supabase Auth
-      const { data, error } = await this.supabase.crearUsuario(this.nuevoEmail, this.nuevoPassword);
-      
-      if (error) {
-        throw new Error(error.message);
+      const authData = await this.supabase.crearUsuario(this.nuevoEmail, this.nuevoPassword);
+      const userId = authData?.user?.id;
+
+      if (!userId) {
+        throw new Error('No se pudo obtener el ID del nuevo usuario.');
       }
-      
+
       // Crear perfil en la tabla profiles
-      await this.supabase.client.from('profiles').insert({
-        id: data.user?.id,
+      const { error: profileErr } = await this.supabase.client.from('profiles').insert({
+        id: userId,
         email: this.nuevoEmail,
         rol: this.nuevoRol,
         activo: true
       });
-      
+
+      if (profileErr) {
+        throw profileErr;
+      }
+
       this.msg.add({ severity: 'success', summary: '¡Listo!', detail: `Usuario ${this.nuevoEmail} creado` });
       this.modalVisible = false;
       await this.cargarUsuarios();
     } catch (err: any) {
       console.error('Error creando usuario:', err);
       this.errorModal = err?.message || 'Error al crear el usuario.';
-    } finally { this.guardando = false; }
+    } finally {
+      this.guardando = false;
+      this.cdr.markForCheck();
+    }
   }
 
   // ── ROL / ACTIVO ─────────────────────────────────

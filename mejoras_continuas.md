@@ -229,4 +229,13 @@
    2. ESTABILIDAD Y DERECHOS DE ACCESO EN TIEMPO REAL:
       - Confirmación de aislamiento de roles (`vendedor`, `admin`, `admin_empresa`, `admin_general`) en navegación y Guards.
       - Resguardo total de la sesión reactiva en `SessionContextService` mediante Signals de Angular 17.3+.
-
+- Wed Aug 12 02:03:00 -05 2026: Optimización Extrema de Consultas PostgreSQL en Supabase, Solución a Bug de Registro de Usuarios y Auditoría Final AOT:
+   1. OPTIMIZACIÓN DE CONSULTAS POSTGRESQL (Eliminación de N+1):
+      - Refactorizado `SupabaseService.getEmpresasDelUsuario()` para reemplazar N llamadas individuales a `cuentas_bancarias` por 1 sola consulta en lote con `.in('empresa_id', ids)` ejecutada en paralelo con `Promise.all`.
+      - Refactorizado `EmpresasComponent.cargarEmpresas()` para agrupar las cuentas bancarias de múltiples empresas en una sola petición bulk, reduciendo drásticamente el tiempo de respuesta y los round-trips a la base de datos Supabase.
+   2. ESTABILIDAD Y REGISTRO DE USUARIOS:
+      - Corregida la desestructuración de retorno en `UsuariosComponent.crearUsuario()`, garantizando la captura correcta del ID de usuario recién registrado y la inserción exitosa en la tabla `profiles`.
+      - Agregada la llamada explícita a `cdr.markForCheck()` en los estados de error y finalización para asegurar la reactividad visual inmediata en la estrategia `ChangeDetectionStrategy.OnPush`.
+   3. VERIFICACIÓN Y COMPILACIÓN DE PRODUCCIÓN AOT:
+      - Verificación limpia de TypeScript (`npx tsc --noEmit`) con 0 errores de compilación.
+      - Verificación limpia de empaquetado Angular PWA (`npx ng build --configuration production`) completado con éxito, optimizando los Lazy Chunks y el Service Worker.
