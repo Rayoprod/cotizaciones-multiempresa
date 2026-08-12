@@ -82,7 +82,19 @@ export class AdminLayoutComponent implements OnDestroy {
         filter(e => e instanceof NavigationEnd),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(() => this.cerrarMenu());
+      .subscribe(() => {
+        this.cerrarMenu();
+        this.resetearScrollContenedor();
+      });
+  }
+
+  private resetearScrollContenedor() {
+    if (typeof document !== 'undefined') {
+      const mainEl = document.querySelector('.layout-router-outlet');
+      if (mainEl) {
+        mainEl.scrollTop = 0;
+      }
+    }
   }
 
   @HostListener('document:keydown.escape')
@@ -106,9 +118,11 @@ export class AdminLayoutComponent implements OnDestroy {
   }
 
   cerrarMenu() {
-    this.sidebarAbierto = false;
-    this.actualizarBodyLock();
-    this.cdr.markForCheck();
+    if (this.sidebarAbierto) {
+      this.sidebarAbierto = false;
+      this.actualizarBodyLock();
+      this.cdr.markForCheck();
+    }
   }
 
   private actualizarBodyLock() {

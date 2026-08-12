@@ -1,17 +1,17 @@
-<div class="flex h-screen h-svh h-dvh overflow-hidden relative surface-ground w-full">
+<div class="flex h-full min-h-full overflow-hidden relative surface-ground w-full">
 
   <!-- Backdrop para móvil -->
   <div *ngIf="sidebarAbierto"
-       class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-60 z-layout-backdrop backdrop-blur"
-       (click)="cerrarMenu()">
+       class="md:hidden fixed inset-0 bg-black-alpha-60 z-layout-backdrop backdrop-blur"
+       (click)="cerrarMenu()"
+       aria-hidden="true">
   </div>
 
   <!-- Sidebar Admin Principal -->
   <aside class="mobile-sidebar-drawer fixed md:static top-0 left-0 bottom-0 z-layout-sidebar h-full shadow-4 flex flex-column select-none"
          style="width: 18.5rem; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color: #f8fafc;"
          [class.open]="sidebarAbierto"
-         [class.closed]="!sidebarAbierto"
-         [ngClass]="sidebarAbierto ? 'translate-x-0' : '-translate-x-100 md:translate-x-0'">
+         [class.closed]="!sidebarAbierto">
 
     <!-- Header Sidebar Admin -->
     <div class="sidebar-top-header flex align-items-center justify-content-between gap-3 flex-shrink-0">
@@ -30,21 +30,24 @@
         </div>
       </div>
       <button pButton type="button" icon="pi pi-times" [text]="true" [rounded]="true"
-              class="p-button-text p-button-rounded text-white-alpha-70 hover:text-white hover:bg-white-alpha-10 flex-shrink-0"
+              class="p-button-text p-button-rounded text-white-alpha-70 hover:text-white hover:bg-white-alpha-10 flex-shrink-0 cursor-pointer"
+              style="min-width: 44px; min-height: 44px; touch-action: manipulation;"
               (click)="cerrarMenu()" aria-label="Cerrar menú"></button>
     </div>
 
     <!-- Navegación Menú Admin -->
-    <div class="flex-1 app-scroll-container p-3">
+    <div class="flex-1 min-h-0 app-scroll-container p-3">
       <div class="mb-3 px-2" style="color: rgba(255,255,255,0.45); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;">
         Módulos de Gestión
       </div>
 
       <div class="flex flex-column gap-2">
-        <a *ngFor="let item of navItemsFiltrados" [routerLink]="item.path" (click)="cerrarMenu()"
+        <a *ngFor="let item of navItemsFiltrados" [routerLink]="item.path"
            routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-sky-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white">
+           style="min-height: 48px; touch-action: manipulation;"
+           (click)="cerrarMenu()"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-sky-500-alpha-20 text-sky-400">
             <i [class]="item.icon + ' text-base'"></i>
           </div>
@@ -58,7 +61,8 @@
         </div>
 
         <button pButton type="button" icon="pi pi-shopping-bag" label="Operar / Cotizar"
-                severity="info" class="w-full justify-content-start border-round-xl py-3 px-3 text-white font-bold"
+                severity="info" class="w-full justify-content-start border-round-xl py-3 px-3 text-white font-bold cursor-pointer"
+                style="min-height: 48px; touch-action: manipulation;"
                 (click)="operarEmpresa()">
         </button>
       </div>
@@ -78,21 +82,25 @@
         </div>
       </div>
       <button pButton type="button" icon="pi pi-sign-out" label="Cerrar sesión"
-              severity="danger" class="w-full border-round-xl" (click)="logout()">
+              severity="danger" class="w-full border-round-xl cursor-pointer"
+              style="min-height: 44px; touch-action: manipulation;"
+              (click)="logout()">
       </button>
     </div>
 
   </aside>
 
   <!-- Contenedor Principal Admin (Top Header + Outlet) -->
-  <div class="flex-1 flex flex-column min-w-0 overflow-hidden z-1 h-full">
+  <div class="flex-1 flex flex-column min-w-0 min-h-0 overflow-hidden z-1 h-full">
 
     <!-- Top Header Bar Executive Admin -->
     <header class="pwa-top-header flex align-items-center justify-content-between px-3 md:px-4 z-2 flex-shrink-0">
       <div class="flex align-items-center gap-3">
         <button pButton type="button" icon="pi pi-bars" [text]="true" [rounded]="true"
-                class="p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all p-2 flex align-items-center justify-content-center border-none cursor-pointer"
+                class="p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all flex align-items-center justify-content-center border-none cursor-pointer"
+                style="min-width: 44px; min-height: 44px; touch-action: manipulation;"
                 (click)="toggleSidebar()"
+                [attr.aria-expanded]="sidebarAbierto"
                 aria-label="Menú principal"></button>
         <div>
           <h1 class="text-lg md:text-xl font-bold text-white m-0 tracking-tight flex align-items-center gap-2">

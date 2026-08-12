@@ -15,20 +15,20 @@
   </ng-template>
 </p-toast>
 
-<div class="flex h-screen h-svh h-dvh overflow-hidden relative surface-ground w-full">
+<div class="flex h-full min-h-full overflow-hidden relative surface-ground w-full">
 
   <!-- Backdrop para móvil -->
   <div *ngIf="menuAbierto"
-       class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-60 z-layout-backdrop backdrop-blur"
-       (click)="cerrarMenu()">
+       class="md:hidden fixed inset-0 bg-black-alpha-60 z-layout-backdrop backdrop-blur"
+       (click)="cerrarMenu()"
+       aria-hidden="true">
   </div>
 
   <!-- Sidebar principal -->
   <aside class="mobile-sidebar-drawer fixed md:static top-0 left-0 bottom-0 z-layout-sidebar h-full shadow-4 flex flex-column select-none"
          style="width: 18.5rem; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color: #f8fafc;"
          [class.open]="menuAbierto"
-         [class.closed]="!menuAbierto"
-         [ngClass]="menuAbierto ? 'translate-x-0' : '-translate-x-100 md:translate-x-0'">
+         [class.closed]="!menuAbierto">
 
     <!-- Encabezado de la Empresa -->
     <div class="sidebar-top-header flex align-items-center justify-content-between gap-3 flex-shrink-0">
@@ -54,61 +54,72 @@
         </div>
       </div>
       <button pButton type="button" icon="pi pi-times" [text]="true" [rounded]="true"
-              class="p-button-text p-button-rounded text-white-alpha-70 hover:text-white hover:bg-white-alpha-10 flex-shrink-0"
+              class="p-button-text p-button-rounded text-white-alpha-70 hover:text-white hover:bg-white-alpha-10 flex-shrink-0 cursor-pointer"
+              style="min-width: 44px; min-height: 44px; touch-action: manipulation;"
               (click)="cerrarMenu()" aria-label="Cerrar menú"></button>
     </div>
 
     <!-- Navegación de menú -->
-    <div class="flex-1 app-scroll-container p-3">
+    <div class="flex-1 min-h-0 app-scroll-container p-3">
       <div class="mb-3 px-2" style="color: rgba(255,255,255,0.45); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;">
         Ventas y Operaciones
       </div>
       <div class="flex flex-column gap-2">
 
-        <a routerLink="/cotizador" (click)="cerrarMenu()"
+        <a routerLink="/cotizador"
            routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-sky-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white">
+           style="min-height: 48px; touch-action: manipulation;"
+           (click)="cerrarMenu()"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-sky-500-alpha-20 text-sky-400">
             <i class="pi pi-plus-circle text-base"></i>
           </div>
           <span>Nueva cotización</span>
         </a>
 
-        <a routerLink="/historial" (click)="cerrarMenu()"
+        <a routerLink="/historial"
            routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-indigo-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white">
+           style="min-height: 48px; touch-action: manipulation;"
+           (click)="cerrarMenu()"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-indigo-500-alpha-20 text-indigo-400">
             <i class="pi pi-history text-base"></i>
           </div>
           <span>Historial de ventas</span>
         </a>
 
-        <a routerLink="/productos" (click)="cerrarMenu()"
+        <a routerLink="/productos"
            routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-emerald-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white">
+           style="min-height: 48px; touch-action: manipulation;"
+           (click)="cerrarMenu()"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-emerald-500-alpha-20 text-emerald-400">
             <i class="pi pi-box text-base"></i>
           </div>
           <span>Catálogo / Productos</span>
         </a>
 
-        <a routerLink="/clientes" (click)="cerrarMenu()"
+        <a routerLink="/clientes"
            routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-amber-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white">
+           style="min-height: 48px; touch-action: manipulation;"
+           (click)="cerrarMenu()"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-amber-500-alpha-20 text-amber-400">
             <i class="pi pi-users text-base"></i>
           </div>
           <span>Directorio clientes</span>
         </a>
 
-        <a routerLink="/maquinaria" (click)="cerrarMenu()"
+        <a routerLink="/maquinaria"
            routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-purple-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white">
+           style="min-height: 48px; touch-action: manipulation;"
+           (click)="cerrarMenu()"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-purple-500-alpha-20 text-purple-400">
             <i class="pi pi-wrench text-base"></i>
           </div>
@@ -124,14 +135,16 @@
         <!-- Solo admin_empresa: configurar su empresa -->
         <button *ngIf="esAdminEmpresa" pButton type="button"
                 icon="pi pi-cog" label="Configurar empresa"
-                severity="secondary" class="w-full justify-content-start border-round-xl py-3 px-3 text-white bg-white-alpha-05 hover:bg-white-alpha-15 border-none"
+                severity="secondary" class="w-full justify-content-start border-round-xl py-3 px-3 text-white bg-white-alpha-05 hover:bg-white-alpha-15 border-none cursor-pointer"
+                style="min-height: 48px; touch-action: manipulation;"
                 (click)="configurarEmpresa()">
         </button>
 
         <!-- Solo admin general: volver al panel -->
         <button *ngIf="esAdminGeneral" pButton type="button"
                 icon="pi pi-shield" label="Panel Admin General"
-                severity="secondary" class="w-full justify-content-start border-round-xl py-3 px-3 text-white bg-white-alpha-05 hover:bg-white-alpha-15 border-none"
+                severity="secondary" class="w-full justify-content-start border-round-xl py-3 px-3 text-white bg-white-alpha-05 hover:bg-white-alpha-15 border-none cursor-pointer"
+                style="min-height: 48px; touch-action: manipulation;"
                 (click)="volverAlAdmin()">
         </button>
 
@@ -152,21 +165,25 @@
         </div>
       </div>
       <button pButton type="button" icon="pi pi-sign-out" label="Cerrar sesión"
-              severity="danger" class="w-full border-round-xl" (click)="cerrarSesion()">
+              severity="danger" class="w-full border-round-xl cursor-pointer"
+              style="min-height: 44px; touch-action: manipulation;"
+              (click)="cerrarSesion()">
       </button>
     </div>
 
   </aside>
 
   <!-- Contenedor Principal (Header superior + Main Content) -->
-  <div class="flex-1 flex flex-column min-w-0 overflow-hidden z-1 h-full">
+  <div class="flex-1 flex flex-column min-w-0 min-h-0 overflow-hidden z-1 h-full">
 
     <!-- Top Header Bar (Desktop & Mobile) -->
     <header class="pwa-top-header flex align-items-center justify-content-between px-3 md:px-4 z-2 flex-shrink-0">
       <div class="flex align-items-center gap-3">
         <button pButton type="button" icon="pi pi-bars" [text]="true" [rounded]="true"
-                class="p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all p-2 flex align-items-center justify-content-center border-none cursor-pointer"
+                class="p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all flex align-items-center justify-content-center border-none cursor-pointer"
+                style="min-width: 44px; min-height: 44px; touch-action: manipulation;"
                 (click)="toggleMenu()"
+                [attr.aria-expanded]="menuAbierto"
                 aria-label="Menú principal"></button>
 
         <!-- Company Switcher Pill -->

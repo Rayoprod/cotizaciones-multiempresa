@@ -53,7 +53,19 @@ export class LayoutComponent implements OnInit, OnDestroy {
         filter(e => e instanceof NavigationEnd),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(() => this.cerrarMenu());
+      .subscribe(() => {
+        this.cerrarMenu();
+        this.resetearScrollContenedor();
+      });
+  }
+
+  private resetearScrollContenedor() {
+    if (typeof document !== 'undefined') {
+      const mainEl = document.querySelector('.layout-router-outlet');
+      if (mainEl) {
+        mainEl.scrollTop = 0;
+      }
+    }
   }
 
   @HostListener('document:keydown.escape')
@@ -146,9 +158,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   cerrarMenu() {
-    this.menuAbierto = false;
-    this.actualizarBodyLock();
-    this.cdr.markForCheck();
+    if (this.menuAbierto) {
+      this.menuAbierto = false;
+      this.actualizarBodyLock();
+      this.cdr.markForCheck();
+    }
   }
 
   private actualizarBodyLock() {
