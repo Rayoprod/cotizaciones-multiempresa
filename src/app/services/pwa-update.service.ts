@@ -28,15 +28,16 @@ export class PwaUpdateService {
 
     this.swUpdate.versionUpdates
       .pipe(filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'))
-      .subscribe(() => {
+      .subscribe(async () => {
         this.updateAvailable.set(true);
-        this.messageService?.add({
-          severity: 'info',
-          summary: '🚀 Nueva versión disponible',
-          detail: 'Una versión actualizada del sistema está lista. Haz clic aquí para aplicar los cambios.',
-          sticky: true,
-          key: 'pwa-update-toast'
-        });
+        try {
+          await this.swUpdate?.activateUpdate();
+          if (typeof window !== 'undefined') {
+            window.location.reload();
+          }
+        } catch (err) {
+          console.error('⚠️ Error al auto-activar actualización PWA:', err);
+        }
       });
   }
 
@@ -72,15 +73,9 @@ export class PwaUpdateService {
 
     this.swUpdate.unrecoverable.subscribe(event => {
       console.error('❌ Estado de caché PWA no recuperable:', event.reason);
-      this.messageService?.add({
-        severity: 'error',
-        summary: 'Actualización requerida',
-        detail: 'Se detectó un cambio crítico en el servidor. Recargando la aplicación...',
-        life: 3000
-      });
-      setTimeout(() => {
+      if (typeof window !== 'undefined') {
         window.location.reload();
-      }, 1500);
+      }
     });
   }
 

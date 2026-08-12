@@ -14,52 +14,52 @@
   "categories": ["business", "productivity", "finance"],
   "icons": [
     {
-      "src": "assets/icons/icon-72x72.png",
+      "src": "/assets/icons/icon-72x72.png",
       "sizes": "72x72",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any maskable"
     },
     {
-      "src": "assets/icons/icon-96x96.png",
+      "src": "/assets/icons/icon-96x96.png",
       "sizes": "96x96",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any maskable"
     },
     {
-      "src": "assets/icons/icon-128x128.png",
+      "src": "/assets/icons/icon-128x128.png",
       "sizes": "128x128",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any maskable"
     },
     {
-      "src": "assets/icons/icon-144x144.png",
+      "src": "/assets/icons/icon-144x144.png",
       "sizes": "144x144",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any maskable"
     },
     {
-      "src": "assets/icons/icon-152x152.png",
+      "src": "/assets/icons/icon-152x152.png",
       "sizes": "152x152",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any maskable"
     },
     {
-      "src": "assets/icons/icon-192x192.png",
+      "src": "/assets/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any maskable"
     },
     {
-      "src": "assets/icons/icon-384x384.png",
+      "src": "/assets/icons/icon-384x384.png",
       "sizes": "384x384",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any maskable"
     },
     {
-      "src": "assets/icons/icon-512x512.png",
+      "src": "/assets/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable any"
+      "purpose": "any maskable"
     }
   ],
   "shortcuts": [
@@ -68,28 +68,28 @@
       "short_name": "Cotizar",
       "description": "Crear una nueva cotización de venta",
       "url": "/cotizador",
-      "icons": [{ "src": "assets/icons/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/assets/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Historial de Ventas",
       "short_name": "Historial",
       "description": "Ver historial de cotizaciones guardadas",
       "url": "/historial",
-      "icons": [{ "src": "assets/icons/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/assets/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Directorio de Clientes",
       "short_name": "Clientes",
       "description": "Gestionar la cartera de clientes",
       "url": "/clientes",
-      "icons": [{ "src": "assets/icons/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/assets/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Catálogo de Productos",
       "short_name": "Productos",
       "description": "Consultar catálogo de productos y servicios",
       "url": "/productos",
-      "icons": [{ "src": "assets/icons/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/assets/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

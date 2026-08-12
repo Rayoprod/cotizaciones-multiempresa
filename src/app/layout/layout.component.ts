@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, HostListener, ChangeDetectorRef, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ChangeDetectorRef, DestroyRef, inject, ChangeDetectionStrategy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -33,6 +33,8 @@ import { InputTextModule } from 'primeng/inputtext';
   templateUrl: './layout.component.html'
 })
 export class LayoutComponent implements OnInit, OnDestroy {
+  @ViewChild('opCompany') opCompany?: OverlayPanel;
+
   menuAbierto = false;
   estaOnline = true;
 
@@ -150,7 +152,16 @@ export class LayoutComponent implements OnInit, OnDestroy {
     }
   }
 
-  toggleMenu() {
+  toggleMenu(event?: Event) {
+    if (event) {
+      event.stopPropagation();
+      if (typeof event.preventDefault === 'function') {
+        event.preventDefault();
+      }
+    }
+    if (this.opCompany) {
+      this.opCompany.hide();
+    }
     this.menuAbierto = !this.menuAbierto;
     this.actualizarBodyLock();
     this.cdr.markForCheck();

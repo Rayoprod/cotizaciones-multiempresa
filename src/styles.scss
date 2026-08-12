@@ -212,6 +212,13 @@ body.layout-menu-open {
   pointer-events: none !important;
 }
 
+.p-toast:empty,
+.p-toast:not(:has(.p-toast-message)) {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
 .p-toast *,
 .p-toast-top-right *,
 .p-toast-top-left *,
@@ -228,13 +235,17 @@ body.layout-menu-open {
 }
 
 @media screen and (max-width: 640px) {
-  .p-toast:not(.p-toast-bottom-center) {
+  .p-toast:not(.p-toast-bottom-center),
+  .p-toast-top-right,
+  .p-toast-top-left,
+  .p-toast-top-center {
     width: calc(100vw - 1.25rem) !important;
     min-width: unset !important;
     max-width: 100vw !important;
     left: 0.625rem !important;
     right: 0.625rem !important;
-    top: calc(0.75rem + env(safe-area-inset-top, 0px)) !important;
+    top: calc(4.25rem + env(safe-area-inset-top, 0px)) !important;
+    pointer-events: none !important;
   }
 
   .p-toast-bottom-center {
@@ -245,6 +256,11 @@ body.layout-menu-open {
     right: 0.625rem !important;
     bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
     top: auto !important;
+    pointer-events: none !important;
+  }
+
+  .company-dropdown-panel {
+    max-width: 92vw !important;
   }
 
   .p-toast .p-toast-message {

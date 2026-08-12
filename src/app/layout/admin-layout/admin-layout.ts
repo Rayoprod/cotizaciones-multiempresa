@@ -112,7 +112,13 @@ export class AdminLayoutComponent implements OnDestroy {
     }
   }
 
-  toggleSidebar() {
+  toggleSidebar(event?: Event) {
+    if (event) {
+      event.stopPropagation();
+      if (typeof event.preventDefault === 'function') {
+        event.preventDefault();
+      }
+    }
     this.sidebarAbierto = !this.sidebarAbierto;
     this.actualizarBodyLock();
     this.cdr.markForCheck();

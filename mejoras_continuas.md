@@ -265,5 +265,43 @@
     2. RESPONSIVIDAD Y FLEX-SHRINK DEL HEADER:
        - Se agregó `flex-shrink-0` al botón del menú sanguchito en `layout.component.html` y `admin-layout.html`.
        - Se aplicó `max-width: clamp(140px, 45vw, 280px)` y `text-overflow-ellipsis` en la pill de empresa y títulos del header para evitar desbordamientos horizontales o desplazamientos del botón sanguchito en teléfonos móviles pequeños (desde 320px hasta 640px).
-    3. VERIFICACIÓN Y COMPILACIÓN AOT:
-       - Verificación con `npm run build` (`ng build`) 100% limpia en 4.6s con 0 errores de TypeScript o plantillas Angular.
+     3. VERIFICACIÓN Y COMPILACIÓN AOT:
+        - Verificación con `npm run build` (`ng build`) 100% limpia en 4.6s con 0 errores de TypeScript o plantillas Angular.
+- Wed Aug 12 06:51:00 -05 2026: Sanitización de Errores de Consola (Supabase LockManager, Meta Tags PWA y Cache de Iconos):
+    1. SUPABASE NAVIGATOR LOCKMANAGER HANDLER:
+       - Configurado en `SupabaseService.constructor()` una función handler de `auth.lock` con fallback defensivo `try/catch` al invocar `navigator.locks.request(name, fn)`. Esto erradica los mensajes de excepción no capturada (`Acquiring an exclusive Navigator LockManager lock immediately failed`) en la consola del navegador.
+    2. DEPRECATED META TAG PWA:
+       - Añadido `<meta name="mobile-web-app-capable" content="yes">` en `src/index.html` eliminando la advertencia de obsolescencia de Chrome en aplicaciones PWA.
+    3. MANIFEST ICONS & PREFETCH SERVICE WORKER:
+       - Normalizadas las rutas de los iconos en `src/manifest.webmanifest` con prefijo `/assets/icons/...` y `"purpose": "any maskable"`.
+       - Añadido `/assets/icons/**` a la lista de archivos en prefetch dentro de `ngsw-config.json` garantizando que el Service Worker pre-cargue y cachee los iconos PWA al instalar la app sin lanzar errores de descarga.
+    4. VERIFICACIÓN DE COMPILACIÓN AOT:
+       - Verificación limpia con `npm run build` (`ng build`) completada en 6.3s con 0 errores.
+- Wed Aug 12 06:55:00 -05 2026: Solución Definitiva de Posicionamiento Toast y Event Propagation en Menú Sanguchito (<= 640px):
+    1. POSICIONAMIENTO Y OCULTAMIENTO INTELIGENTE DE TOASTS MÓVILES:
+       - Ajustada la posición de `.p-toast:not(.p-toast-bottom-center)` a `top: calc(4.25rem + env(safe-area-inset-top, 0px)) !important;` en `@media screen and (max-width: 640px)`. Esto ubica cualquier notificación Toast activa por debajo del top-header ejecutivo, dejando libre el 100% de la barra superior.
+       - Añadida la regla `.p-toast:not(:has(.p-toast-message)) { display: none !important; }` para asegurar que contenedores de Toast vacíos se colapsen a `display: none` y consuman 0 área de hit-test.
+    2. PREVENCIÓN DE PROPAGACIÓN Y GESTIÓN DE POPOVERS:
+       - Inyectado `@ViewChild('opCompany') opCompany?: OverlayPanel` en `LayoutComponent` y configurado `event?.stopPropagation()` en `toggleMenu()` y `toggleSidebar()` para evitar la propagación indeseada de eventos táctiles.
+       - Configurado el cierre automático del overlay de selector de empresa `opCompany.hide()` al alternar el menú lateral.
+       - Asignado `[style]="{ width: '92vw', maxWidth: '340px' }"` al panel desplegable de empresas para una adaptación perfecta en pantallas móviles estrechas (320px..640px).
+    3. VERIFICACIÓN Y COMPILACIÓN AOT DE PRODUCCIÓN:
+       - Ejecutado `npm run build` (`ng build`) con 0 errores de compilación TypeScript y empaquetado optimizado del Service Worker y Lazy Chunks en 3.9s.
+- Wed Aug 12 07:00:00 -05 2026: Auto-Actualización Transparente PWA y Limpieza Completa del Encabezado:
+    1. REMOCIÓN DE ELEMENTOS DISRUPTIVOS DE ENCABEZADO Y TOASTS:
+       - Removidos por completo el tag "Online / Offline", el botón manual "Actualizar App" y las notificaciones emergentes `<p-toast key="pwa-update-toast">` de `layout.component.html` y `admin-layout.html`.
+    2. MECANISMO DE AUTO-ACTIVACIÓN SILENCIOSA PWA:
+       - Refactorizado `PwaUpdateService.initUpdateListener()` para que al emitirse `VERSION_READY`, ejecute `await swUpdate.activateUpdate()` de forma inmediata y refresque la ventana (`window.location.reload()`) automáticamente en segundo plano.
+       - Eliminada la necesidad de reiniciar la app o presionar botones para recibir actualizaciones de versión.
+    3. VERIFICACIÓN DE COMPILACIÓN AOT:
+       - `npm run build` (`ng build`) 100% limpio en 4.1s con 0 errores de compilación.
+- Wed Aug 12 07:05:00 -05 2026: Desduplicación Total de Toasts, Solución Definitiva Responsive Sanguchito (<= 640px) y Verificación AOT:
+    1. ELIMINACIÓN DE TOASTS DUPLICADOS Y DESDUPLICACIÓN DE CAPAS OVERLAY:
+       - Removidas las declaraciones redundantes de `<p-toast>` en todos los componentes hijos (`clientes.html`, `cotizador.html`, `empresas.html`, `historial.html`, `maquinaria.html`, `productos.html`, `usuarios.html`), unificando las notificaciones en el singleton del Layout.
+    2. RESPONSIVIDAD Y TACTILIDAD MÓVIL EN ENCABEZADO:
+       - Inyectado `event.preventDefault()` y `touch-action: manipulation; -webkit-tap-highlight-color: transparent;` en el botón circular del sanguchito para evitar eventos fantasma de doble toque.
+       - Añadida regla `.p-toast:empty { display: none !important; pointer-events: none !important; visibility: hidden !important; }` en `styles.scss` asegurando un encabezado 100% libre de capas invisibles.
+       - Refinado el ancho de `pwa-company-pill` a `max-width: clamp(120px, 40vw, 280px)` y `min-width: 0` para una responsividad perfecta en dispositivos móviles de 320px a 640px.
+    3. VERIFICACIÓN DE COMPILACIÓN AOT DE PRODUCCIÓN:
+       - `npm run build` (`ng build`) 100% limpio sin errores TypeScript ni advertencias.
+

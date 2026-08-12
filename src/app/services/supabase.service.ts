@@ -9,7 +9,23 @@ export class SupabaseService {
   readonly client: SupabaseClient;
 
   constructor() {
-    this.client = createClient(environment.supabaseUrl, environment.supabaseKey);
+    this.client = createClient(environment.supabaseUrl, environment.supabaseKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        lock: async (name, _acquireTimeout, fn) => {
+          if (typeof navigator !== 'undefined' && navigator?.locks) {
+            try {
+              return await navigator.locks.request(name, fn);
+            } catch {
+              return await fn();
+            }
+          }
+          return await fn();
+        }
+      }
+    });
   }
 
   // ─── AUTH ─────────────────────────────────────────────────────────────────

@@ -1,19 +1,4 @@
 <p-toast />
-<p-toast key="pwa-update-toast" position="bottom-center">
-  <ng-template let-message pTemplate="message">
-    <div class="flex flex-column gap-2 w-full p-2">
-      <div class="flex align-items-center gap-2 font-bold text-sm text-900">
-        <i class="pi pi-refresh text-sky-600 text-lg"></i>
-        <span>{{ message.summary }}</span>
-      </div>
-      <div class="text-xs text-700">{{ message.detail }}</div>
-      <div class="flex gap-2 justify-content-end mt-2">
-        <button pButton type="button" label="Actualizar Ahora" icon="pi pi-sync" size="small"
-                class="p-button-sm p-button-primary border-round-lg shadow-2" (click)="reloadPwaApp()"></button>
-      </div>
-    </div>
-  </ng-template>
-</p-toast>
 
 <div class="flex h-full min-h-full overflow-hidden relative surface-ground w-full">
 
@@ -181,13 +166,13 @@
       <div class="flex align-items-center gap-2 sm:gap-3 min-w-0">
         <button pButton type="button" icon="pi pi-bars" [text]="true" [rounded]="true"
                 class="p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all flex align-items-center justify-content-center border-none cursor-pointer flex-shrink-0"
-                style="min-width: 44px; min-height: 44px; touch-action: manipulation;"
-                (click)="toggleMenu()"
+                style="min-width: 44px; min-height: 44px; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
+                (click)="toggleMenu($event)"
                 [attr.aria-expanded]="menuAbierto"
                 aria-label="Menú principal"></button>
 
         <!-- Company Switcher Pill -->
-        <div class="pwa-company-pill overflow-hidden flex-shrink-1" style="max-width: clamp(140px, 45vw, 280px);" (click)="opCompany.toggle($event)" pTooltip="Haz clic para cambiar de empresa" tooltipPosition="bottom">
+        <div class="pwa-company-pill overflow-hidden flex-shrink-1" style="max-width: clamp(120px, 40vw, 280px); min-width: 0;" (click)="opCompany.toggle($event)" pTooltip="Haz clic para cambiar de empresa" tooltipPosition="bottom">
           <div class="w-2rem h-2rem border-circle flex align-items-center justify-content-center shadow-1 overflow-hidden flex-shrink-0"
                [style.background]="empresaActiva?.color || 'var(--p-primary-color)'" style="color: #ffffff;">
             <ng-container *ngIf="empresaActiva?.ruta_logo; else topLogo">
@@ -212,20 +197,11 @@
 
       <!-- Quick Status & Action -->
       <div class="flex align-items-center gap-2 md:gap-3">
-        <button *ngIf="pwaUpdate.updateAvailable()" pButton type="button" icon="pi pi-refresh" label="Actualizar App"
-                severity="primary" size="small" class="font-bold text-xs border-round-lg shadow-2 px-3 animate-pulse"
-                [pTooltip]="'Una nueva versión está lista. Haz clic para actualizar.'"
-                tooltipPosition="bottom"
-                (click)="reloadPwaApp()"></button>
-        <button *ngIf="pwaUpdate.canInstallPwa()" pButton type="button" icon="pi pi-download" label="Instalar App"
-                severity="success" size="small" class="font-bold text-xs border-round-lg shadow-2 px-3"
-                (click)="instalarPwa()"></button>
-        <p-tag [value]="estaOnline ? 'Online' : 'Offline'"
-               [severity]="estaOnline ? 'success' : 'warning'"
-               [icon]="estaOnline ? 'pi pi-wifi' : 'pi pi-wifi-off'"
-               styleClass="font-bold text-xs px-2 py-1 border-round-md"
-               [pTooltip]="estaOnline ? 'Conexión activa con el servidor' : 'Sin conexión a internet'"
-               tooltipPosition="bottom"></p-tag>
+        <button *ngIf="pwaUpdate.canInstallPwa()" pButton type="button" icon="pi pi-download"
+                severity="success" size="small" class="font-bold text-xs border-round-lg shadow-2 px-2 sm:px-3"
+                (click)="instalarPwa()" pTooltip="Instalar PWA" tooltipPosition="bottom">
+          <span class="hidden sm:inline ml-1">Instalar App</span>
+        </button>
         <p-tag [value]="esAdminGeneral ? 'Super Admin' : esAdminEmpresa ? 'Admin Empresa' : 'Vendedor'"
                [severity]="esAdminGeneral ? 'danger' : esAdminEmpresa ? 'warning' : 'info'"
                styleClass="font-bold text-xs px-2 py-1 border-round-md hidden sm:inline-flex"></p-tag>
@@ -233,7 +209,7 @@
     </header>
 
     <!-- Overlay Panel de Selección Rápida de Empresa -->
-    <p-overlayPanel #opCompany styleClass="company-dropdown-panel shadow-4" [style]="{ width: '340px' }">
+    <p-overlayPanel #opCompany styleClass="company-dropdown-panel shadow-4" [style]="{ width: '92vw', maxWidth: '340px' }">
       <div class="p-2 border-bottom-1 surface-border mb-2 flex align-items-center justify-content-between">
         <span class="font-bold text-xs text-700 uppercase tracking-wider">Cambiar Empresa</span>
         <span class="text-xs bg-sky-100 text-sky-700 font-bold px-2 py-1 border-round-pill">
