@@ -313,12 +313,13 @@
        - Implementado guardián `lastToggleTime` con debounce de 250ms en `toggleMenu()` (`layout.component.ts`) y `toggleSidebar()` (`admin-layout.ts`), con escuchadores directos `(click)` y `(touchstart)` en las plantillas HTML, evitando que toques rápidos alternen instantáneamente el estado `menuAbierto` (open -> closed en < 200ms).
     3. VERIFICACIÓN AOT DE PRODUCCIÓN:
        - Ejecutado `npm run build` (`ng build`) 100% exitoso en 4.5s con 0 errores TypeScript o de empaquetado.
-- Wed Aug 12 07:15:00 -05 2026: Unificación de Barra de Estado (Top Safe Area / Notch) y Optimización de Ancho de Pill Selector de Empresa:
-    1. UNIFICACIÓN DE COLOR EN LA BARRA DE ESTADO SUPERIOR (STATUS BAR):
-       - Asignado `background-color: #0f172a !important;` en `html` y `body` en `styles.scss`, emparejando el color de fondo raíz de la aplicación con la etiqueta `<meta name="theme-color" content="#0f172a">` y el degradado del top header. Esto eliminó la difuminación y la franja blanca/azul en la barra de estado de dispositivos iOS y Android PWA.
-    2. REAPROVECHAMIENTO Y AMPLIACIÓN DEL SELECTOR DE EMPRESA (`pwa-company-pill`):
-       - Ajustado el ancho máximo del selector de empresa en `layout.component.html` a `max-width: clamp(210px, 68vw, 420px)` y `flex-1` para ocupar el espacio horizontal libre en dispositivos móviles.
-       - Aumentado el tamaño del contenedor del avatar/logo a `2.25rem` (36px) con tipografía `text-sm sm:text-base font-bold` y chevrón de despliegue prominente `pi-chevron-down text-sky-300`, garantizando legibilidad perfecta de los nombres comerciales.
-    3. VERIFICACIÓN AOT DE PRODUCCIÓN:
-       - Compilación de producción `npm run build` (`ng build`) finalizada con 0 errores en 4.1s.
+- Wed Aug 12 07:20:00 -05 2026: Corrección de Translucidez y Restauración de Lienzo Claro (`surface-ground-bg`):
+    1. RESTAURACIÓN DEL FONDO DEL BODY:
+       - Restaurado `background-color: var(--surface-ground-bg);` (`#f8fafc`) en `html` y `body` en `styles.scss`, resolviendo la distorsión visual donde modales y diálogos redondeados mostraban bordes oscuros en iOS Safari/PWA.
+    2. AJUSTE DE META TAG STATUS-BAR-STYLE:
+       - Cambiado `<meta name="apple-mobile-web-app-status-bar-style" content="default">` en `index.html` para evitar que la barra de estado traslúcida afecte el viewport de la página Web App.
+    3. REFINAMIENTO DE `pwa-company-pill`:
+       - Proporcionado el ancho máximo del selector a `clamp(140px, 55vw, 320px)` y removido `flex-1` forzado para evitar estiramientos inesperados en el encabezado.
+    4. VERIFICACIÓN AOT DE PRODUCCIÓN:
+       - Compilación de producción `npm run build` (`ng build`) finalizada con 0 errores en 4.8s.
 
