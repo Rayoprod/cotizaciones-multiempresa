@@ -105,6 +105,8 @@ export class AdminLayoutComponent implements OnDestroy {
     }
   }
 
+  private lastToggleTime = 0;
+
   @HostListener('window:resize')
   onResize() {
     if (window.innerWidth >= 768 && this.sidebarAbierto) {
@@ -113,6 +115,18 @@ export class AdminLayoutComponent implements OnDestroy {
   }
 
   toggleSidebar(event?: Event) {
+    const now = Date.now();
+    if (now - this.lastToggleTime < 250) {
+      if (event) {
+        event.stopPropagation();
+        if (typeof event.preventDefault === 'function') {
+          event.preventDefault();
+        }
+      }
+      return;
+    }
+    this.lastToggleTime = now;
+
     if (event) {
       event.stopPropagation();
       if (typeof event.preventDefault === 'function') {

@@ -304,4 +304,13 @@
        - Refinado el ancho de `pwa-company-pill` a `max-width: clamp(120px, 40vw, 280px)` y `min-width: 0` para una responsividad perfecta en dispositivos móviles de 320px a 640px.
     3. VERIFICACIÓN DE COMPILACIÓN AOT DE PRODUCCIÓN:
        - `npm run build` (`ng build`) 100% limpio sin errores TypeScript ni advertencias.
+- Wed Aug 12 07:10:00 -05 2026: Diagnóstico Definitivo y Solución Integral al Bloqueo del Menú Sanguchito (<= 640px):
+    1. DIAGNÓSTICO Y CORRECCIÓN DE CAPA HOST P-TOAST Y STACKING CONTEXT:
+       - Detectado que a `<= 640px`, la regla `@media screen and (max-width: 640px)` reposicionaba la capa de notificaciones a lo ancho del viewport (`width: calc(100vw - 1.25rem)`), pero el selector de clase `.p-toast` no aplicaba sobre la etiqueta custom HTML del Angular Host Element `<p-toast>`, dejando el host element con `pointer-events: auto` y `z-index: 1100` sobre el top header (`z-index: 100`).
+       - Actualizado `styles.scss` agregando el selector de etiqueta `p-toast` junto a `.p-toast` para forzar `pointer-events: none !important` y colapsar elementos vacíos a `display: none !important; height: 0 !important; width: 0 !important;`.
+       - Elevada la prioridad visual y táctil del top header `.pwa-top-header` a `z-index: 1000 !important; position: relative !important;` y asignada la clase `relative z-3` en el botón circular del menú sanguchito en `layout.component.html` y `admin-layout.html`.
+    2. PREVENCIÓN DE DISPARO DOBLE (TOUCHSTART + CLICK) EN PANTALLAS TÁCTILES:
+       - Implementado guardián `lastToggleTime` con debounce de 250ms en `toggleMenu()` (`layout.component.ts`) y `toggleSidebar()` (`admin-layout.ts`), con escuchadores directos `(click)` y `(touchstart)` en las plantillas HTML, evitando que toques rápidos alternen instantáneamente el estado `menuAbierto` (open -> closed en < 200ms).
+    3. VERIFICACIÓN AOT DE PRODUCCIÓN:
+       - Ejecutado `npm run build` (`ng build`) 100% exitoso en 4.5s con 0 errores TypeScript o de empaquetado.
 

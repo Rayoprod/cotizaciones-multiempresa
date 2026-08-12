@@ -142,7 +142,8 @@ body.layout-menu-open {
   color: #ffffff !important;
   border-bottom: 3px solid var(--company-accent-color, #0284c7) !important;
   box-shadow: 0 4px 20px rgba(15, 23, 42, 0.18) !important;
-  z-index: 100 !important;
+  z-index: 1000 !important;
+  position: relative !important;
 }
 
 @media screen and (min-width: 768px) {
@@ -201,6 +202,7 @@ body.layout-menu-open {
 }
 
 /* ── PrimeNG Toasts & Notices Mobile Responsiveness ───────────────── */
+p-toast,
 .p-toast,
 .p-toast-top-right,
 .p-toast-top-left,
@@ -212,13 +214,19 @@ body.layout-menu-open {
   pointer-events: none !important;
 }
 
+p-toast:empty,
+p-toast:not(:has(.p-toast-message)),
 .p-toast:empty,
 .p-toast:not(:has(.p-toast-message)) {
   display: none !important;
   pointer-events: none !important;
   visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  max-height: 0 !important;
 }
 
+p-toast *,
 .p-toast *,
 .p-toast-top-right *,
 .p-toast-top-left *,
@@ -229,12 +237,15 @@ body.layout-menu-open {
   pointer-events: none !important;
 }
 
+p-toast .p-toast-message,
 .p-toast .p-toast-message,
+p-toast .p-toast-message *,
 .p-toast .p-toast-message * {
   pointer-events: auto !important;
 }
 
 @media screen and (max-width: 640px) {
+  p-toast,
   .p-toast:not(.p-toast-bottom-center),
   .p-toast-top-right,
   .p-toast-top-left,

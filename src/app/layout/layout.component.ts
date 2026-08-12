@@ -145,6 +145,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
     }
   }
 
+  private lastToggleTime = 0;
+
   @HostListener('window:resize')
   onResize() {
     if (window.innerWidth >= 768 && this.menuAbierto) {
@@ -153,6 +155,18 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   toggleMenu(event?: Event) {
+    const now = Date.now();
+    if (now - this.lastToggleTime < 250) {
+      if (event) {
+        event.stopPropagation();
+        if (typeof event.preventDefault === 'function') {
+          event.preventDefault();
+        }
+      }
+      return;
+    }
+    this.lastToggleTime = now;
+
     if (event) {
       event.stopPropagation();
       if (typeof event.preventDefault === 'function') {
