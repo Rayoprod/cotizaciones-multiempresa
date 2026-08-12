@@ -164,8 +164,8 @@
     <!-- Top Header Bar (Desktop & Mobile) -->
     <header class="pwa-top-header flex align-items-center justify-content-between px-2 md:px-4 z-2 flex-shrink-0">
       <div class="flex align-items-center gap-2 sm:gap-3 min-w-0">
-        <button pButton type="button" icon="pi pi-bars" [text]="true" [rounded]="true"
-                class="p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all flex align-items-center justify-content-center border-none cursor-pointer flex-shrink-0 relative z-3"
+        <button *ngIf="!menuAbierto" pButton type="button" icon="pi pi-bars" [text]="true" [rounded]="true"
+                class="md:hidden p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all flex align-items-center justify-content-center border-none cursor-pointer flex-shrink-0 relative z-3"
                 style="min-width: 44px; min-height: 44px; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
                 (click)="toggleMenu($event)"
                 (touchstart)="toggleMenu($event)"
