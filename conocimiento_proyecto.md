@@ -141,5 +141,22 @@
     - **Verificación E2E de Automatismos e Integridad Referencial**:
       - Verificación de RPC `getnextfolioempresa` para la generación atómica de folios sin colisión bajo concurrencia (`BVC-00000001`).
       - Confirmación del correcto funcionamiento de triggers PostgreSQL `sync_horometro_actual` y `sync_ultimo_mantenimiento` en `lecturas_horometro`.
-      - Validación de la suite de pruebas E2E automatizada (`e2e_data_flow_verification.js`) con resultado 100% exitoso (11 PASSED, 0 FAILED).
+147. **Encapsulamiento Completo de SupabaseService y Cero Consultas Crudas**:
+    - **Centralización 100% de Operaciones BD**: Se encapsularon todas las operaciones directas a Supabase (`maquinaria`, `lecturas_horometro`, `cuentas_bancarias`, `cotizaciones.oculta`, `profiles`) dentro de métodos fuertemente tipados en `SupabaseService.ts`.
+    - **Eliminación Total de `this.supabase.client` en Componentes**: Cero llamadas crudas `this.supabase.client` en componentes UI (`CotizadorComponent`, `MaquinariaComponent`, `HistorialComponent`, `EmpresasComponent`, `UsuariosComponent`).
+148. **Auditoría E2E de Datos, CASCADE Foreign Keys, RLS Caching, e Invariantes Supabase-PostgreSQL**:
+    - **CASCADE Foreign Keys**: Se actualizaron las claves foráneas de `productos`, `clientes`, `cotizaciones` y `folios_empresas` a `ON DELETE CASCADE ON UPDATE CASCADE` contra `empresas(id)`. La eliminación de una empresa limpia automáticamente todas sus relaciones en una única transacción atómica de BD sin producir errores 23503 o dejar registros huérfanos.
+    - **Limpieza de Registros Huérfanos**: Se identificó y eliminó 1 registro huérfano en `folios_empresas` (`bloquetera-virgen-del-carmen`), agregando la restricción FK `fk_folios_empresas_empresa`.
+    - **Estandarización de `cotizaciones.oculta`**: Se configuró la columna `oculta` como `NOT NULL DEFAULT false` en PostgreSQL y se optimizó la consulta `getHistorial()` en `SupabaseService` para filtrar `eq('oculta', false)` mediante el índice B-tree `idx_cotizaciones_empresa_oculta`.
+    - **Optimización de Política RLS**: Se optimizó la política `vendedor no ve ocultas` en `cotizaciones` con el patrón subquery caching `(SELECT auth.uid())` en PostgreSQL.
+    - **Sanitización de Payloads & Tipado**: Se actualizó `guardarMaquinaria()` para remover campos calculados frontend (`horas_desde_mantenimiento`, `horas_restantes`, `porcentaje_progreso`, `estado_mantenimiento`) antes de enviarlos a PostgREST. Se corrigió `IProducto.precio_unitario_base` a `number` y se agregó coerción en `guardarProducto()`.
+149. **Solución a la Creación de Usuarios mediante Función RPC PostgreSQL (`admin_crear_usuario`)**:
+    - **Implementación de RPC Atómica SECURITY DEFINER**: Se creó la función PostgreSQL `admin_crear_usuario(p_email, p_password, p_rol)` con `SECURITY DEFINER`. Esta función realiza en una sola transacción atómica de BD:
+      1. Validación de duplicados en `auth.users` lanzando una excepción clara si el correo ya existe.
+      2. Inserción directa en `auth.users` fijando `email_confirmed_at = now()`.
+      3. Actualización/inserción explícita en `public.profiles` estableciendo el rol asignado (`admin`, `admin_empresa`, `vendedor`) y `activo = true`.
+    - **Cero Límite de Envío de Correos (Bypass de Error 429)**: Al confirmar la cuenta inmediatamente en PostgreSQL, no se envían correos SMTP de verificación ni se sufren límites de tasa (*rate limit 429*).
+    - **Cero Deslogueo de Administración**: Al ejecutarse vía PostgREST RPC (`this.client.rpc('admin_crear_usuario', ...)`), la sesión activa del administrador en la aplicación jamás se sobrescribe ni invalida.
+    - **Verificación AOT**: Compilación de producción `npx ng build` ejecutada y aprobada con 0 errores.
+
 

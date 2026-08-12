@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
-import { IEmpresa, ICotizacion, ICuentaBancaria } from '../models';
+import { IEmpresa, ICotizacion, ICuentaBancaria, IMaquinaria, ILecturaHorometro } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
@@ -85,6 +85,8 @@ export class SupabaseService {
       for (const c of cuentasRes.data) {
         const list = cuentasMap.get(c.empresa_id) || [];
         list.push({
+          id: c.id,
+          empresa_id: c.empresa_id,
           banco: c.banco,
           tipo_cuenta: c.tipo_cuenta,
           moneda: c.moneda,
@@ -111,6 +113,41 @@ export class SupabaseService {
       .order('id');
     if (error) throw error;
     return data as IEmpresa[];
+  }
+
+  async getEmpresasConCuentas(): Promise<IEmpresa[]> {
+    const empresas = await this.getEmpresas();
+    if (!empresas.length) return [];
+    const ids = empresas.map(e => e.id);
+    const { data: todasCuentas } = await this.client
+      .from('cuentas_bancarias')
+      .select('*')
+      .in('empresa_id', ids)
+      .order('orden', { ascending: true });
+
+    const cuentasMap = new Map<string, ICuentaBancaria[]>();
+    if (todasCuentas) {
+      for (const c of todasCuentas) {
+        const list = cuentasMap.get(c.empresa_id) || [];
+        list.push({
+          id: c.id,
+          empresa_id: c.empresa_id,
+          banco: c.banco,
+          tipo_cuenta: c.tipo_cuenta,
+          moneda: c.moneda,
+          numero: c.numero,
+          cci: c.cci || '',
+          titular: c.titular || '',
+          activa: c.activa,
+          orden: c.orden
+        });
+        cuentasMap.set(c.empresa_id, list);
+      }
+    }
+    return empresas.map(e => ({
+      ...e,
+      cuentas_bancarias: cuentasMap.get(e.id) ?? []
+    }));
   }
 
   // ─── EMPRESAS CRUD ────────────────────────────────────────────────────────
@@ -195,6 +232,9 @@ export class SupabaseService {
     const payload = { ...producto };
     if (!payload.id || String(payload.id).trim() === '') delete payload.id;
     if (!payload.created_at || String(payload.created_at).trim() === '') delete payload.created_at;
+    if (payload.precio_unitario_base !== undefined && payload.precio_unitario_base !== null) {
+      payload.precio_unitario_base = Number(payload.precio_unitario_base) || 0;
+    }
 
     if (payload.id) {
       const { data, error } = await this.client
@@ -259,13 +299,13 @@ export class SupabaseService {
 
     let query = this.client
       .from('cotizaciones')
-      .select('id, folio, fecha, empresa_id, cliente_nombre, cliente_documento, cliente_telefono, cliente_direccion, cliente_correo, subtotal, igv, total, estado, items, vendedor, lugar_entrega, observaciones, oculta')
+      .select('id, folio, fecha, empresa_id, cliente_id, cliente_nombre, cliente_documento, cliente_telefono, cliente_direccion, cliente_correo, subtotal, igv, total, estado, items, vendedor, lugar_entrega, observaciones, oculta')
       .eq('empresa_id', empresaId)
       .order('fecha', { ascending: false });
 
-    // Si NO queremos las ocultas, las filtramos explícitamente
+    // Si NO queremos las ocultas, las filtramos explícitamente (usando índice b-tree)
     if (!incluirOcultas) {
-      query = query.or('oculta.is.null,oculta.eq.false');
+      query = query.eq('oculta', false);
     }
 
     const { data, error } = await query;
@@ -290,6 +330,14 @@ export class SupabaseService {
       .eq('id', id).select().single();
     if (error) throw error;
     return data;
+  }
+
+  async actualizarVisibilidadCotizacion(id: string, oculta: boolean): Promise<void> {
+    const { error } = await this.client
+      .from('cotizaciones')
+      .update({ oculta })
+      .eq('id', id);
+    if (error) throw error;
   }
 
   async obtenerSiguienteFolio(empresaId: string, prefijoFallback?: string): Promise<string> {
@@ -391,6 +439,16 @@ export class SupabaseService {
     return data;
   }
 
+  async guardarPerfil(perfil: { id: string, email: string, rol: string, activo?: boolean }): Promise<void> {
+    const { error } = await this.client.from('profiles').upsert({
+      id: perfil.id,
+      email: perfil.email,
+      rol: perfil.rol,
+      activo: perfil.activo ?? true
+    });
+    if (error) throw error;
+  }
+
   // ─── USUARIOS (solo admin) ────────────────────────────────────────────────
 
   async getUsuarios(): Promise<any[]> {
@@ -400,11 +458,11 @@ export class SupabaseService {
     return data || [];
   }
 
-  async crearUsuario(email: string, password: string): Promise<any> {
-    const { data, error } = await this.client.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: window.location.origin + '/login' }
+  async crearUsuario(email: string, password: string, rol: string = 'vendedor'): Promise<any> {
+    const { data, error } = await this.client.rpc('admin_crear_usuario', {
+      p_email: email,
+      p_password: password,
+      p_rol: rol
     });
     if (error) throw error;
     return data;
@@ -452,4 +510,132 @@ export class SupabaseService {
     const { error } = await this.client.from('usuario_empresa').insert(filas);
     if (error) throw error;
   }
+
+  // ─── MAQUINARIA & HOROMETRO ───────────────────────────────────────────────
+
+  async getMaquinaria(empresaId: string, soloActivas = false): Promise<IMaquinaria[]> {
+    let query = this.client
+      .from('maquinaria')
+      .select('*')
+      .eq('empresa_id', empresaId)
+      .order('nombre');
+
+    if (soloActivas) {
+      query = query.eq('activa', true);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data || []) as IMaquinaria[];
+  }
+
+  async guardarMaquinaria(maquina: IMaquinaria): Promise<IMaquinaria> {
+    const {
+      horas_desde_mantenimiento,
+      horas_restantes,
+      porcentaje_progreso,
+      estado_mantenimiento,
+      ...payload
+    } = maquina as any;
+
+    if (!payload.id || payload.id === '') delete payload.id;
+    if (!payload.created_at || payload.created_at === '') delete payload.created_at;
+
+    if (maquina.id) {
+      const { data, error } = await this.client
+        .from('maquinaria')
+        .update(payload)
+        .eq('id', maquina.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as IMaquinaria;
+    } else {
+      const { data, error } = await this.client
+        .from('maquinaria')
+        .insert([payload])
+        .select()
+        .single();
+      if (error) throw error;
+      return data as IMaquinaria;
+    }
+  }
+
+  async eliminarMaquinaria(id: string): Promise<void> {
+    const { error } = await this.client.from('maquinaria').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async getLecturasHorometro(maquinaId: string, limit = 20): Promise<ILecturaHorometro[]> {
+    const { data, error } = await this.client
+      .from('lecturas_horometro')
+      .select('*')
+      .eq('maquina_id', maquinaId)
+      .order('fecha_lectura', { ascending: false })
+      .order('horometro', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data || []) as ILecturaHorometro[];
+  }
+
+  async guardarLecturaHorometro(lectura: ILecturaHorometro): Promise<ILecturaHorometro> {
+    const payload: any = { ...lectura };
+    if (!payload.id || payload.id === '') delete payload.id;
+    if (!payload.created_at || payload.created_at === '') delete payload.created_at;
+
+    if (lectura.id) {
+      const { data, error } = await this.client
+        .from('lecturas_horometro')
+        .update(payload)
+        .eq('id', lectura.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as ILecturaHorometro;
+    } else {
+      const { data, error } = await this.client
+        .from('lecturas_horometro')
+        .insert([payload])
+        .select()
+        .single();
+      if (error) throw error;
+      return data as ILecturaHorometro;
+    }
+  }
+
+  async eliminarLecturaHorometro(id: string): Promise<void> {
+    const { error } = await this.client.from('lecturas_horometro').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async recalcularHorometroMaquina(maquinaId: string): Promise<void> {
+    const { data } = await this.client
+      .from('lecturas_horometro')
+      .select('horometro, tipo_evento')
+      .eq('maquina_id', maquinaId)
+      .order('horometro', { ascending: false })
+      .limit(1);
+
+    if (!data || data.length === 0) return;
+    const maxLectura = data[0].horometro;
+    const updateData: any = { horometro_actual: maxLectura };
+
+    const { data: ultimoMant } = await this.client
+      .from('lecturas_horometro')
+      .select('horometro')
+      .eq('maquina_id', maquinaId)
+      .eq('tipo_evento', 'mantenimiento')
+      .order('horometro', { ascending: false })
+      .limit(1);
+
+    if (ultimoMant && ultimoMant.length > 0) {
+      updateData.ultimo_mantenimiento = ultimoMant[0].horometro;
+    }
+
+    await this.client
+      .from('maquinaria')
+      .update(updateData)
+      .eq('id', maquinaId);
+  }
 }
+

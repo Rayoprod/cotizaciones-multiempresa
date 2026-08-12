@@ -65,6 +65,7 @@ export class CotizadorComponent implements OnInit {
   carrito: any[] = [];
 
   // ── Formulario cliente ────────────────────────────────────────────────────
+  clienteId: string | null = null;
   clienteNombre: string = '';
   clienteDocumento: string = '';
   clienteTelefono: string = '';
@@ -174,20 +175,15 @@ export class CotizadorComponent implements OnInit {
       const empresaId = this.empresaActiva?.id;
       if (!empresaId) return;
 
-      const [prods, clis, maqRes] = await Promise.all([
+      const [prods, clis, maqs] = await Promise.all([
         this.supabaseSvc.getProductos(empresaId),
         this.supabaseSvc.getClientes(empresaId),
-        this.supabaseSvc.client
-          .from('maquinaria')
-          .select('*')
-          .eq('empresa_id', empresaId)
-          .eq('activa', true)
-          .order('nombre')
+        this.supabaseSvc.getMaquinaria(empresaId, true)
       ]);
 
       this.productosBD = prods || [];
       this.clientesBD = clis || [];
-      this.maquinariaBD = maqRes.data || [];
+      this.maquinariaBD = maqs || [];
     } catch (e) {
       console.error('Error cargando datos:', e);
       this.messageService.add({
@@ -767,6 +763,7 @@ export class CotizadorComponent implements OnInit {
     try {
       const b = JSON.parse(raw);
 
+      this.clienteId            = b.cliente_id        || null;
       this.clienteNombre        = b.cliente_nombre    || '';
       this.clienteDocumento     = b.cliente_documento || '';
       this.clienteTelefono      = b.cliente_telefono  || '';
@@ -798,16 +795,14 @@ export class CotizadorComponent implements OnInit {
 
       this.messageService.add({
         severity: b.modo === 'revision' ? 'warn' : 'info',
-        summary: b.modo === 'revision'
-          ? `✏️ Revisión de ${b.folio_padre}`
-          : '📋 Cotización duplicada',
-        detail: b.modo === 'revision'
-          ? 'La cotización original fue marcada como Anulada.'
-          : 'Datos cargados. Se generará un folio nuevo al guardar.',
-        life: 6000
+        summary:  b.modo === 'revision' ? 'Revisión Creada' : 'Cotización Duplicada',
+        detail:   b.modo === 'revision'
+          ? `Editando revisión de ${b.folio_padre}. La cotización original fue anulada.`
+          : `Datos cargados desde ${b.folio_padre || 'borrador'}.`
       });
       return true;
     } catch (e) {
+      console.error('Error al cargar borrador:', e);
       sessionStorage.removeItem('cotizador-borrador');
       return false;
     }

@@ -151,32 +151,23 @@ export class UsuariosComponent implements OnInit {
     this.cdr.markForCheck();
 
     try {
-      // Crear usuario en Supabase Auth
-      const authData = await this.supabase.crearUsuario(this.nuevoEmail, this.nuevoPassword);
-      const userId = authData?.user?.id;
+      // Crear usuario y perfil de forma atómica mediante RPC sin colisión de correos ni cierre de sesión
+      const res = await this.supabase.crearUsuario(this.nuevoEmail, this.nuevoPassword, this.nuevoRol);
 
-      if (!userId) {
-        throw new Error('No se pudo obtener el ID del nuevo usuario.');
+      if (!res?.id) {
+        throw new Error('No se pudo obtener la respuesta de creación de usuario.');
       }
 
-      // Crear perfil en la tabla profiles
-      const { error: profileErr } = await this.supabase.client.from('profiles').insert({
-        id: userId,
-        email: this.nuevoEmail,
-        rol: this.nuevoRol,
-        activo: true
-      });
-
-      if (profileErr) {
-        throw profileErr;
-      }
-
-      this.msg.add({ severity: 'success', summary: '¡Listo!', detail: `Usuario ${this.nuevoEmail} creado` });
-      this.modalVisible = false;
+      this.msg.add({ severity: 'success', summary: '¡Listo!', detail: `Usuario ${this.nuevoEmail} creado exitosamente` });
+      this.modalVisible  = false;
+      this.nuevoEmail    = '';
+      this.nuevoPassword = '';
+      this.nuevoRol      = 'vendedor';
+      this.errorModal    = '';
       await this.cargarUsuarios();
     } catch (err: any) {
       console.error('Error creando usuario:', err);
-      this.errorModal = err?.message || 'Error al crear el usuario.';
+      this.errorModal = err?.message || err?.details || 'Error al crear el usuario.';
     } finally {
       this.guardando = false;
       this.cdr.markForCheck();

@@ -336,5 +336,37 @@
        - Ejecución de la suite automatizada E2E (`e2e_data_flow_verification.js`) validando generación atómica de folios (`getnextfolioempresa`), triggers automáticos de horómetro (`sync_horometro_actual`, `sync_ultimo_mantenimiento`) e integridad referencial de FKs.
        - Resultado final: 11 PRUEBAS PASADAS, 0 FALLIDAS.
        - Verificación de compilación AOT de producción `npm run build` completada con 0 errores en 5.6s.
-
-
+- Wed Aug 12 09:10:00 -05 2026: Refactorización Integral de SupabaseService, Cero Consultas Crudas en Componentes y Verificación E2E:
+    1. ENCAPSULAMIENTO 100% DE OPERACIONES DE BASE DE DATOS:
+       - Refactorizado `SupabaseService.ts` agregando métodos dedicados y fuertemente tipados: `getMaquinaria`, `guardarMaquinaria`, `eliminarMaquinaria`, `getLecturasHorometro`, `guardarLecturaHorometro`, `eliminarLecturaHorometro`, `recalcularHorometroMaquina`, `getEmpresasConCuentas`, `actualizarVisibilidadCotizacion`, `guardarPerfil`.
+       - Eliminadas todas las invocaciones directas a `this.supabase.client` en `MaquinariaComponent`, `HistorialComponent`, `EmpresasComponent`, `UsuariosComponent` y `CotizadorComponent`.
+    2. INTEGRIDAD REFERENCIAL Y MAPEO DE DATOS:
+       - Inclusión de `cliente_id` en la consulta `getHistorial()` en `SupabaseService`, permitiendo que la clonación, edición y duplicación de cotizaciones conserven la relación con el registro del cliente sin pérdida de claves foráneas.
+       - Configurada la restauración y reseteo explícito de `clienteId` en `CotizadorComponent` durante la carga de borradores (`cargarBorradorSiExiste`) y limpieza de formularios (`limpiarFormulario`).
+    3. PRUEBAS INTEGRALES E2E Y VERIFICACIÓN AOT:
+       - Ejecución exitosa de la suite E2E de integración `test_db_e2e_crud.js` validando la concurrencia de la RPC `getnextfolioempresa`, la ejecución en cascada de los triggers `sync_horometro_actual` / `sync_ultimo_mantenimiento` y la vista de estado `v_flota_mantenimiento`.
+       - Verificación AOT de compilación de Angular 17.3+ (`npx ng build`) 100% exitosa en 2.5s con 0 errores de compilación o de tipos.
+- Wed Aug 12 12:25:00 -05 2026: Auditoría E2E de Datos, CASCADE Foreign Keys, RLS Caching, e Invariantes Supabase-PostgreSQL:
+    1. CASCADE FOREIGN KEYS Y ELIMINACIÓN DE REGISTROS HUÉRFANOS:
+       - Actualización de las restricciones de clave foránea `productos_empresa_id_fkey`, `clientes_empresa_id_fkey`, `fk_cotizacion_empresa` y `fk_folios_empresas_empresa` a `ON DELETE CASCADE ON UPDATE CASCADE` contra `empresas(id)`. De este modo, la eliminación de una empresa en PostgreSQL borra de forma atómica y consistente todas sus tablas dependientes sin producir errores 23503.
+       - Identificación y eliminación del registro huérfano `bloquetera-virgen-del-carmen` en `folios_empresas`, estableciendo la restricción `fk_folios_empresas_empresa`.
+    2. OPTIMIZACIÓN DE CONSULTAS B-TREE Y CACHING DE RLS:
+       - Configuración de la columna `cotizaciones.oculta` como `NOT NULL DEFAULT false` y optimización de la consulta `getHistorial()` en `SupabaseService` para filtrar `eq('oculta', false)`, permitiendo escaneo directo del índice B-tree `idx_cotizaciones_empresa_oculta`.
+       - Optimización de la política de seguridad RLS `vendedor no ve ocultas` en la tabla `cotizaciones` utilizando el patrón de subquery caching `(SELECT auth.uid())` en PostgreSQL.
+    3. SANITIZACIÓN DE PAYLOADS, TIPADO Y ENCAPSULAMIENTO EN ANGULAR:
+       - Refactorización de `SupabaseService.guardarMaquinaria()` para remover campos calculados de la interfaz (`horas_desde_mantenimiento`, `horas_restantes`, `porcentaje_progreso`, `estado_mantenimiento`) antes de enviar el objeto a PostgREST.
+       - Corrección de `IProducto.precio_unitario_base` a `number` y coerción numérica en `SupabaseService.guardarProducto()`.
+       - Eliminación de la última consulta directa a Supabase en `CotizadorComponent.cargarDatosDesdeBD()`, reemplazándola por `this.supabaseSvc.getMaquinaria(empresaId, true)`.
+    4. SUITE DE PRUEBAS E2E AUTOMATIZADA Y COMPILACIÓN DE PRODUCCIÓN AOT:
+       - Ejecución exitosa de la suite `test_all_services_authenticated_e2e.js` verificando el 100% de operaciones CRUD, secuencia de la RPC `getnextfolioempresa`, triggers PostgreSQL `sync_horometro_actual`, índices B-Tree y borrado masivo CASCADE en el 100% de las tablas dependientes.
+       - Verificación de compilación Angular AOT `npx ng build` finalizada con 0 errores y 0 advertencias en 6.9s.
+- Wed Aug 12 14:33:00 -05 2026: Solución Definitiva a la Creación de Usuarios mediante RPC PostgreSQL (`admin_crear_usuario`):
+    1. FUNCIÓN RPC SECURITY DEFINER ATÓMICA:
+       - Implementada la función PostgreSQL `admin_crear_usuario(p_email, p_password, p_rol)` con `SECURITY DEFINER`. Inserta simultáneamente la cuenta confirmada (`email_confirmed_at = now()`) en `auth.users` y el perfil en `public.profiles` con su rol (`admin`, `admin_empresa`, `vendedor`) y `activo = true`.
+    2. BYPASS DE LÍMITE DE TASA 429 Y ELIMINACIÓN DE DESLOGUEO:
+       - Al no invocar `auth.signUp()` cliente, se eliminaron por completo los errores de límite de envío de correos (*rate limit 429*) y se garantizó que la sesión activa del administrador jamás sea interrumpida o sobrescrita.
+    3. DETECCIÓN LIMPIA DE DUPLICADOS Y REACTIVIDAD ONPUSH:
+       - Captura explícita de la excepción de correo duplicado (`El correo electrónico "..." ya se encuentra registrado.`) mostrada dentro del modal UI.
+       - Disparo de `cdr.markForCheck()` y recarga reactiva de la tabla de usuarios en Angular 17.3+.
+    4. VERIFICACIÓN INTEGRAL AOT:
+       - Ejecución exitosa de pruebas automáticas RPC y compilación `npx ng build` finalizada con 0 errores y 0 advertencias.

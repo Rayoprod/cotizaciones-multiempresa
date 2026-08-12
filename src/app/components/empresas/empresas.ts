@@ -160,41 +160,7 @@ export class EmpresasComponent implements OnInit, OnDestroy {
       if (rol === 'admin_empresa') {
         data = await this.supabase.getEmpresasDelUsuario();
       } else {
-        data = await this.supabase.getEmpresas();
-        const empresaIds = data.map((e: any) => e.id);
-
-        if (empresaIds.length > 0) {
-          const { data: todasCuentas } = await this.supabase.client
-            .from('cuentas_bancarias')
-            .select('*')
-            .in('empresa_id', empresaIds)
-            .order('orden', { ascending: true });
-
-          const cuentasMap = new Map<string, any[]>();
-          if (todasCuentas) {
-            for (const c of todasCuentas) {
-              const list = cuentasMap.get(c.empresa_id) || [];
-              list.push({
-                banco: c.banco,
-                tipo_cuenta: c.tipo_cuenta,
-                moneda: c.moneda,
-                numero: c.numero,
-                cci: c.cci || '',
-                titular: c.titular || '',
-                activa: c.activa,
-                orden: c.orden
-              });
-              cuentasMap.set(c.empresa_id, list);
-            }
-          }
-
-          data = data.map((empresa: any) => ({
-            ...empresa,
-            cuentas_bancarias: cuentasMap.get(empresa.id) || (Array.isArray(empresa.cuentas_bancarias) ? empresa.cuentas_bancarias : []),
-            mostrar_cuentas: empresa.mostrar_cuentas ?? true,
-            activa: empresa.activa ?? true
-          }));
-        }
+        data = await this.supabase.getEmpresasConCuentas();
       }
 
       this.empresas = data;

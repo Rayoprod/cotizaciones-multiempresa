@@ -141,12 +141,7 @@ export class MaquinariaComponent implements OnInit {
     this.cargando = true;
     try {
       if (!this.empresaActiva?.id) { this.items = []; this.itemsFiltrados = []; return; }
-      const { data, error } = await this.supabase.client
-        .from('maquinaria')
-        .select('*')
-        .eq('empresa_id', this.empresaActiva.id)
-        .order('nombre');
-      if (error) throw error;
+      const data = await this.supabase.getMaquinaria(this.empresaActiva.id);
       this.items = (data || []).map((m: any) => this.calcularEstadoMantenimiento(m));
       this.aplicarFiltros();
       this.calcularKPIs();
@@ -264,6 +259,7 @@ export class MaquinariaComponent implements OnInit {
     this.guardando = true;
     try {
       const datos: any = {
+        id: this.esEdicion ? this.form.id : undefined,
         empresa_id: this.empresaActiva.id,
         nombre: this.form.nombre.trim(),
         descripcion: this.form.descripcion || '',
@@ -281,17 +277,12 @@ export class MaquinariaComponent implements OnInit {
         ultimo_mantenimiento: this.form.ultimo_mantenimiento ?? 0
       };
 
-      if (this.esEdicion && this.form.id) {
-        const { error } = await this.supabase.client
-          .from('maquinaria').update(datos).eq('id', this.form.id);
-        if (error) throw error;
-        this.msg.add({ severity: 'success', summary: 'Actualizado', detail: 'Equipo actualizado' });
-      } else {
-        const { error } = await this.supabase.client
-          .from('maquinaria').insert([datos]);
-        if (error) throw error;
-        this.msg.add({ severity: 'success', summary: 'Creado', detail: 'Equipo agregado al catálogo' });
-      }
+      await this.supabase.guardarMaquinaria(datos);
+      this.msg.add({
+        severity: 'success',
+        summary: this.esEdicion ? 'Actualizado' : 'Creado',
+        detail: this.esEdicion ? 'Equipo actualizado' : 'Equipo agregado al catálogo'
+      });
       this.modalVisible = false;
       await this.cargar();
     } catch (e: any) {
@@ -316,8 +307,7 @@ export class MaquinariaComponent implements OnInit {
 
   async eliminar(item: IMaquinaria) {
     try {
-      const { error } = await this.supabase.client.from('maquinaria').delete().eq('id', item.id!);
-      if (error) throw error;
+      await this.supabase.eliminarMaquinaria(item.id!);
       this.items = this.items.filter(i => i.id !== item.id);
       this.aplicarFiltros();
       this.calcularKPIs();
@@ -367,15 +357,7 @@ export class MaquinariaComponent implements OnInit {
     if (!this.maquinaSeleccionada?.id) return;
     this.cargandoLecturas = true;
     try {
-      const { data, error } = await this.supabase.client
-        .from('lecturas_horometro')
-        .select('*')
-        .eq('maquina_id', this.maquinaSeleccionada.id)
-        .order('fecha_lectura', { ascending: false })
-        .order('horometro', { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      this.lecturas = data || [];
+      this.lecturas = await this.supabase.getLecturasHorometro(this.maquinaSeleccionada.id);
     } catch {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las operaciones' });
     } finally {
@@ -405,49 +387,14 @@ export class MaquinariaComponent implements OnInit {
 
   async eliminarOperacion(id: string) {
     try {
-      const { error } = await this.supabase.client
-        .from('lecturas_horometro')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
+      await this.supabase.eliminarLecturaHorometro(id);
       this.msg.add({ severity: 'success', summary: 'Eliminado', detail: 'Registro eliminado del historial' });
       await this.cargarHistorialOperaciones();
-      await this.recalcularHorometroMaquina();
+      await this.supabase.recalcularHorometroMaquina(this.maquinaSeleccionada!.id!);
       await this.cargar();
     } catch (e: any) {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el registro' });
     }
-  }
-
-  private async recalcularHorometroMaquina() {
-    if (!this.maquinaSeleccionada?.id) return;
-    const { data } = await this.supabase.client
-      .from('lecturas_horometro')
-      .select('horometro, tipo_evento')
-      .eq('maquina_id', this.maquinaSeleccionada.id)
-      .order('horometro', { ascending: false })
-      .limit(1);
-
-    const maxLectura = data && data.length > 0 ? data[0].horometro : (this.maquinaSeleccionada.horometro_inicial || 0);
-
-    const updateData: any = { horometro_actual: maxLectura };
-
-    const { data: ultimoMant } = await this.supabase.client
-      .from('lecturas_horometro')
-      .select('horometro')
-      .eq('maquina_id', this.maquinaSeleccionada.id)
-      .eq('tipo_evento', 'mantenimiento')
-      .order('horometro', { ascending: false })
-      .limit(1);
-
-    if (ultimoMant && ultimoMant.length > 0) {
-      updateData.ultimo_mantenimiento = ultimoMant[0].horometro;
-    }
-
-    await this.supabase.client
-      .from('maquinaria')
-      .update(updateData)
-      .eq('id', this.maquinaSeleccionada.id);
   }
 
   async guardarOperacion() {
@@ -479,40 +426,22 @@ export class MaquinariaComponent implements OnInit {
 
     this.guardandoLectura = true;
     try {
-      const payload = {
+      const payload: ILecturaHorometro = {
+        id: this.editandoOperacion && this.operacionEditadaId ? this.operacionEditadaId : undefined,
         maquina_id: this.maquinaSeleccionada!.id!,
         horometro: this.nuevaLectura.horometro,
         fecha_lectura: fechaStr,
         tipo_evento: this.nuevaLectura.tipo_evento,
-        operador: this.nuevaLectura.operador || null,
-        observaciones: this.nuevaLectura.observaciones || null
+        operador: this.nuevaLectura.operador || undefined,
+        observaciones: this.nuevaLectura.observaciones || undefined
       };
 
-      if (this.editandoOperacion && this.operacionEditadaId) {
-        const { error } = await this.supabase.client
-          .from('lecturas_horometro')
-          .update(payload)
-          .eq('id', this.operacionEditadaId);
-        if (error) throw error;
-        this.msg.add({ severity: 'success', summary: 'Actualizado', detail: 'Operación actualizada correctamente' });
-      } else {
-        const { error } = await this.supabase.client
-          .from('lecturas_horometro')
-          .insert([payload]);
-        if (error) throw error;
-        this.msg.add({ severity: 'success', summary: 'Registrado', detail: 'Operación guardada correctamente' });
-      }
-
-      if (this.nuevaLectura.horometro > (this.maquinaSeleccionada?.horometro_actual || 0)) {
-        const updateData: any = { horometro_actual: this.nuevaLectura.horometro };
-        if (this.nuevaLectura.tipo_evento === 'mantenimiento') {
-          updateData.ultimo_mantenimiento = this.nuevaLectura.horometro;
-        }
-        await this.supabase.client
-          .from('maquinaria')
-          .update(updateData)
-          .eq('id', this.maquinaSeleccionada!.id!);
-      }
+      await this.supabase.guardarLecturaHorometro(payload);
+      this.msg.add({
+        severity: 'success',
+        summary: this.editandoOperacion ? 'Actualizado' : 'Registrado',
+        detail: this.editandoOperacion ? 'Operación actualizada correctamente' : 'Operación guardada correctamente'
+      });
 
       await this.cargar();
       const fresca = this.items.find(i => i.id === this.maquinaSeleccionada?.id);

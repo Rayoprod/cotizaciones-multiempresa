@@ -5,7 +5,7 @@ export interface IProducto {
   codigo_sku: string;
   descripcion: string;
   unidad?: string;
-  precio_unitario_base: number | null;
+  precio_unitario_base: number;
   created_at?: string;
   empresa_id: string;
 }

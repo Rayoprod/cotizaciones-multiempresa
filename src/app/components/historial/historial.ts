@@ -428,15 +428,7 @@ export class HistorialComponent implements OnInit {
           cot.oculta = nuevoEstadoOculta;
 
           // 2. Persistencia en base de datos Supabase
-          const { error } = await this.supabase.client
-            .from('cotizaciones')
-            .update({ oculta: nuevoEstadoOculta })
-            .eq('id', cot.id!);
-
-          if (error) {
-            cot.oculta = yaOculta; // revertir en fallo
-            throw error;
-          }
+          await this.supabase.actualizarVisibilidadCotizacion(cot.id!, nuevoEstadoOculta);
 
           this.msg.add({
             severity: nuevoEstadoOculta ? 'warn' : 'success',
@@ -508,24 +500,23 @@ export class HistorialComponent implements OnInit {
 
     try {
       if (this.opcionEditar.accionOriginal === 'anular') {
-        const { error } = await this.supabase.client
-          .from('cotizaciones').update({ estado: 'ANULADA' }).eq('id', cot.id!);
-        if (error) throw error;
+        await this.supabase.actualizarEstado(cot.id!, 'ANULADA');
       }
 
       let empresaDestino = this.empresaActiva;
       if (this.opcionEditar.empresaOrigen === 'otra') {
-  empresaDestino = this.empresasDisponibles.find(
-    e => e.id === this.opcionEditar.empresaSeleccionadaId
-  );
-  if (!empresaDestino) throw new Error('No se encontró la empresa seleccionada');
-  this.session.setEmpresaActiva(empresaDestino); // ← único cambio
-}
+        empresaDestino = this.empresasDisponibles.find(
+          e => e.id === this.opcionEditar.empresaSeleccionadaId
+        );
+        if (!empresaDestino) throw new Error('No se encontró la empresa seleccionada');
+        this.session.setEmpresaActiva(empresaDestino);
+      }
 
       const borrador = {
         modo: this.opcionEditar.accionOriginal === 'anular' ? 'revision' : 'duplicar',
         folio_padre: cot.folio,
         cotizacion_id: cot.id,
+        cliente_id: cot.cliente_id || null,
         cliente_nombre:     this.obtenerNombreCliente(cot) === 'Sin nombre' ? '' : this.obtenerNombreCliente(cot),
         cliente_documento:  this.obtenerDocumentoCliente(cot),
         cliente_telefono:   cot.cliente_telefono    || '',
