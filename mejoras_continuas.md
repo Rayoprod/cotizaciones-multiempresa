@@ -236,6 +236,23 @@
    2. ESTABILIDAD Y REGISTRO DE USUARIOS:
       - Corregida la desestructuración de retorno en `UsuariosComponent.crearUsuario()`, garantizando la captura correcta del ID de usuario recién registrado y la inserción exitosa en la tabla `profiles`.
       - Agregada la llamada explícita a `cdr.markForCheck()` en los estados de error y finalización para asegurar la reactividad visual inmediata en la estrategia `ChangeDetectionStrategy.OnPush`.
-   3. VERIFICACIÓN Y COMPILACIÓN DE PRODUCCIÓN AOT:
-      - Verificación limpia de TypeScript (`npx tsc --noEmit`) con 0 errores de compilación.
-      - Verificación limpia de empaquetado Angular PWA (`npx ng build --configuration production`) completado con éxito, optimizando los Lazy Chunks y el Service Worker.
+- Wed Aug 12 04:05:00 -05 2026: Consolidador Singleton de Notificaciones Toast, Corrección de Stream PWA Update y Notificaciones Admin:
+   1. SINGLETON MESSAGE & CONFIRMATION SERVICES:
+      - Eliminadas las instancias locales redundantes en los arrays `providers` de todos los componentes y layouts (`LayoutComponent`, `ClientesComponent`, `CotizadorComponent`, `EmpresasComponent`, `HistorialComponent`, `MaquinariaComponent`, `ProductosComponent`, `UsuariosComponent`).
+      - Centralizado el suministro global de `MessageService` y `ConfirmationService` a nivel de inyector raíz en `app.config.ts`, evitando notificaciones huérfanas, consumo innecesario de memoria y garantizando la entrega unificada de avisos Toast en toda la SPA.
+   2. CORRECCIÓN DE STREAM PWA UPDATE SERVICE:
+      - Agregado el operador `first()` al Observable `appRef.isStable` en `PwaUpdateService.initPeriodicCheck()`. Esto asegura que el stream complete tras estabilizarse la app, permitiendo que `concat()` inicie el intervalo de comprobación periódica de actualizaciones PWA cada 5 minutos.
+   3. TOAST NOTIFICATIONS EN ADMIN LAYOUT:
+      - Importado `ToastModule` en `AdminLayoutComponent` e incluidos los elementos `<p-toast>` y `<p-toast key="pwa-update-toast">` en `admin-layout.html`, garantizando la correcta renderización de avisos PWA y notificaciones del sistema en la vista administrativa.
+   4. VERIFICACIÓN Y COMPILACIÓN AOT:
+      - Verificación limpia con `npx ng build` (0 errores) y empaquetado optimizado del Service Worker y Lazy Chunks.
+- Wed Aug 12 05:05:00 -05 2026: Cobertura 100% OnPush, Optimización de Consultas Auth y Blancos Táctiles PWA Globale:
+   1. COBERTURA 100% CHANGE DETECTION ONPUSH:
+      - Inyectado `ChangeDetectionStrategy.OnPush` en `App` (`src/app/app.ts`), consolidando una estrategia de renderizado optimizada y de bajo consumo en el 100% de la jerarquía de componentes.
+   2. OPTIMIZACIÓN DE CONSULTAS A SUPABASE AUTH & PERFILES:
+      - Actualizado `SupabaseService.obtenerPerfil(userId?: string)` para aceptar el ID del usuario directamente.
+      - Refactorizados `LoginComponent`, `LayoutComponent` y `AdminLayoutComponent` para proporcionar el ID del usuario activo previamente autenticado, evitando peticiones HTTP redundantes a `auth.getUser()` durante el arranque y cambio de sesión.
+   3. ERGONOMÍA Y TARGETS TÁCTILES PWA GLOBALES:
+      - Estandarizados blancos táctiles globales en `src/styles.scss` (`min-height: 44px` en botones, campos de texto y dropdowns; `48px` en enlaces de navegación del sidebar) garantizando usabilidad en dispositivos táctiles PWA.
+   4. VERIFICACIÓN DE COMPILACIÓN AOT DE PRODUCCIÓN:
+      - Compilación de producción (`ng build --configuration=production`) 100% limpia en 3.7s con 0 errores de TypeScript.

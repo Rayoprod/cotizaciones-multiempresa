@@ -294,10 +294,11 @@ body.layout-menu-open {
     padding: 0.75rem 1.15rem !important;
   }
 
-  /* Minimum touch targets for mobile usability */
-  .p-button, .p-inputtext, .p-dropdown, .p-autocomplete-input {
-    min-height: 44px !important;
-  }
+}
+
+/* Minimum touch targets for accessibility and touch interaction */
+.p-button, .p-inputtext, .p-dropdown, .p-autocomplete-input {
+  min-height: 44px !important;
 }
 
 .p-dialog-mask {

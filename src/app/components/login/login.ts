@@ -53,7 +53,7 @@ export class LoginComponent {
 
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      const perfil = await this.supabaseSvc.obtenerPerfil();
+      const perfil = await this.supabaseSvc.obtenerPerfil(data.user?.id);
 
       if (perfil) {
         this.session.setUsuario({

@@ -36,7 +36,6 @@ import { extraerNombreClienteTexto, extraerDocumentoClienteTexto } from '../../m
     DialogModule, DropdownModule, TooltipModule, ToastModule, InputTextareaModule,
     ProgressSpinnerModule, ConfirmDialogModule
   ],
-  providers: [MessageService, ConfirmationService],
   templateUrl: './cotizador.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })

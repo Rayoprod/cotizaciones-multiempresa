@@ -10,6 +10,7 @@ import { DividerModule } from 'primeng/divider';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
+import { ToastModule } from 'primeng/toast';
 
 import { AuthService } from '../../services/auth';
 import { SupabaseService } from '../../services/supabase.service';
@@ -28,7 +29,7 @@ interface NavItem {
   imports: [
     CommonModule, RouterOutlet, RouterLink, RouterLinkActive,
     ButtonModule, AvatarModule, DividerModule, ProgressSpinnerModule,
-    TagModule, TooltipModule
+    TagModule, TooltipModule, ToastModule
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-layout.html'
@@ -178,7 +179,7 @@ export class AdminLayoutComponent implements OnDestroy {
         const sesion = await this.supabase.obtenerSesion();
         const user = sesion?.data?.session?.user;
         if (user?.email) {
-          const perfil = await this.supabase.obtenerPerfil();
+          const perfil = await this.supabase.obtenerPerfil(user.id);
           if (perfil?.rol) {
             this.session.setUsuario({
               id: user.id,

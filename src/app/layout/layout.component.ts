@@ -29,7 +29,6 @@ import { InputTextModule } from 'primeng/inputtext';
     CommonModule, FormsModule, RouterLink, RouterLinkActive, RouterOutlet,
     ButtonModule, AvatarModule, DividerModule, OverlayPanelModule, TagModule, TooltipModule, InputTextModule, ToastModule
   ],
-  providers: [MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './layout.component.html'
 })
@@ -231,7 +230,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
           const sesion = await this.supabaseSvc.obtenerSesion();
           const user = sesion?.data?.session?.user;
           if (user?.email) {
-            const perfil = await this.supabaseSvc.obtenerPerfil();
+            const perfil = await this.supabaseSvc.obtenerPerfil(user.id);
             if (perfil?.rol) {
               this.session.setUsuario({
                 id: user.id,

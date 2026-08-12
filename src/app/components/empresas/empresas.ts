@@ -39,7 +39,6 @@ import { SessionContextService } from '../../services/session-context.service';
     ToastModule, TagModule, TooltipModule, ConfirmDialogModule,
     ProgressSpinnerModule, InputTextareaModule
   ],
-  providers: [MessageService, ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './empresas.html',
   styleUrls: ['./empresas.scss']

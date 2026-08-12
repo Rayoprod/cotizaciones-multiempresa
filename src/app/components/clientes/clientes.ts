@@ -27,7 +27,6 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
     InputTextModule, DialogModule, ToolbarModule, ProgressSpinnerModule,
     TagModule, TooltipModule, ToastModule, ConfirmDialogModule
   ],
-  providers: [MessageService, ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './clientes.html'
 })

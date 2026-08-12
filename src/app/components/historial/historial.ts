@@ -65,7 +65,6 @@ interface OpcionEditar {
     ToggleButtonModule,
     DividerModule
   ],
-  providers: [MessageService, ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './historial.html',
   styleUrls: ['./historial.scss']

@@ -32,7 +32,6 @@ import { SessionContextService } from '../../services/session-context.service';
     CheckboxModule, ConfirmDialogModule, ProgressBarModule, ProgressSpinnerModule,
     DropdownModule, CalendarModule, TableModule
   ],
-  providers: [MessageService, ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './maquinaria.html'
 })

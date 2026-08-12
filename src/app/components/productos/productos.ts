@@ -30,7 +30,6 @@ import { InputTextareaModule } from 'primeng/inputtextarea';
     InputTextModule, InputNumberModule, InputTextareaModule, DialogModule, ToolbarModule,
     TagModule, TooltipModule, ProgressSpinnerModule, ToastModule, ConfirmDialogModule
   ],
-  providers: [MessageService, ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './productos.html'
 })

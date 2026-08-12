@@ -35,7 +35,6 @@ interface Usuario {
     ToastModule, ConfirmDialogModule, TooltipModule, CheckboxModule,
     ProgressSpinnerModule
   ],
-  providers: [MessageService, ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './usuarios.html',
   styleUrl: './usuarios.scss'

@@ -1,6 +1,6 @@
 import { Injectable, Optional, signal, ApplicationRef } from '@angular/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
-import { filter } from 'rxjs/operators';
+import { filter, first } from 'rxjs/operators';
 import { interval, concat } from 'rxjs';
 import { MessageService } from 'primeng/api';
 
@@ -44,7 +44,7 @@ export class PwaUpdateService {
     if (!this.swUpdate?.isEnabled) return;
 
     // Esperar a que la aplicación esté estable antes de iniciar chequeos periódicos cada 5 minutos
-    const appIsStable$ = this.appRef.isStable.pipe(filter(isStable => isStable === true));
+    const appIsStable$ = this.appRef.isStable.pipe(filter(isStable => isStable === true), first());
     const everyFiveMinutes$ = interval(5 * 60 * 1000);
     const checkInterval$ = concat(appIsStable$, everyFiveMinutes$);
 

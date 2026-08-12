@@ -364,12 +364,12 @@ export class SupabaseService {
 
   // ─── PERFILES Y ROLES ─────────────────────────────────────────────────────
 
-  async obtenerPerfil(): Promise<{ rol: string } | null> {
-    const usuario = await this.obtenerUsuarioActual();
-    if (!usuario) return null;
+  async obtenerPerfil(userId?: string): Promise<{ rol: string } | null> {
+    const id = userId || (await this.obtenerUsuarioActual())?.id;
+    if (!id) return null;
 
     const { data, error } = await this.client
-      .from('profiles').select('rol').eq('id', usuario.id).single();
+      .from('profiles').select('rol').eq('id', id).single();
 
     if (error) return null;
     return data;
