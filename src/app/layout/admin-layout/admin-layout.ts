@@ -106,11 +106,9 @@ export class AdminLayoutComponent implements OnDestroy {
   }
 
   cerrarMenu() {
-    if (this.sidebarAbierto) {
-      this.sidebarAbierto = false;
-      this.actualizarBodyLock();
-      this.cdr.markForCheck();
-    }
+    this.sidebarAbierto = false;
+    this.actualizarBodyLock();
+    this.cdr.markForCheck();
   }
 
   private actualizarBodyLock() {

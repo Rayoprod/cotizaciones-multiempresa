@@ -146,11 +146,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   cerrarMenu() {
-    if (this.menuAbierto) {
-      this.menuAbierto = false;
-      this.actualizarBodyLock();
-      this.cdr.markForCheck();
-    }
+    this.menuAbierto = false;
+    this.actualizarBodyLock();
+    this.cdr.markForCheck();
   }
 
   private actualizarBodyLock() {

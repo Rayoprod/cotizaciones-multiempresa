@@ -24,7 +24,8 @@ html, body {
   padding: 0;
   height: 100%;
   height: 100dvh;
-  width: 100vw;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
   font-family: var(--font-family);
   background-color: var(--surface-ground-bg);
@@ -33,9 +34,13 @@ html, body {
   touch-action: manipulation;
 }
 
+.h-svh { height: 100svh !important; }
+.h-dvh { height: 100dvh !important; }
+
 body.layout-menu-open {
   overflow: hidden !important;
-  touch-action: none !important;
+  overscroll-behavior: none !important;
+  touch-action: pan-y !important;
 }
 
 /* ── Typography & Headings Polish ────────────────────────── */
@@ -159,6 +164,7 @@ h1, h2, h3, h4, h5, h6 {
 /* ── Layout & Mobile Drawer Z-Index & Touch Fixes ──────── */
 .z-layout-backdrop {
   z-index: 998 !important;
+  touch-action: none;
 }
 
 .z-layout-sidebar {
@@ -169,8 +175,8 @@ h1, h2, h3, h4, h5, h6 {
 .app-scroll-container {
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  overscroll-behavior-y: contain !important;
   touch-action: pan-y !important;
+  overscroll-behavior-y: auto !important;
 }
 
 /* Outlet main scroll container padding */
@@ -178,7 +184,8 @@ h1, h2, h3, h4, h5, h6 {
   flex: 1 1 0%;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
-  overscroll-behavior-y: contain !important;
+  touch-action: pan-y !important;
+  overscroll-behavior-y: auto !important;
   padding-bottom: max(1.5rem, calc(1.5rem + var(--sab))) !important;
 }
 
@@ -186,9 +193,19 @@ h1, h2, h3, h4, h5, h6 {
 .mobile-sidebar-drawer {
   will-change: transform, visibility;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s ease;
+  touch-action: pan-y !important;
 }
 
 @media screen and (max-width: 767.98px) {
+  .mobile-sidebar-drawer {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    height: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
   .mobile-sidebar-drawer.closed {
     transform: translateX(-100%) !important;
     pointer-events: none !important;
