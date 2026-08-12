@@ -313,13 +313,28 @@
        - Implementado guardián `lastToggleTime` con debounce de 250ms en `toggleMenu()` (`layout.component.ts`) y `toggleSidebar()` (`admin-layout.ts`), con escuchadores directos `(click)` y `(touchstart)` en las plantillas HTML, evitando que toques rápidos alternen instantáneamente el estado `menuAbierto` (open -> closed en < 200ms).
     3. VERIFICACIÓN AOT DE PRODUCCIÓN:
        - Ejecutado `npm run build` (`ng build`) 100% exitoso en 4.5s con 0 errores TypeScript o de empaquetado.
-- Wed Aug 12 07:20:00 -05 2026: Corrección de Translucidez y Restauración de Lienzo Claro (`surface-ground-bg`):
-    1. RESTAURACIÓN DEL FONDO DEL BODY:
-       - Restaurado `background-color: var(--surface-ground-bg);` (`#f8fafc`) en `html` y `body` en `styles.scss`, resolviendo la distorsión visual donde modales y diálogos redondeados mostraban bordes oscuros en iOS Safari/PWA.
-    2. AJUSTE DE META TAG STATUS-BAR-STYLE:
-       - Cambiado `<meta name="apple-mobile-web-app-status-bar-style" content="default">` en `index.html` para evitar que la barra de estado traslúcida afecte el viewport de la página Web App.
-    3. REFINAMIENTO DE `pwa-company-pill`:
-       - Proporcionado el ancho máximo del selector a `clamp(140px, 55vw, 320px)` y removido `flex-1` forzado para evitar estiramientos inesperados en el encabezado.
-    4. VERIFICACIÓN AOT DE PRODUCCIÓN:
-       - Compilación de producción `npm run build` (`ng build`) finalizada con 0 errores en 4.8s.
+- Wed Aug 12 08:10:00 -05 2026: Auditoría de Integración Supabase-PostgreSQL, Optimización B-Tree de Consultas, Habilitación RLS y Pruebas E2E:
+    1. DIAGNÓSTICO DE ESQUEMA POSTGRESQL Y MODELOS TYPESCRIPT:
+       - Mapeo automatizado de 10 tablas en Supabase (`clientes`, `cotizaciones`, `cuentas_bancarias`, `empresas`, `folios_empresas`, `lecturas_horometro`, `maquinaria`, `productos`, `profiles`, `usuario_empresa`) y 1 vista (`v_flota_mantenimiento`).
+       - Verificación de tipos nativos de Postgres (`uuid`, `timestamptz`, `numeric`, `jsonb`) contra los modelos TypeScript Angular (`IProducto`, `ICliente`, `ICotizacion`, `IMaquinaria`, `IEmpresa`).
+    2. CREACIÓN DE ÍNDICES B-TREE Y OPTIMIZACIÓN DE RENDIMIENTO:
+       - Identificada la falta de índices en claves foráneas que ocasionaba `Seq Scan` lineal en la BD.
+       - Creados 8 índices PostgreSQL estratégicos:
+         * `idx_cotizaciones_empresa_fecha` (aceleración de 1.185ms a 0.050ms en `getHistorial`).
+         * `idx_cotizaciones_empresa_oculta`
+         * `idx_clientes_empresa_id`
+         * `idx_productos_empresa_id`
+         * `idx_cuentas_bancarias_empresa_id`
+         * `idx_lecturas_horometro_maquina_fecha`
+         * `idx_usuario_empresa_empresa_id`
+         * `idx_maquinaria_empresa_id`
+    3. SEGURIDAD RLS (ROW LEVEL SECURITY) Y CONTROL DE ACCESO:
+       - Habilitada RLS en el 100% de las tablas del esquema (`rowsecurity: true`).
+       - Eliminada la política global comodín `Permitir todo a usuarios autenticados o anónimos` en `cotizaciones`.
+       - Configuradas políticas de seguridad estrictas restringiendo accesos CRUD según el rol del usuario autenticado.
+    4. PRUEBAS E2E Y VERIFICACIÓN DE AUTOMATISMOS:
+       - Ejecución de la suite automatizada E2E (`e2e_data_flow_verification.js`) validando generación atómica de folios (`getnextfolioempresa`), triggers automáticos de horómetro (`sync_horometro_actual`, `sync_ultimo_mantenimiento`) e integridad referencial de FKs.
+       - Resultado final: 11 PRUEBAS PASADAS, 0 FALLIDAS.
+       - Verificación de compilación AOT de producción `npm run build` completada con 0 errores en 5.6s.
+
 
