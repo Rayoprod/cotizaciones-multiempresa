@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, ChangeDetectorRef, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ChangeDetectorRef, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -33,7 +33,7 @@ import { InputTextModule } from 'primeng/inputtext';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './layout.component.html'
 })
-export class LayoutComponent implements OnInit {
+export class LayoutComponent implements OnInit, OnDestroy {
   menuAbierto = false;
   estaOnline = true;
 
@@ -54,6 +54,13 @@ export class LayoutComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(() => this.cerrarMenu());
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    if (this.menuAbierto) {
+      this.cerrarMenu();
+    }
   }
 
   @HostListener('window:online')
@@ -119,22 +126,41 @@ export class LayoutComponent implements OnInit {
     await this.inicializarSesion();
   }
 
+  ngOnDestroy() {
+    if (typeof document !== 'undefined') {
+      document.body.classList.remove('layout-menu-open');
+    }
+  }
+
   @HostListener('window:resize')
   onResize() {
     if (window.innerWidth >= 768 && this.menuAbierto) {
-      this.menuAbierto = false;
-      this.cdr.markForCheck();
+      this.cerrarMenu();
     }
   }
 
   toggleMenu() {
     this.menuAbierto = !this.menuAbierto;
+    this.actualizarBodyLock();
     this.cdr.markForCheck();
   }
 
   cerrarMenu() {
-    this.menuAbierto = false;
-    this.cdr.markForCheck();
+    if (this.menuAbierto) {
+      this.menuAbierto = false;
+      this.actualizarBodyLock();
+      this.cdr.markForCheck();
+    }
+  }
+
+  private actualizarBodyLock() {
+    if (typeof document !== 'undefined') {
+      if (this.menuAbierto) {
+        document.body.classList.add('layout-menu-open');
+      } else {
+        document.body.classList.remove('layout-menu-open');
+      }
+    }
   }
 
   volverAlAdmin() {

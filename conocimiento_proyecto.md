@@ -94,10 +94,6 @@
 - **Creación Directa e Integral de Usuarios**: Implementado modal de creación de usuario en `UsuariosComponent` permitiendo registrar nuevas cuentas con email, contraseña temporal y rol asignado (`admin`, `admin_empresa`, `vendedor`) mediante API de autenticación e inyección en `SessionContextService`.
 - **Estandarización Total OnPush y Animaciones UX/UI PWA**: Aplicado `ChangeDetectionStrategy.OnPush` en el 100% de los componentes de la SPA (incluyendo `LayoutComponent`, `AdminLayoutComponent` y `LoginComponent`). Integrada la micro-animación CSS `@keyframes modalScaleUp` en `styles.scss` con desenfoque de fondo en modales (`backdrop-filter: blur(8px)`), garantizando fluidez táctil y respuesta visual instantánea en dispositivos móviles PWA.
 - **Sistema Autónomo de Detección de Nuevas Versiones y Auto-Actualización PWA**: Configurado `PwaUpdateService` con `registerImmediately` en `app.config.ts`, chequeo periódico cada 5 minutos, detección en `visibilitychange` al retornar el foco de ventana y manejo del evento `unrecoverable` para evitar estados obsoletos de caché. Integrado botón relámpago `Actualizar App` y Toast interactivo persistente `<p-toast key="pwa-update-toast">`.
-
-
-
-
-
-
-
+98: - **Refactorización Integral del Main Layout & Solución a Bugs PWA de Menú Sandwich y Scroll**:
+   - **Menú Sandwich / Drawer PWA**: Eliminada la directiva `pTooltip` del botón toggle hamburguesa que interceptaba los eventos `touchstart`/`touchend` en navegadores móviles y PWAs standalone. Asignados z-indexes elevados (`z-layout-backdrop: 998`, `z-layout-sidebar: 999`) para prevenir que el menú quede atrapado debajo de modales u overlays de PrimeNG. Añadidas las clases CSS `closed` con `pointer-events: none` y `visibility: hidden` cuando el drawer está cerrado para evitar intercepciones de gestos laterales. Removidos los cierres tempranos de click en los tags `<a>` del sidebar delegando el cierre fluido a la suscripción de `NavigationEnd`. Incorporados listener de tecla Escape y clase de bloqueo `body.layout-menu-open` para eliminar el desplazamiento fantasma de fondo.
+   - **Comportamiento del Scroll & Viewport Dynamic Height (`100dvh`)**: Actualizados los contenedores raíz del layout de `h-screen` (`100vh`) a `100dvh` (`h-svh h-dvh`), eliminando el desbordamiento vertical y los bloqueos de scroll causados por la barra de navegación del navegador en dispositivos móviles. Integrada la clase de scroll `.app-scroll-container` con `-webkit-overflow-scrolling: touch`, `overscroll-behavior-y: contain` y `touch-action: pan-y` para un desplazamiento inercial nativo e impecable en iOS y Android.

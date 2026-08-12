@@ -1,4 +1,4 @@
-import { Component, inject, HostListener, ChangeDetectorRef, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, HostListener, ChangeDetectorRef, DestroyRef, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -33,7 +33,7 @@ interface NavItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-layout.html'
 })
-export class AdminLayoutComponent {
+export class AdminLayoutComponent implements OnDestroy {
   private auth       = inject(AuthService);
   private router     = inject(Router);
   private cdr        = inject(ChangeDetectorRef);
@@ -85,22 +85,48 @@ export class AdminLayoutComponent {
       .subscribe(() => this.cerrarMenu());
   }
 
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    if (this.sidebarAbierto) {
+      this.cerrarMenu();
+    }
+  }
+
   @HostListener('window:resize')
   onResize() {
     if (window.innerWidth >= 768 && this.sidebarAbierto) {
-      this.sidebarAbierto = false;
-      this.cdr.markForCheck();
+      this.cerrarMenu();
     }
   }
 
   toggleSidebar() {
     this.sidebarAbierto = !this.sidebarAbierto;
+    this.actualizarBodyLock();
     this.cdr.markForCheck();
   }
 
   cerrarMenu() {
-    this.sidebarAbierto = false;
-    this.cdr.markForCheck();
+    if (this.sidebarAbierto) {
+      this.sidebarAbierto = false;
+      this.actualizarBodyLock();
+      this.cdr.markForCheck();
+    }
+  }
+
+  private actualizarBodyLock() {
+    if (typeof document !== 'undefined') {
+      if (this.sidebarAbierto) {
+        document.body.classList.add('layout-menu-open');
+      } else {
+        document.body.classList.remove('layout-menu-open');
+      }
+    }
+  }
+
+  ngOnDestroy() {
+    if (typeof document !== 'undefined') {
+      document.body.classList.remove('layout-menu-open');
+    }
   }
 
   operarEmpresa() {

@@ -14,17 +14,36 @@
     </div>
   </ng-template>
 </p-toast>
-<div class="flex h-screen overflow-hidden relative surface-ground">
+<p-toast />
+<p-toast key="pwa-update-toast" position="bottom-center">
+  <ng-template let-message pTemplate="message">
+    <div class="flex flex-column gap-2 w-full p-2">
+      <div class="flex align-items-center gap-2 font-bold text-sm text-900">
+        <i class="pi pi-refresh text-sky-600 text-lg"></i>
+        <span>{{ message.summary }}</span>
+      </div>
+      <div class="text-xs text-700">{{ message.detail }}</div>
+      <div class="flex gap-2 justify-content-end mt-2">
+        <button pButton type="button" label="Actualizar Ahora" icon="pi pi-sync" size="small"
+                class="p-button-sm p-button-primary border-round-lg shadow-2" (click)="reloadPwaApp()"></button>
+      </div>
+    </div>
+  </ng-template>
+</p-toast>
+<div class="flex h-screen h-svh h-dvh overflow-hidden relative surface-ground w-full">
 
   <!-- Backdrop para móvil -->
   <div *ngIf="menuAbierto"
-       class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-60 z-4 backdrop-blur"
-       (click)="cerrarMenu()">
+       class="md:hidden fixed top-0 left-0 w-full h-full bg-black-alpha-60 z-layout-backdrop backdrop-blur"
+       (click)="cerrarMenu()"
+       (touchstart)="cerrarMenu()">
   </div>
 
   <!-- Sidebar principal -->
-  <aside class="fixed md:static top-0 left-0 z-5 h-full shadow-4 flex flex-column transition-transform transition-duration-300 select-none"
+  <aside class="mobile-sidebar-drawer fixed md:static top-0 left-0 z-layout-sidebar h-full shadow-4 flex flex-column select-none"
          style="width: 18.5rem; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color: #f8fafc;"
+         [class.open]="menuAbierto"
+         [class.closed]="!menuAbierto"
          [ngClass]="menuAbierto ? 'translate-x-0' : '-translate-x-100 md:translate-x-0'">
 
     <!-- Encabezado de la Empresa -->
@@ -56,7 +75,7 @@
     </div>
 
     <!-- Navegación de menú -->
-    <div class="flex-1 overflow-y-auto p-3">
+    <div class="flex-1 app-scroll-container p-3">
       <div class="mb-3 px-2" style="color: rgba(255,255,255,0.45); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;">
         Ventas y Operaciones
       </div>
@@ -64,8 +83,7 @@
 
         <a routerLink="/cotizador" routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-sky-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
-           (click)="cerrarMenu()">
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white">
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-sky-500-alpha-20 text-sky-400">
             <i class="pi pi-plus-circle text-base"></i>
           </div>
@@ -74,8 +92,7 @@
 
         <a routerLink="/historial" routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-indigo-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
-           (click)="cerrarMenu()">
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white">
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-indigo-500-alpha-20 text-indigo-400">
             <i class="pi pi-history text-base"></i>
           </div>
@@ -84,8 +101,7 @@
 
         <a routerLink="/productos" routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-emerald-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
-           (click)="cerrarMenu()">
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white">
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-emerald-500-alpha-20 text-emerald-400">
             <i class="pi pi-box text-base"></i>
           </div>
@@ -94,8 +110,7 @@
 
         <a routerLink="/clientes" routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-amber-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
-           (click)="cerrarMenu()">
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white">
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-amber-500-alpha-20 text-amber-400">
             <i class="pi pi-users text-base"></i>
           </div>
@@ -104,8 +119,7 @@
 
         <a routerLink="/maquinaria" routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-purple-400"
            [routerLinkActiveOptions]="{ exact: false }"
-           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white"
-           (click)="cerrarMenu()">
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white">
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-purple-500-alpha-20 text-purple-400">
             <i class="pi pi-wrench text-base"></i>
           </div>
@@ -156,7 +170,7 @@
   </aside>
 
   <!-- Contenedor Principal (Header superior + Main Content) -->
-  <div class="flex-1 flex flex-column min-w-0 overflow-hidden z-1">
+  <div class="flex-1 flex flex-column min-w-0 overflow-hidden z-1 h-full">
 
     <!-- Top Header Bar (Desktop & Mobile) -->
     <header class="pwa-top-header flex align-items-center justify-content-between px-3 md:px-4 z-2">
@@ -164,7 +178,6 @@
         <button pButton type="button" icon="pi pi-bars" [text]="true" [rounded]="true"
                 class="p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all p-2 flex align-items-center justify-content-center border-none cursor-pointer"
                 (click)="toggleMenu()"
-                pTooltip="Alternar menú lateral" tooltipPosition="bottom"
                 aria-label="Menú principal"></button>
 
         <!-- Company Switcher Pill -->
@@ -264,7 +277,7 @@
     </p-overlayPanel>
 
     <!-- Main View Outlet -->
-    <main class="flex-1 overflow-auto p-2 md:p-4" style="background: #f8fafc;">
+    <main class="flex-1 layout-router-outlet app-scroll-container p-2 md:p-4" style="background: #f8fafc;">
       <router-outlet></router-outlet>
     </main>
   </div>
