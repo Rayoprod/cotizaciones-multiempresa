@@ -107,8 +107,60 @@
       </div>
     </div>
 
-    <!-- Tabla -->
-    <div class="bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
+    <!-- Vista Mobile Cards (< 768px) -->
+    <div class="block md:hidden flex flex-column gap-3 mb-4">
+      <div *ngFor="let m of itemsFiltrados" class="bg-white border-round-2xl p-3 shadow-1 border-1 surface-border flex flex-column gap-3">
+        <div class="flex align-items-center justify-content-between gap-2 min-w-0">
+          <div class="flex align-items-center gap-2 min-w-0">
+            <span class="font-bold text-sky-700 text-base bg-sky-50 px-2 py-1 border-round-md flex-shrink-0">
+              {{ m.horometro_actual || 0 | number:'1.1-1' }} h
+            </span>
+            <p-tag [value]="getEtiquetaEstadoMaquina(m.estado)"
+                   [severity]="getColorEstadoMaquina(m.estado)" styleClass="text-xs font-bold border-round-md flex-shrink-0" />
+          </div>
+          <div class="flex gap-1 flex-shrink-0">
+            <p-button icon="pi pi-clock" severity="info" [text]="true" [rounded]="true" size="small"
+                      styleClass="w-2.5rem h-2.5rem" pTooltip="Horómetro" (onClick)="abrirDialogoOperaciones(m)" />
+            <p-button icon="pi pi-pencil" severity="info" [text]="true" [rounded]="true" size="small"
+                      styleClass="w-2.5rem h-2.5rem" pTooltip="Editar" (onClick)="editar(m)" />
+            <p-button icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true" size="small"
+                      styleClass="w-2.5rem h-2.5rem" pTooltip="Eliminar" (onClick)="confirmarEliminar(m)" />
+          </div>
+        </div>
+
+        <div class="min-w-0">
+          <p class="font-bold text-900 text-base m-0 line-height-2 overflow-hidden text-overflow-ellipsis word-break-break-word">
+            {{ m.nombre }}
+          </p>
+          <span class="text-xs text-500 font-medium block mt-1 overflow-hidden text-overflow-ellipsis white-space-nowrap">
+            {{ m.tipo || 'Sin especificación' }}{{ m.marca ? ' · ' + m.marca : '' }}{{ m.modelo ? ' · ' + m.modelo : '' }}
+          </span>
+        </div>
+
+        <div class="pt-2 border-top-1 surface-border" *ngIf="m.intervalo_mantenimiento">
+          <div class="flex align-items-center justify-content-between mb-1">
+            <span class="text-xs font-bold text-600">Mantenimiento:</span>
+            <p-tag [value]="getEtiquetaEstadoMantenimiento(m.estado_mantenimiento!)"
+                   [severity]="getColorEstadoMantenimiento(m.estado_mantenimiento!)" styleClass="text-xs font-bold border-round-md" />
+          </div>
+          <p-progressBar [value]="(m.porcentaje_progreso! > 100 ? 100 : m.porcentaje_progreso!) || 0"
+                         [color]="(m.porcentaje_progreso! > 100 ? '#ef4444' : m.porcentaje_progreso! > 85 ? '#f59e0b' : '#10b981')"
+                         [style]="{ height: '6px' }" styleClass="border-round-md mb-1" />
+          <span class="text-xs text-500 font-medium">
+            {{ (m.horas_restantes! > 0) ? (m.horas_restantes! | number:'1.0-0') + ' h restantes' : 'Vencido por ' + (-m.horas_restantes! | number:'1.0-0') + ' h' }}
+          </span>
+        </div>
+      </div>
+
+      <div *ngIf="itemsFiltrados.length === 0" class="bg-white border-round-2xl p-5 text-center text-500 shadow-1 surface-border border-1">
+        <i class="pi pi-truck text-5xl mb-3 opacity-30"></i>
+        <p class="font-bold text-900 m-0">No se encontraron equipos</p>
+        <p class="text-sm m-0 mt-1">Intenta cambiar los parámetros de búsqueda o agregar un nuevo equipo</p>
+      </div>
+    </div>
+
+    <!-- Desktop Table View (>= 768px) -->
+    <div class="hidden md:block bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
       <p-table [value]="itemsFiltrados" [rows]="10" [paginator]="true" [rowHover]="true"
                styleClass="p-datatable-sm" [showCurrentPageReport]="true"
                currentPageReportTemplate="{first}-{last} de {totalRecords} equipos">
@@ -124,9 +176,9 @@
         <ng-template pTemplate="body" let-m>
           <tr>
             <td>
-              <div class="flex flex-column">
-                <span class="font-bold text-900 text-base">{{ m.nombre }}</span>
-                <span class="text-xs text-500 font-medium">{{ m.tipo || 'Sin especificación' }}{{ m.marca ? ' · ' + m.marca : '' }}{{ m.modelo ? ' · ' + m.modelo : '' }}</span>
+              <div class="flex flex-column max-w-20rem overflow-hidden">
+                <span class="font-bold text-900 text-base text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="m.nombre">{{ m.nombre }}</span>
+                <span class="text-xs text-500 font-medium text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ m.tipo || 'Sin especificación' }}{{ m.marca ? ' · ' + m.marca : '' }}{{ m.modelo ? ' · ' + m.modelo : '' }}</span>
               </div>
             </td>
             <td>

@@ -72,26 +72,61 @@
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
-      <p-table #dt [value]="productos" [rows]="10" [paginator]="true"
-               [globalFilterFields]="['codigo_sku', 'descripcion']"
-               [rowHover]="true" styleClass="p-datatable-sm">
+    <!-- Buscador y Contador -->
+    <div class="bg-white border-round-2xl shadow-1 p-3 md:p-4 mb-4 border-1 surface-border">
+      <div class="flex flex-column sm:flex-row align-items-stretch sm:align-items-center justify-content-between gap-3">
+        <span class="font-bold text-900 text-base">
+          Catálogo Activo (<span class="text-sky-600 font-extrabold">{{ productosFiltrados.length }}</span>)
+        </span>
+        <div class="relative flex align-items-center w-full sm:w-20rem">
+          <i class="pi pi-search absolute pl-3 text-400"></i>
+          <input pInputText type="text" [(ngModel)]="terminoBusqueda" class="w-full border-round-xl pl-6 text-sm"
+                 placeholder="Buscar SKU o descripción..." />
+        </div>
+      </div>
+    </div>
 
-        <ng-template pTemplate="caption">
-          <div class="flex align-items-center justify-content-between gap-3 p-3 flex-wrap bg-white border-bottom-1 surface-border">
-            <span class="font-bold text-900 text-base">
-              Productos (<span class="text-sky-600">{{ productos.length }}</span>)
+    <!-- Vista Mobile Cards (< 768px) -->
+    <div class="block md:hidden flex flex-column gap-3 mb-4">
+      <div *ngFor="let producto of productosFiltrados" class="bg-white border-round-2xl p-3 shadow-1 border-1 surface-border flex flex-column gap-3">
+        <div class="flex align-items-center justify-content-between gap-2 min-w-0">
+          <div class="flex align-items-center gap-2 min-w-0">
+            <span class="font-mono text-xs font-bold text-sky-700 bg-sky-50 px-2 py-1 border-round-md flex-shrink-0">
+              {{ producto.codigo_sku || 'S/C' }}
             </span>
-            <div class="relative flex align-items-center w-full md:w-auto">
-              <i class="pi pi-search absolute pl-3 text-400"></i>
-              <input pInputText type="text" class="w-full md:w-20rem border-round-xl pl-6"
-                     #filterInput
-                     (input)="dt.filterGlobal(filterInput.value, 'contains')"
-                     placeholder="Buscar SKU o descripción..." />
-            </div>
+            <p-tag [value]="producto.unidad || 'UND'" severity="info" styleClass="text-xs font-bold border-round-md flex-shrink-0" />
           </div>
-        </ng-template>
+          <div class="flex gap-1 flex-shrink-0">
+            <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" size="small"
+                      styleClass="w-2.5rem h-2.5rem" pTooltip="Editar" (onClick)="editarProducto(producto)" />
+            <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" size="small"
+                      styleClass="w-2.5rem h-2.5rem" pTooltip="Eliminar" (onClick)="confirmarBorrarProducto(producto)" />
+          </div>
+        </div>
+
+        <div class="min-w-0">
+          <p class="font-bold text-900 text-base m-0 line-height-2 overflow-hidden text-overflow-ellipsis word-break-break-word">
+            {{ producto.descripcion }}
+          </p>
+        </div>
+
+        <div class="flex align-items-center justify-content-between pt-2 border-top-1 surface-border">
+          <span class="text-xs text-500 font-bold uppercase tracking-wider">Precio Unitario Base</span>
+          <span class="font-extrabold text-emerald-600 text-lg">S/ {{ producto.precio_unitario_base | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div *ngIf="productosFiltrados.length === 0" class="bg-white border-round-2xl p-5 text-center text-500 shadow-1 surface-border border-1">
+        <i class="pi pi-box text-5xl mb-3 opacity-30"></i>
+        <p class="font-bold text-900 m-0">No se encontraron productos</p>
+        <p class="text-sm m-0 mt-1">Intenta con otro término de búsqueda o agrega un nuevo producto</p>
+      </div>
+    </div>
+
+    <!-- Desktop Table View (>= 768px) -->
+    <div class="hidden md:block bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
+      <p-table [value]="productosFiltrados" [rows]="10" [paginator]="true"
+               [rowHover]="true" styleClass="p-datatable-sm">
 
         <ng-template pTemplate="header">
           <tr>
@@ -110,7 +145,11 @@
                 {{ producto.codigo_sku || 'S/C' }}
               </span>
             </td>
-            <td class="font-bold text-900">{{ producto.descripcion }}</td>
+            <td class="font-bold text-900">
+              <div class="text-overflow-ellipsis overflow-hidden white-space-nowrap max-w-25rem" [pTooltip]="producto.descripcion">
+                {{ producto.descripcion }}
+              </div>
+            </td>
             <td><p-tag [value]="producto.unidad || 'UND'" severity="info" styleClass="text-xs font-bold border-round-md" /></td>
             <td class="font-bold text-emerald-600 text-right text-base">S/ {{ producto.precio_unitario_base | number:'1.2-2' }}</td>
             <td class="text-center">

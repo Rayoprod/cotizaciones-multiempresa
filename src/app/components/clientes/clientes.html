@@ -70,25 +70,68 @@
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
-      <p-table #dt [value]="clientes" [rows]="10" [paginator]="true"
-               [globalFilterFields]="['documento_identidad', 'nombre_razon_social', 'correo']"
-               [rowHover]="true" styleClass="p-datatable-sm">
+    <!-- Buscador Global y Contador -->
+    <div class="bg-white border-round-2xl shadow-1 p-3 md:p-4 mb-4 border-1 surface-border">
+      <div class="flex flex-column sm:flex-row align-items-stretch sm:align-items-center justify-content-between gap-3">
+        <span class="font-bold text-900 text-base">
+          Clientes Cartera (<span class="text-sky-600 font-extrabold">{{ clientesFiltrados.length }}</span>)
+        </span>
+        <div class="relative flex align-items-center w-full sm:w-20rem">
+          <i class="pi pi-search absolute pl-3 text-400"></i>
+          <input pInputText type="text" [(ngModel)]="terminoBusqueda" class="w-full border-round-xl pl-6 text-sm"
+                 placeholder="Buscar DNI, RUC o nombre..." />
+        </div>
+      </div>
+    </div>
 
-        <ng-template pTemplate="caption">
-          <div class="flex align-items-center justify-content-between gap-3 p-3 flex-wrap bg-white border-bottom-1 surface-border">
-            <span class="font-bold text-900 text-base">
-              Clientes (<span class="text-sky-600">{{ clientes.length }}</span>)
-            </span>
-            <div class="relative flex align-items-center w-full md:w-auto">
-              <i class="pi pi-search absolute pl-3 text-400"></i>
-              <input pInputText type="text" class="w-full md:w-20rem border-round-xl pl-6"
-                     (input)="dt.filterGlobal($any($event.target).value, 'contains')"
-                     placeholder="Buscar DNI, RUC o nombre..." />
-            </div>
+    <!-- Vista Mobile Cards (< 768px) -->
+    <div class="block md:hidden flex flex-column gap-3 mb-4">
+      <div *ngFor="let cliente of clientesFiltrados" class="bg-white border-round-2xl p-3 shadow-1 border-1 surface-border flex flex-column gap-3">
+        <div class="flex align-items-center justify-content-between gap-2 min-w-0">
+          <span class="font-mono text-xs font-bold text-sky-700 bg-sky-50 px-2 py-1 border-round-md flex-shrink-0">
+            {{ cliente.documento_identidad }}
+          </span>
+          <div class="flex gap-1 flex-shrink-0">
+            <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" size="small"
+                      styleClass="w-2.5rem h-2.5rem" pTooltip="Editar" (onClick)="editarCliente(cliente)" />
+            <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" size="small"
+                      styleClass="w-2.5rem h-2.5rem" pTooltip="Eliminar" (onClick)="confirmarBorrarCliente(cliente)" />
           </div>
-        </ng-template>
+        </div>
+
+        <div class="min-w-0">
+          <p class="font-bold text-900 text-base m-0 line-height-2 overflow-hidden text-overflow-ellipsis word-break-break-word">
+            {{ cliente.nombre_razon_social }}
+          </p>
+        </div>
+
+        <div class="flex flex-column gap-2 pt-2 border-top-1 surface-border text-xs text-700">
+          <div class="flex align-items-center gap-2 min-w-0" *ngIf="cliente.telefono">
+            <i class="pi pi-phone text-emerald-600 text-sm flex-shrink-0"></i>
+            <span class="font-medium text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ cliente.telefono }}</span>
+          </div>
+          <div class="flex align-items-center gap-2 min-w-0" *ngIf="cliente.correo">
+            <i class="pi pi-envelope text-indigo-600 text-sm flex-shrink-0"></i>
+            <span class="font-medium text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ cliente.correo }}</span>
+          </div>
+          <div class="flex align-items-center gap-2 min-w-0" *ngIf="cliente.direccion">
+            <i class="pi pi-map-marker text-amber-600 text-sm flex-shrink-0"></i>
+            <span class="font-medium text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ cliente.direccion }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="clientesFiltrados.length === 0" class="bg-white border-round-2xl p-5 text-center text-500 shadow-1 surface-border border-1">
+        <i class="pi pi-users text-5xl mb-3 opacity-30"></i>
+        <p class="font-bold text-900 m-0">No se encontraron clientes</p>
+        <p class="text-sm m-0 mt-1">Intenta con otro término de búsqueda o agrega un nuevo cliente</p>
+      </div>
+    </div>
+
+    <!-- Desktop Table View (>= 768px) -->
+    <div class="hidden md:block bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
+      <p-table [value]="clientesFiltrados" [rows]="10" [paginator]="true"
+               [rowHover]="true" styleClass="p-datatable-sm">
 
         <ng-template pTemplate="header">
           <tr>
@@ -107,9 +150,17 @@
                 {{ cliente.documento_identidad }}
               </span>
             </td>
-            <td class="font-bold text-900">{{ cliente.nombre_razon_social }}</td>
+            <td class="font-bold text-900">
+              <div class="text-overflow-ellipsis overflow-hidden white-space-nowrap max-w-20rem" [pTooltip]="cliente.nombre_razon_social">
+                {{ cliente.nombre_razon_social }}
+              </div>
+            </td>
             <td class="text-sm font-medium text-700">{{ cliente.telefono || '—' }}</td>
-            <td class="text-sm font-medium text-700">{{ cliente.correo || '—' }}</td>
+            <td class="text-sm font-medium text-700">
+              <div class="text-overflow-ellipsis overflow-hidden white-space-nowrap max-w-15rem" [pTooltip]="cliente.correo">
+                {{ cliente.correo || '—' }}
+              </div>
+            </td>
             <td class="text-center">
               <div class="flex gap-1 justify-content-center">
                 <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" size="small"

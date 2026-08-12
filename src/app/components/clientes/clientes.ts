@@ -40,6 +40,18 @@ export class ClientesComponent implements OnInit {
   enviando: boolean = false;
   buscandoApi: boolean = false;
   empresaActiva: any;
+  terminoBusqueda: string = '';
+
+  get clientesFiltrados(): ICliente[] {
+    const q = (this.terminoBusqueda || '').trim().toLowerCase();
+    if (!q) return this.clientes;
+    return this.clientes.filter(c =>
+      (c.documento_identidad && c.documento_identidad.toLowerCase().includes(q)) ||
+      (c.nombre_razon_social && c.nombre_razon_social.toLowerCase().includes(q)) ||
+      (c.correo && c.correo.toLowerCase().includes(q)) ||
+      (c.telefono && c.telefono.includes(q))
+    );
+  }
 
   constructor(
     private supabaseSvc: SupabaseService,

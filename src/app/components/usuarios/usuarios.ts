@@ -43,6 +43,17 @@ export class UsuariosComponent implements OnInit {
 
   usuarios: Usuario[] = [];
   cargando = true;
+  terminoBusqueda: string = '';
+
+  get usuariosFiltrados(): Usuario[] {
+    const q = (this.terminoBusqueda || '').trim().toLowerCase();
+    if (!q) return this.usuarios;
+    return this.usuarios.filter(u =>
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.rol && u.rol.toLowerCase().includes(q)) ||
+      (u.id && u.id.toLowerCase().includes(q))
+    );
+  }
 
   // Modal nuevo usuario
   modalVisible  = false;

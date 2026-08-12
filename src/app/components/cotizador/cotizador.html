@@ -248,19 +248,19 @@
           <!-- CARDS MOBILE -->
           <div class="flex flex-column gap-3 md:hidden">
             <div *ngFor="let item of carrito; let i = index"
-                 class="border-1 surface-border border-round-xl p-3 surface-ground relative">
+                 class="border-1 surface-border border-round-2xl p-3 bg-white shadow-1 relative flex flex-column gap-3">
 
-              <div class="flex align-items-center justify-content-between mb-3 border-bottom-1 surface-border pb-2">
-                <span class="font-bold text-sky-600">Ítem {{ i + 1 }}</span>
-                <button pButton icon="pi pi-trash"
-                        class="p-button-danger p-button-text p-button-rounded p-button-sm"
+              <div class="flex align-items-center justify-content-between border-bottom-1 surface-border pb-2 min-w-0">
+                <span class="font-bold text-sky-700 bg-sky-50 px-2 py-1 border-round-md text-sm">Ítem #{{ i + 1 }}</span>
+                <button pButton icon="pi pi-trash" type="button"
+                        class="p-button-danger p-button-text p-button-rounded p-button-sm w-2.5rem h-2.5rem"
                         (click)="eliminarItem(i)">
                 </button>
               </div>
 
-              <div class="grid p-fluid">
-                <div class="col-12 mb-2">
-                  <label class="text-xs font-bold text-500 uppercase mb-1 block">Descripción</label>
+              <div class="grid p-fluid m-0">
+                <div class="col-12 p-1">
+                  <label class="text-xs font-bold text-700 uppercase mb-1 block">Descripción del Producto / Servicio</label>
                   <p-autoComplete
                     [(ngModel)]="item.descripcion"
                     (ngModelChange)="recalcularItem(item)"
@@ -270,28 +270,28 @@
                     [dropdown]="true" appendTo="body"
                     styleClass="w-full" [maxlength]="100"></p-autoComplete>
                 </div>
-                <div class="col-4 mb-2">
-                  <label class="text-xs font-bold text-500 uppercase mb-1 block">Unidad</label>
+                <div class="col-6 sm:col-4 p-1">
+                  <label class="text-xs font-bold text-700 uppercase mb-1 block">Unidad</label>
                   <input pInputText [(ngModel)]="item.unidad"
                          (ngModelChange)="recalcularTodo()"
-                         class="w-full text-center" placeholder="m3" />
+                         class="w-full text-center font-medium border-round-xl" placeholder="m3 / UNID" />
                 </div>
-                <div class="col-4 mb-2">
-                  <label class="text-xs font-bold text-500 uppercase mb-1 block">Cant.</label>
+                <div class="col-6 sm:col-4 p-1">
+                  <label class="text-xs font-bold text-700 uppercase mb-1 block">Cantidad</label>
                   <p-inputNumber [(ngModel)]="item.cantidad" [min]="0.01" [minFractionDigits]="0" [maxFractionDigits]="2"
                                  (ngModelChange)="recalcularItem(item)"
-                                 inputStyleClass="w-full text-center font-bold"></p-inputNumber>
+                                 inputStyleClass="w-full text-center font-bold border-round-xl"></p-inputNumber>
                 </div>
-                <div class="col-4 mb-2">
-                  <label class="text-xs font-bold text-500 uppercase mb-1 block">P. Unit.</label>
+                <div class="col-12 sm:col-4 p-1">
+                  <label class="text-xs font-bold text-700 uppercase mb-1 block">P. Unitario</label>
                   <p-inputNumber [(ngModel)]="item.precio_unitario"
                                  mode="currency" currency="PEN" locale="es-PE"
                                  (ngModelChange)="recalcularItem(item)"
-                                 inputStyleClass="w-full text-right"></p-inputNumber>
+                                 inputStyleClass="w-full text-right font-semibold border-round-xl"></p-inputNumber>
                 </div>
-                <div class="col-12 pt-2 border-top-1 surface-border flex justify-content-between align-items-center">
-                  <span class="text-sm font-bold text-600">Subtotal</span>
-                  <span class="font-bold text-lg text-emerald-600">
+                <div class="col-12 p-2 mt-2 border-top-1 surface-border flex justify-content-between align-items-center bg-slate-50 border-round-xl min-w-0">
+                  <span class="text-xs font-bold text-700 uppercase">Subtotal</span>
+                  <span class="font-bold text-lg text-emerald-600 overflow-hidden text-overflow-ellipsis white-space-nowrap">
                     S/ {{ item.subtotal | number:'1.2-2' }}
                   </span>
                 </div>
@@ -299,13 +299,13 @@
             </div>
 
             <div *ngIf="carrito.length === 0"
-                 class="text-center py-6 text-500 surface-ground border-round-xl border-1 surface-border">
+                 class="text-center py-6 text-500 bg-white border-round-2xl border-1 surface-border shadow-1 p-4">
               <i class="pi pi-shopping-cart text-4xl mb-2 opacity-30 block"></i>
               <p class="m-0 text-sm font-medium">Aún no hay ítems agregados</p>
             </div>
 
             <button pButton icon="pi pi-plus" label="Agregar ítem"
-                    class="p-button-outlined p-button-primary w-full border-round-xl font-bold"
+                    class="p-button-outlined p-button-primary w-full border-round-xl font-bold py-2"
                     (click)="agregarFila()">
             </button>
           </div>

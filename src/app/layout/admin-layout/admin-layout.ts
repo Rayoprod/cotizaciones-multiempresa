@@ -115,24 +115,18 @@ export class AdminLayoutComponent implements OnDestroy {
   }
 
   toggleSidebar(event?: Event) {
-    const now = Date.now();
-    if (now - this.lastToggleTime < 250) {
-      if (event) {
-        event.stopPropagation();
-        if (typeof event.preventDefault === 'function') {
-          event.preventDefault();
-        }
-      }
-      return;
-    }
-    this.lastToggleTime = now;
-
     if (event) {
       event.stopPropagation();
       if (typeof event.preventDefault === 'function') {
         event.preventDefault();
       }
     }
+    const now = Date.now();
+    if (now - this.lastToggleTime < 150) {
+      return;
+    }
+    this.lastToggleTime = now;
+
     this.sidebarAbierto = !this.sidebarAbierto;
     this.actualizarBodyLock();
     this.cdr.markForCheck();

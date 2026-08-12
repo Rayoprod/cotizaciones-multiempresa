@@ -86,26 +86,24 @@
       </div>
     </div>
 
+    <!-- Buscador Global y Contador -->
+    <div class="bg-white border-round-2xl shadow-1 p-3 md:p-4 mb-4 border-1 surface-border">
+      <div class="flex flex-column sm:flex-row align-items-stretch sm:align-items-center justify-content-between gap-3">
+        <span class="font-bold text-900 text-base">
+          Usuarios Registrados (<span class="text-sky-600 font-extrabold">{{ usuariosFiltrados.length }}</span>)
+        </span>
+        <div class="relative flex align-items-center w-full sm:w-20rem">
+          <i class="pi pi-search absolute pl-3 text-400"></i>
+          <input pInputText type="text" [(ngModel)]="terminoBusqueda" class="w-full border-round-xl pl-6 text-sm"
+                 placeholder="Buscar por correo, ID o rol..." />
+        </div>
+      </div>
+    </div>
+
     <!-- Tabla Desktop -->
     <div class="bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border hidden md:block">
-      <p-table #dt [value]="usuarios" [rows]="10" [paginator]="true"
-               [globalFilterFields]="['email','rol']"
+      <p-table [value]="usuariosFiltrados" [rows]="10" [paginator]="true"
                [rowHover]="true" styleClass="p-datatable-sm">
-
-        <ng-template pTemplate="caption">
-          <div class="flex align-items-center justify-content-between gap-3 p-3 flex-wrap bg-white border-bottom-1 surface-border">
-            <span class="font-bold text-900 text-base">
-              Usuarios (<span class="text-sky-600">{{ usuarios.length }}</span>)
-            </span>
-            <div class="relative flex align-items-center w-full md:w-auto">
-              <i class="pi pi-search absolute pl-3 text-400"></i>
-              <input pInputText type="text" placeholder="Buscar usuario por correo o rol..."
-                     class="w-full md:w-20rem border-round-xl pl-6"
-                     #filterInput
-                     (input)="dt.filterGlobal(filterInput.value, 'contains')" />
-            </div>
-          </div>
-        </ng-template>
 
         <ng-template pTemplate="header">
           <tr>
@@ -120,16 +118,16 @@
         <ng-template pTemplate="body" let-u>
           <tr>
             <td>
-              <div class="flex align-items-center gap-3">
+              <div class="flex align-items-center gap-3 max-w-22rem overflow-hidden">
                 <div class="flex align-items-center justify-content-center border-circle flex-shrink-0"
                      [style]="{'width':'40px','height':'40px',
                                'background': u.rol === 'admin' ? 'var(--sky-100)' : 'var(--indigo-100)'}">
                   <i [class]="u.rol === 'admin' ? 'pi pi-shield text-sky-600' : 'pi pi-user text-indigo-600'"
                      class="text-lg"></i>
                 </div>
-                <div>
-                  <p class="font-bold text-900 m-0">{{ u.email || u.id }}</p>
-                  <p class="text-xs text-500 m-0 font-mono">{{ u.id | slice:0:16 }}…</p>
+                <div class="min-w-0 flex-1 overflow-hidden">
+                  <p class="font-bold text-900 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="u.email || u.id">{{ u.email || u.id }}</p>
+                  <p class="text-xs text-500 m-0 font-mono text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ u.id }}</p>
                 </div>
               </div>
             </td>
@@ -177,7 +175,7 @@
             <td colspan="5">
               <div class="flex flex-column align-items-center py-8 text-500">
                 <i class="pi pi-users text-5xl mb-3 opacity-30"></i>
-                <p class="font-bold text-900 m-0">No hay usuarios registrados</p>
+                <p class="font-bold text-900 m-0">No se encontraron usuarios</p>
               </div>
             </td>
           </tr>
@@ -185,45 +183,57 @@
       </p-table>
     </div>
 
-    <!-- Cards Móvil -->
-    <div class="flex flex-column gap-3 md:hidden">
-      <div *ngFor="let u of usuarios" class="bg-white border-round-2xl shadow-1 p-4 border-1 surface-border">
-        <div class="flex align-items-center gap-3 mb-3">
+    <!-- Cards Móvil (< 768px) -->
+    <div class="flex flex-column gap-3 md:hidden mb-4">
+      <div *ngFor="let u of usuariosFiltrados" class="bg-white border-round-2xl shadow-1 p-3 border-1 surface-border flex flex-column gap-3">
+        <div class="flex align-items-center gap-3 min-w-0">
           <div class="flex align-items-center justify-content-center border-circle flex-shrink-0"
-               [style]="{'width':'44px','height':'44px',
+               [style]="{'width':'40px','height':'40px',
                          'background': u.rol === 'admin' ? 'var(--sky-100)' : 'var(--indigo-100)'}">
             <i [class]="u.rol === 'admin' ? 'pi pi-shield text-sky-600' : 'pi pi-user text-indigo-600'"></i>
           </div>
-          <div class="flex-1 overflow-hidden">
-            <p class="font-bold text-900 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap">
+          <div class="flex-1 min-w-0 overflow-hidden">
+            <p class="font-bold text-900 m-0 text-base line-height-2 overflow-hidden text-overflow-ellipsis word-break-break-word" [pTooltip]="u.email || u.id">
               {{ u.email || u.id }}
             </p>
-            <p-tag [value]="u.activo ? 'Activo' : 'Inactivo'"
-                   [severity]="u.activo ? 'success' : 'warning'"
-                   styleClass="mt-1 font-bold border-round-md" />
+            <div class="flex align-items-center gap-2 mt-1">
+              <p-tag [value]="u.activo ? 'Activo' : 'Inactivo'"
+                     [severity]="u.activo ? 'success' : 'warning'"
+                     styleClass="font-bold border-round-md text-xs" />
+              <span class="text-xs text-400 font-mono overflow-hidden text-overflow-ellipsis white-space-nowrap">ID: {{ u.id | slice:0:8 }}...</span>
+            </div>
           </div>
         </div>
 
-        <div class="mb-3">
-          <label class="text-xs font-bold text-800 uppercase mb-1 block">Rol Asignado</label>
+        <div>
+          <label class="text-xs font-bold text-700 uppercase mb-1 block">Rol Asignado</label>
           <p-dropdown [options]="rolesOpciones" [ngModel]="u.rol"
                     (onChange)="cambiarRol(u, $event.value)"
                     optionLabel="label" optionValue="value"
                     appendTo="body" styleClass="w-full border-round-xl" />
         </div>
 
-        <div class="flex gap-2">
+        <div class="flex gap-2 pt-2 border-top-1 surface-border">
           <p-button icon="pi pi-building" label="Empresas"
                     severity="info" [outlined]="true" size="small"
                     class="flex-1 border-round-xl font-bold" (onClick)="abrirEmpresas(u)" />
           <p-button [icon]="u.activo ? 'pi pi-ban' : 'pi pi-check-circle'"
                     [severity]="u.activo ? 'warning' : 'success'"
                     [outlined]="true" size="small"
-                    class="border-round-xl" (onClick)="toggleActivo(u)" />
-          <p-button icon="pi pi-trash" severity="danger" [outlined]="true"
-                    size="small" [disabled]="u.activo"
-                    class="border-round-xl" (onClick)="confirmarEliminar(u)" />
+                    class="border-round-xl"
+                    (onClick)="toggleActivo(u)" />
+          <p-button icon="pi pi-trash" severity="danger"
+                    [outlined]="true" size="small"
+                    class="border-round-xl"
+                    [disabled]="u.activo"
+                    (onClick)="confirmarEliminar(u)" />
         </div>
+      </div>
+
+      <div *ngIf="usuariosFiltrados.length === 0" class="bg-white border-round-2xl p-5 text-center text-500 shadow-1 surface-border border-1">
+        <i class="pi pi-users text-5xl mb-3 opacity-30"></i>
+        <p class="font-bold text-900 m-0">No se encontraron usuarios</p>
+        <p class="text-sm m-0 mt-1">Intenta cambiar los parámetros de búsqueda</p>
       </div>
     </div>
 

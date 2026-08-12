@@ -129,16 +129,83 @@
       </div>
     </div>
 
-    <!-- Tabla -->
-    <div class="bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
+    <!-- Vista Mobile Cards (< 768px) -->
+    <div class="block md:hidden flex flex-column gap-3 mb-4">
+      <div *ngFor="let cot of cotizacionesFiltradas"
+           class="bg-white border-round-2xl p-3 shadow-1 border-1 surface-border flex flex-column gap-3 transition-all"
+           [class.opacity-60]="cot.oculta">
+
+        <div class="flex align-items-center justify-content-between gap-2 min-w-0">
+          <div class="flex align-items-center gap-2 min-w-0">
+            <span class="font-mono font-bold text-xs text-sky-700 bg-sky-50 px-2 py-1 border-round-md flex-shrink-0">
+              {{ cot.folio }}
+            </span>
+            <p-tag *ngIf="cot.oculta" value="Oculta" severity="secondary" styleClass="font-bold text-xs px-2 py-0 border-round-md flex-shrink-0"></p-tag>
+          </div>
+          <span class="text-xs font-semibold text-500 flex-shrink-0">
+            {{ formatearFecha(cot.fecha) }}
+          </span>
+        </div>
+
+        <div class="min-w-0">
+          <p class="font-bold text-900 text-base m-0 line-height-2 overflow-hidden text-overflow-ellipsis word-break-break-word">
+            {{ obtenerNombreCliente(cot) }}
+          </p>
+          <p class="text-xs text-500 m-0 mt-1 font-mono" *ngIf="obtenerDocumentoCliente(cot)">
+            {{ obtenerDocumentoCliente(cot) }}
+          </p>
+        </div>
+
+        <div class="flex align-items-center justify-content-between pt-2 border-top-1 surface-border">
+          <div class="flex flex-column">
+            <span class="text-xs text-500 font-bold uppercase tracking-wider">Monto Total</span>
+            <span class="font-extrabold text-emerald-600 text-xl">S/ {{ cot.total | number:'1.2-2' }}</span>
+          </div>
+          <div class="w-10rem">
+            <p-dropdown
+              [options]="opcionesEstado"
+              [(ngModel)]="cot.estado"
+              (onChange)="cambiarEstado(cot, $event.value)"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="p-inputtext-sm w-full border-round-xl"
+              appendTo="body">
+            </p-dropdown>
+          </div>
+        </div>
+
+        <div class="flex align-items-center justify-content-end gap-2 pt-2 border-top-1 surface-border">
+          <button pButton type="button" icon="pi pi-file-pdf" label="PDF" severity="danger" size="small"
+                  class="border-round-xl font-bold text-xs px-3" style="min-height: 44px; touch-action: manipulation;"
+                  [loading]="descargando === cot.id" (click)="descargarPDF(cot)">
+          </button>
+          <button pButton type="button" icon="pi pi-pencil" label="Editar" severity="info" size="small"
+                  class="border-round-xl font-bold text-xs px-3" style="min-height: 44px; touch-action: manipulation;"
+                  [loading]="cotizacionCargandoModal === cot.id" (click)="abrirModalEditar(cot)">
+          </button>
+          <button pButton type="button" [icon]="cot.oculta ? 'pi pi-eye' : 'pi pi-eye-slash'"
+                  [severity]="cot.oculta ? 'info' : 'secondary'" size="small"
+                  class="border-round-xl p-button-outlined font-bold text-xs" style="min-width: 44px; min-height: 44px; touch-action: manipulation;"
+                  [pTooltip]="cot.oculta ? 'Restaurar' : 'Ocultar'" (click)="ocultarCotizacion(cot)">
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="cotizacionesFiltradas.length === 0" class="bg-white border-round-2xl p-5 text-center text-500 shadow-1 surface-border border-1">
+        <i class="pi pi-inbox text-5xl mb-3 opacity-30"></i>
+        <p class="font-bold text-900 m-0">No se encontraron cotizaciones</p>
+        <p class="text-sm m-0 mt-1">Ajusta los filtros de búsqueda o fecha para ver otros registros</p>
+      </div>
+    </div>
+
+    <!-- Desktop Table View (>= 768px) -->
+    <div class="hidden md:block bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
       <p-table
         [value]="cotizacionesFiltradas"
         [paginator]="true"
         [rows]="15"
         [rowsPerPageOptions]="[10, 15, 30, 50]"
-        styleClass="p-datatable-sm"
-        responsiveLayout="stack"
-        breakpoint="768px">
+        styleClass="p-datatable-sm">
 
         <ng-template pTemplate="header">
           <tr>
@@ -165,8 +232,14 @@
               </span>
             </td>
             <td>
-              <p class="font-bold text-900 text-sm m-0">{{ obtenerNombreCliente(cot) }}</p>
-              <p class="text-xs text-500 m-0 mt-1 font-mono">{{ obtenerDocumentoCliente(cot) }}</p>
+              <div class="flex flex-column max-w-18rem overflow-hidden">
+                <p class="font-bold text-900 text-sm m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="obtenerNombreCliente(cot)">
+                  {{ obtenerNombreCliente(cot) }}
+                </p>
+                <p class="text-xs text-500 m-0 mt-1 font-mono text-overflow-ellipsis overflow-hidden white-space-nowrap">
+                  {{ obtenerDocumentoCliente(cot) }}
+                </p>
+              </div>
             </td>
             <td class="text-right font-bold text-emerald-600 text-base">
               S/ {{ cot.total | number:'1.2-2' }}

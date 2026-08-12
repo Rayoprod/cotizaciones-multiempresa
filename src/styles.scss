@@ -59,14 +59,14 @@ body.layout-menu-open {
 
 /* ── Layout & Mobile Drawer Z-Index & Touch Fixes ──────── */
 .z-layout-backdrop {
-  z-index: 1040 !important;
+  z-index: 1065 !important;
   touch-action: manipulation !important;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
 .z-layout-sidebar {
-  z-index: 1050 !important;
+  z-index: 1070 !important;
 }
 
 /* Smooth inertia touch scroll container */
@@ -106,7 +106,7 @@ body.layout-menu-open {
     height: 100% !important;
     height: 100dvh !important;
     max-height: 100dvh !important;
-    z-index: 1050 !important;
+    z-index: 1070 !important;
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35) !important;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
@@ -143,7 +143,7 @@ body.layout-menu-open {
   color: #ffffff !important;
   border-bottom: 3px solid var(--company-accent-color, #0284c7) !important;
   box-shadow: 0 4px 20px rgba(15, 23, 42, 0.18) !important;
-  z-index: 1000 !important;
+  z-index: 1060 !important;
   position: relative !important;
 }
 
@@ -183,6 +183,7 @@ body.layout-menu-open {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  max-width: 100%;
 }
 
 .pwa-company-pill:hover, .pwa-company-pill:active {
@@ -471,4 +472,59 @@ p-toast .p-toast-message *,
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* ── Global Text Containment & Overflow Utilities ──────── */
+.text-overflow-ellipsis,
+.text-ellipsis,
+.truncate {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  max-width: 100% !important;
+}
+
+.word-break-break-word,
+.text-break-word,
+.break-words {
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  hyphens: auto !important;
+}
+
+.line-clamp-2 {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+/* Ensure buttons, badges, inputs and cards contain text cleanly */
+.p-button,
+.p-tag,
+.p-badge,
+.p-card,
+.p-dialog,
+.p-overlaypanel,
+.p-inputtext,
+.p-dropdown {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.p-button .p-button-label {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  max-width: 100% !important;
+}
+
+/* Table wrapper responsiveness */
+.p-datatable-wrapper {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.p-datatable {
+  max-width: 100% !important;
 }

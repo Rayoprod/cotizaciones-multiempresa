@@ -42,6 +42,17 @@ export class ProductosComponent implements OnInit {
   productoOriginal: string = '';
   enviando: boolean = false;
   empresaActiva: any;
+  terminoBusqueda: string = '';
+
+  get productosFiltrados(): IProducto[] {
+    const q = (this.terminoBusqueda || '').trim().toLowerCase();
+    if (!q) return this.productos;
+    return this.productos.filter(p =>
+      (p.codigo_sku && p.codigo_sku.toLowerCase().includes(q)) ||
+      (p.descripcion && p.descripcion.toLowerCase().includes(q)) ||
+      (p.unidad && p.unidad.toLowerCase().includes(q))
+    );
+  }
 
   constructor(
     private supabaseSvc: SupabaseService,

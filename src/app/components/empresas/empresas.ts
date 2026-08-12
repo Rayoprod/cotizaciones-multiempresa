@@ -50,9 +50,21 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   empresaDialog = false;
   esEdicion = false;
   enviando = false;
-  empresaActual: IEmpresa | null = null;
   esAdminGeneral = false;
   esAdminEmpresa = false;
+  terminoBusqueda: string = '';
+  empresaActual: IEmpresa | null = null;
+
+  get empresasFiltradas(): IEmpresa[] {
+    const q = (this.terminoBusqueda || '').trim().toLowerCase();
+    if (!q) return this.empresas;
+    return this.empresas.filter(e =>
+      (e.id && e.id.toLowerCase().includes(q)) ||
+      (e.nombre_comercial && e.nombre_comercial.toLowerCase().includes(q)) ||
+      (e.razon_social && e.razon_social.toLowerCase().includes(q)) ||
+      (e.ruc && e.ruc.includes(q))
+    );
+  }
   
   empresaForm!: FormGroup;
   cuentasFormArray!: FormArray;

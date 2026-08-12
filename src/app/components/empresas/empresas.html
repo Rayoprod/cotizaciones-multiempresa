@@ -68,25 +68,75 @@
       </div>
     </div>
 
-    <!-- Tabla de Empresas -->
-    <div class="bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
-      <p-table #dt [value]="empresas" [rows]="15" [paginator]="true" [rowsPerPageOptions]="[10, 15, 25, 50]"
-        [rowHover]="true" responsiveLayout="scroll" scrollable="true" scrollHeight="flex"
-        [globalFilterFields]="['id','nombre_comercial','razon_social','ruc']" styleClass="p-datatable-sm">
+    <!-- Buscador Global y Contador -->
+    <div class="bg-white border-round-2xl shadow-1 p-3 md:p-4 mb-4 border-1 surface-border">
+      <div class="flex flex-column sm:flex-row align-items-stretch sm:align-items-center justify-content-between gap-3">
+        <span class="font-bold text-900 text-base">
+          Empresas Registradas (<span class="text-sky-600 font-extrabold">{{ empresasFiltradas.length }}</span>)
+        </span>
+        <div class="relative flex align-items-center w-full sm:w-20rem">
+          <i class="pi pi-search absolute pl-3 text-400"></i>
+          <input pInputText type="text" [(ngModel)]="terminoBusqueda" class="w-full border-round-xl pl-6 text-sm"
+                 placeholder="Buscar por nombre, RUC o código..." />
+        </div>
+      </div>
+    </div>
 
-        <ng-template pTemplate="caption">
-          <div class="flex align-items-center justify-content-between gap-3 p-3 flex-wrap bg-white border-bottom-1 surface-border">
-            <span class="font-bold text-900 text-base">
-              Empresas (<span class="text-sky-600">{{ empresas.length }}</span>)
-            </span>
-            <div class="relative flex align-items-center w-full md:w-auto">
-              <i class="pi pi-search absolute pl-3 text-400"></i>
-              <input pInputText type="text" #searchInput placeholder="Buscar por nombre, RUC o código..."
-                     class="w-full md:w-20rem border-round-xl pl-6"
-                     (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
+    <!-- Vista Mobile Cards (< 768px) -->
+    <div class="block md:hidden flex flex-column gap-3 mb-4">
+      <div *ngFor="let emp of empresasFiltradas" class="bg-white border-round-2xl p-3 shadow-1 border-1 surface-border flex flex-column gap-3">
+        <div class="flex align-items-center justify-content-between gap-2 min-w-0">
+          <div class="flex align-items-center gap-2 min-w-0">
+            <div class="flex align-items-center justify-content-center border-round-lg overflow-hidden flex-shrink-0 surface-100 border-1 surface-border" style="width: 40px; height: 40px;">
+              <img *ngIf="emp.ruta_logo" [src]="emp.ruta_logo" [alt]="emp.nombre_comercial" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+              <i *ngIf="!emp.ruta_logo" class="pi pi-building text-500 text-lg"></i>
             </div>
+            <span class="font-mono text-xs font-bold bg-sky-50 text-sky-700 px-2 py-1 border-round-md flex-shrink-0">
+              {{ emp.id }}
+            </span>
           </div>
-        </ng-template>
+          <div class="flex align-items-center gap-1 flex-shrink-0">
+            <p-tag [value]="emp.activa ? 'Activa' : 'Inactiva'"
+                   [severity]="emp.activa ? 'success' : 'danger'"
+                   styleClass="font-bold border-round-md text-xs" />
+            <p-button *ngIf="esAdminGeneral || esAdminEmpresa" icon="pi pi-pencil" [text]="true" [rounded]="true" severity="info" size="small"
+                      styleClass="w-2.5rem h-2.5rem" pTooltip="Editar" (click)="editarEmpresa(emp)" />
+            <p-button *ngIf="esAdminGeneral" icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" size="small"
+                      styleClass="w-2.5rem h-2.5rem" pTooltip="Eliminar" (click)="eliminarEmpresa(emp.id)" />
+          </div>
+        </div>
+
+        <div class="min-w-0">
+          <p class="font-bold text-900 text-base m-0 line-height-2 overflow-hidden text-overflow-ellipsis word-break-break-word">
+            {{ emp.nombre_comercial }}
+          </p>
+          <p class="text-xs text-500 m-0 mt-1 overflow-hidden text-overflow-ellipsis white-space-nowrap" *ngIf="emp.razon_social">
+            <i class="pi pi-briefcase text-xs"></i> {{ emp.razon_social }}
+          </p>
+        </div>
+
+        <div class="flex align-items-center justify-content-between pt-2 border-top-1 surface-border text-xs text-700">
+          <span class="font-mono font-semibold text-700 surface-100 px-2 py-1 border-round-md">
+            RUC: {{ emp.ruc }}
+          </span>
+          <span class="text-500 text-xs" *ngIf="emp.direccion">
+            <i class="pi pi-map-marker text-xs"></i> {{ emp.direccion }}
+          </span>
+        </div>
+      </div>
+
+      <div *ngIf="empresasFiltradas.length === 0" class="bg-white border-round-2xl p-5 text-center text-500 shadow-1 surface-border border-1">
+        <i class="pi pi-building text-5xl mb-3 opacity-30"></i>
+        <p class="font-bold text-900 m-0">No se encontraron empresas</p>
+        <p class="text-sm m-0 mt-1 mb-3">Intenta cambiar el término de búsqueda o registra una nueva empresa</p>
+        <p-button *ngIf="esAdminGeneral" label="Agregar Empresa" icon="pi pi-plus" class="border-round-xl font-bold" (click)="abrirNuevo()" />
+      </div>
+    </div>
+
+    <!-- Desktop Table View (>= 768px) -->
+    <div class="hidden md:block bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
+      <p-table [value]="empresasFiltradas" [rows]="15" [paginator]="true" [rowsPerPageOptions]="[10, 15, 25, 50]"
+        [rowHover]="true" styleClass="p-datatable-sm">
 
         <ng-template pTemplate="header">
           <tr>
@@ -115,12 +165,12 @@
             </td>
 
             <td>
-              <div>
-                <p class="font-bold text-900 m-0 text-base">{{ emp.nombre_comercial }}</p>
-                <p class="text-xs text-500 m-0 mt-1 flex align-items-center gap-1" *ngIf="emp.razon_social">
+              <div class="flex flex-column max-w-22rem overflow-hidden">
+                <p class="font-bold text-900 m-0 text-base text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="emp.nombre_comercial">{{ emp.nombre_comercial }}</p>
+                <p class="text-xs text-500 m-0 mt-1 text-overflow-ellipsis overflow-hidden white-space-nowrap" *ngIf="emp.razon_social">
                   <i class="pi pi-briefcase text-xs"></i> {{ emp.razon_social }}
                 </p>
-                <p class="text-xs text-400 m-0 mt-1 flex align-items-center gap-1" *ngIf="emp.direccion">
+                <p class="text-xs text-400 m-0 mt-1 text-overflow-ellipsis overflow-hidden white-space-nowrap" *ngIf="emp.direccion">
                   <i class="pi pi-map-marker text-xs"></i> {{ emp.direccion }}
                 </p>
               </div>
