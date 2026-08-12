@@ -177,18 +177,18 @@
   <div class="flex-1 flex flex-column min-w-0 min-h-0 overflow-hidden z-1 h-full">
 
     <!-- Top Header Bar (Desktop & Mobile) -->
-    <header class="pwa-top-header flex align-items-center justify-content-between px-3 md:px-4 z-2 flex-shrink-0">
-      <div class="flex align-items-center gap-3">
+    <header class="pwa-top-header flex align-items-center justify-content-between px-2 md:px-4 z-2 flex-shrink-0">
+      <div class="flex align-items-center gap-2 sm:gap-3 min-w-0">
         <button pButton type="button" icon="pi pi-bars" [text]="true" [rounded]="true"
-                class="p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all flex align-items-center justify-content-center border-none cursor-pointer"
+                class="p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all flex align-items-center justify-content-center border-none cursor-pointer flex-shrink-0"
                 style="min-width: 44px; min-height: 44px; touch-action: manipulation;"
                 (click)="toggleMenu()"
                 [attr.aria-expanded]="menuAbierto"
                 aria-label="Menú principal"></button>
 
         <!-- Company Switcher Pill -->
-        <div class="pwa-company-pill" (click)="opCompany.toggle($event)" pTooltip="Haz clic para cambiar de empresa" tooltipPosition="bottom">
-          <div class="w-2rem h-2rem border-circle flex align-items-center justify-content-center shadow-1 overflow-hidden"
+        <div class="pwa-company-pill overflow-hidden flex-shrink-1" style="max-width: clamp(140px, 45vw, 280px);" (click)="opCompany.toggle($event)" pTooltip="Haz clic para cambiar de empresa" tooltipPosition="bottom">
+          <div class="w-2rem h-2rem border-circle flex align-items-center justify-content-center shadow-1 overflow-hidden flex-shrink-0"
                [style.background]="empresaActiva?.color || 'var(--p-primary-color)'" style="color: #ffffff;">
             <ng-container *ngIf="empresaActiva?.ruta_logo; else topLogo">
               <img [src]="empresaActiva?.ruta_logo" [alt]="empresaActiva?.nombre_comercial" style="max-width: 90%; max-height: 90%; object-fit: contain;">
@@ -197,12 +197,12 @@
               <i class="pi pi-building text-xs"></i>
             </ng-template>
           </div>
-          <div class="flex flex-column text-left">
-            <span class="font-bold text-sm text-white line-height-1 flex align-items-center gap-1">
+          <div class="flex flex-column text-left overflow-hidden">
+            <span class="font-bold text-sm text-white line-height-1 flex align-items-center gap-1 text-overflow-ellipsis overflow-hidden white-space-nowrap">
               {{ empresaActiva?.nombre_comercial || 'Seleccionar Empresa' }}
-              <i class="pi pi-chevron-down text-xs text-white-alpha-70 ml-1"></i>
+              <i class="pi pi-chevron-down text-xs text-white-alpha-70 ml-1 flex-shrink-0"></i>
             </span>
-            <span class="text-xs text-sky-300 font-medium line-height-1 mt-1" *ngIf="empresaActiva?.ruc">
+            <span class="text-xs text-sky-300 font-medium line-height-1 mt-1 text-overflow-ellipsis overflow-hidden white-space-nowrap" *ngIf="empresaActiva?.ruc">
               RUC: {{ empresaActiva?.ruc }}
             </span>
           </div>

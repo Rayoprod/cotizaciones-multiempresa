@@ -254,5 +254,16 @@
       - Refactorizados `LoginComponent`, `LayoutComponent` y `AdminLayoutComponent` para proporcionar el ID del usuario activo previamente autenticado, evitando peticiones HTTP redundantes a `auth.getUser()` durante el arranque y cambio de sesión.
    3. ERGONOMÍA Y TARGETS TÁCTILES PWA GLOBALES:
       - Estandarizados blancos táctiles globales en `src/styles.scss` (`min-height: 44px` en botones, campos de texto y dropdowns; `48px` en enlaces de navegación del sidebar) garantizando usabilidad en dispositivos táctiles PWA.
-   4. VERIFICACIÓN DE COMPILACIÓN AOT DE PRODUCCIÓN:
-      - Compilación de producción (`ng build --configuration=production`) 100% limpia en 3.7s con 0 errores de TypeScript.
+    4. VERIFICACIÓN DE COMPILACIÓN AOT DE PRODUCCIÓN:
+       - Compilación de producción (`ng build --configuration=production`) 100% limpia en 3.7s con 0 errores de TypeScript.
+- Wed Aug 12 06:48:00 -05 2026: Diagnóstico Definitivo y Solución al Bloqueo del Menú Sanguchito en Pantallas <= 640px:
+    1. DIAGNÓSTICO Y SOLUCIÓN DEL OVERLAY INVISIBLE:
+       - Se identificó que al reducir la pantalla a `<= 640px`, la regla CSS media query para `.p-toast` en `styles.scss` forzaba `top: calc(0.75rem + env(safe-area-inset-top))` con `width: calc(100vw - 1.25rem)` y `z-index: 1100`.
+       - Dado que PrimeNG mantiene los elementos contenedor de `<p-toast>` en el DOM aun estando vacíos, este contenedor invisible de z-index 1100 capturaba los eventos táctiles y clics sobre el header (`z-index: 100`) bloqueando el botón del menú sanguchito y el selector de empresa.
+       - Se asignó `pointer-events: none !important` al contenedor global `.p-toast` y a todos sus descendientes por defecto (`.p-toast *`), restringiendo `pointer-events: auto !important` únicamente a las tarjetas de mensaje de toast visibles (`.p-toast-message`).
+       - Se aisló la posición de `.p-toast-bottom-center` (Toast de actualización PWA) para que se mantenga fixed al pie de la pantalla (`bottom: calc(1rem + env(safe-area-inset-bottom))`).
+    2. RESPONSIVIDAD Y FLEX-SHRINK DEL HEADER:
+       - Se agregó `flex-shrink-0` al botón del menú sanguchito en `layout.component.html` y `admin-layout.html`.
+       - Se aplicó `max-width: clamp(140px, 45vw, 280px)` y `text-overflow-ellipsis` en la pill de empresa y títulos del header para evitar desbordamientos horizontales o desplazamientos del botón sanguchito en teléfonos móviles pequeños (desde 320px hasta 640px).
+    3. VERIFICACIÓN Y COMPILACIÓN AOT:
+       - Verificación con `npm run build` (`ng build`) 100% limpia en 4.6s con 0 errores de TypeScript o plantillas Angular.
