@@ -256,8 +256,6 @@
       - Estandarizados blancos táctiles globales en `src/styles.scss` (`min-height: 44px` en botones, campos de texto y dropdowns; `48px` en enlaces de navegación del sidebar) garantizando usabilidad en dispositivos táctiles PWA.
     4. VERIFICACIÓN DE COMPILACIÓN AOT DE PRODUCCIÓN:
        - Compilación de producción (`ng build --configuration=production`) 100% limpia en 3.7s con 0 errores de TypeScript.
-- Wed Aug 12 06:48:00 -05 2026: Diagnóstico Definitivo y Solución al Bloqueo del Menú Sanguchito en Pantallas <= 640px:
-    1. DIAGNÓSTICO Y SOLUCIÓN DEL OVERLAY INVISIBLE:
        - Se identificó que al reducir la pantalla a `<= 640px`, la regla CSS media query para `.p-toast` en `styles.scss` forzaba `top: calc(0.75rem + env(safe-area-inset-top))` con `width: calc(100vw - 1.25rem)` y `z-index: 1100`.
        - Dado que PrimeNG mantiene los elementos contenedor de `<p-toast>` en el DOM aun estando vacíos, este contenedor invisible de z-index 1100 capturaba los eventos táctiles y clics sobre el header (`z-index: 100`) bloqueando el botón del menú sanguchito y el selector de empresa.
        - Se asignó `pointer-events: none !important` al contenedor global `.p-toast` y a todos sus descendientes por defecto (`.p-toast *`), restringiendo `pointer-events: auto !important` únicamente a las tarjetas de mensaje de toast visibles (`.p-toast-message`).
@@ -370,3 +368,24 @@
        - Disparo de `cdr.markForCheck()` y recarga reactiva de la tabla de usuarios en Angular 17.3+.
     4. VERIFICACIÓN INTEGRAL AOT:
        - Ejecución exitosa de pruebas automáticas RPC y compilación `npx ng build` finalizada con 0 errores y 0 advertencias.
+- Wed Aug 13 12:18:00 -05 2026: Auditoría Integral de Integración Supabase PostgreSQL, Corrección Crítica RLS de Folios, Triggers y Pruebas E2E:
+     1. REPARACIÓN CRÍTICA DE RPC & SEGURIDAD RLS:
+        - Solucionado el fallo silencioso de RLS (error PostgreSQL 42501) en la generación de folios secuenciales. Las funciones RPC `getnextfolioempresa` y `get_next_folio_empresa` carecían del modificador `SECURITY DEFINER` y `SET search_path = public`, provocando que PostgREST fallara al incrementar el correlativo e hiciera un fallback a folios aleatorios basados en timestamp (`Date.now()`). Al agregar `SECURITY DEFINER`, se garantizó la generación atómica y secuencial de folios (`OT-00000001`, `OT-00000002`, etc.) para todas las empresas.
+        - Creada la función RPC `admin_eliminar_usuario(p_user_id uuid)` con `SECURITY DEFINER` para permitir la eliminación limpia y atómica de usuarios en `usuario_empresa`, `public.profiles` y `auth.users`, integrada en `SupabaseService.eliminarUsuario()`.
+     2. INTEGRIDAD REFERENCIAL & PURGA DE DATOS HUÉRFANOS:
+        - Identificados y purgados 3 registros huérfanos en `usuario_empresa` que hacían referencia a IDs de usuario no existentes en `profiles`.
+        - Creadas e impuestas las claves foráneas `usuario_empresa_usuario_id_fkey` (`usuario_id -> profiles(id) ON DELETE CASCADE ON UPDATE CASCADE`) y `fk_cotizaciones_cliente` (`cliente_id -> clientes(id) ON DELETE SET NULL ON UPDATE CASCADE`).
+        - Estandarizada la regla `ON UPDATE CASCADE` en todas las claves foráneas dependientes de `empresas(id)` (`usuario_empresa`, `cuentas_bancarias`, `maquinaria`, `productos`, `clientes`, `cotizaciones`, `folios_empresas`).
+     3. RESTRICCIONES UNIQUE MULTIEMPRESA:
+        - Creadas las restricciones únicas compuestas a nivel de esquema PostgreSQL:
+          - `uq_cotizaciones_empresa_folio` (`empresa_id, folio`)
+          - `uq_productos_empresa_sku` (`empresa_id, codigo_sku`)
+          - `uq_clientes_empresa_documento` (`empresa_id, documento_identidad`)
+        - Estas restricciones garantizan la unicidad estricta por empresa en el motor de base de datos, imposibilitando la inserción de folios, SKUs o documentos duplicados ante concurrencia.
+     4. AUTOMATIZACIÓN DE HORÓMETRO Y MANTENIMIENTO VÍA TRIGGERS:
+        - Creado e instalado el disparador PostgreSQL `trg_sync_horometro_maquinaria` con la función `fn_sync_horometro_maquinaria()` que se ejecuta `AFTER INSERT OR UPDATE OR DELETE` sobre `lecturas_horometro`. Esto recalcula automáticamente `horometro_actual` y `ultimo_mantenimiento` en `maquinaria` ante cualquier inserción, modificación o eliminación de lecturas históricas.
+     5. SANITIZACIÓN DE PAYLOADS EN ANGULAR & BATERÍA DE PRUEBAS E2E:
+        - Actualizado `SupabaseService.guardarCotizacion()` para transformar valores vacíos (`''` o espacios) de `cliente_id` a `null`, evitando el error de sintaxis PostgreSQL `22P02`.
+        - Creada y ejecutada la suite de pruebas automatizada End-to-End (`e2e_crud_test_suite.js`) validando la creación de empresas, restricción UNIQUE en productos y clientes, generación secuencial de folios, reactividad de triggers ante eliminación de horometro y borrado en cascada (Resultado: **11/11 Pruebas Pasadas**).
+     6. VERIFICACIÓN DE COMPILACIÓN:
+        - Verificado `npx ng build --configuration=production` resultando en compilación 100% exitosa sin errores de compilación ni advertencias.

@@ -317,6 +317,9 @@ export class SupabaseService {
     const payload: any = { ...cotizacion };
     if (!payload.id || payload.id === '') delete payload.id;
     if (!payload.created_at || payload.created_at === '') delete payload.created_at;
+    if (!payload.cliente_id || (typeof payload.cliente_id === 'string' && payload.cliente_id.trim() === '')) {
+      payload.cliente_id = null;
+    }
 
     const { data, error } = await this.client
       .from('cotizaciones').insert([payload]).select().single();
@@ -481,9 +484,12 @@ export class SupabaseService {
   }
 
   async eliminarUsuario(id: string): Promise<void> {
-    const { error } = await this.client
-      .from('profiles').delete().eq('id', id);
-    if (error) throw error;
+    const { error } = await this.client.rpc('admin_eliminar_usuario', { p_user_id: id });
+    if (error) {
+      const { error: profErr } = await this.client
+        .from('profiles').delete().eq('id', id);
+      if (profErr) throw profErr;
+    }
   }
 
   async getEmpresasDeUsuario(usuarioId: string): Promise<string[]> {
