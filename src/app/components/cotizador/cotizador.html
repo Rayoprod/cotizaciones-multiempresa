@@ -180,7 +180,7 @@
                   <td>
                     <p-autoComplete
                       [(ngModel)]="item.descripcion"
-                      (ngModelChange)="recalcularItem(item)"
+                      (ngModelChange)="alCambiarDescripcion(item)"
                       [suggestions]="nombresProductosFiltrados"
                       (completeMethod)="filtrarNombresProductos($event)"
                       (onSelect)="alElegirProductoSugerido($event, item)"
@@ -263,7 +263,7 @@
                   <label class="text-xs font-bold text-700 uppercase mb-1 block">Descripción del Producto / Servicio</label>
                   <p-autoComplete
                     [(ngModel)]="item.descripcion"
-                    (ngModelChange)="recalcularItem(item)"
+                    (ngModelChange)="alCambiarDescripcion(item)"
                     [suggestions]="nombresProductosFiltrados"
                     (completeMethod)="filtrarNombresProductos($event)"
                     (onSelect)="alElegirProductoSugerido($event, item)"

@@ -389,3 +389,32 @@
         - Creada y ejecutada la suite de pruebas automatizada End-to-End (`e2e_crud_test_suite.js`) validando la creación de empresas, restricción UNIQUE en productos y clientes, generación secuencial de folios, reactividad de triggers ante eliminación de horometro y borrado en cascada (Resultado: **11/11 Pruebas Pasadas**).
      6. VERIFICACIÓN DE COMPILACIÓN:
         - Verificado `npx ng build --configuration=production` resultando en compilación 100% exitosa sin errores de compilación ni advertencias.
+- Tue Aug 18 18:37:00 -05 2026: Auditoría Exhaustiva de Integración Supabase-PostgreSQL, Resiliencia de Triggers, RPCs y Certificación E2E de Datos (27/27 PASSED):
+     1. ROBUSTEZ Y RESILIENCIA DE TRIGGERS POSTGRESQL:
+        - **Problema Detectado**: Al registrar lecturas de tipo `'lectura'` en una máquina con mantenimiento inicial, `fn_sync_horometro_maquinaria` sobreescribía `ultimo_mantenimiento` a `NULL` al no encontrar lecturas históricas de tipo `'mantenimiento'`.
+        - **Optimización**: Se actualizó la función `fn_sync_horometro_maquinaria()` con `COALESCE(v_ultimo_mant, ultimo_mantenimiento, horometro_inicial, 0)`, preservando el umbral de mantenimiento previo de la máquina.
+     2. CONSULTAS Y SERVICIOS VALIDADOS:
+        - `SupabaseService.getHistorial`: Index scan eficiente vía `idx_cotizaciones_empresa_fecha` e `idx_cotizaciones_empresa_oculta`.
+        - `SupabaseService.getProductos`: Filtro indexado por `idx_productos_empresa_id` y ordenamiento.
+        - `SupabaseService.getClientes`: Filtro indexado por `idx_clientes_empresa_id` con unicidad `uq_clientes_empresa_documento`.
+        - `SupabaseService.getMaquinaria`: Filtro indexado por `idx_maquinaria_empresa_id` y sincronización reactiva de horómetro.
+        - `SupabaseService.obtenerSiguienteFolio`: Invocación atómica a RPC `getnextfolioempresa` con bloqueo de concurrencia e incremento en `folios_empresas`.
+        - `SupabaseService.crearUsuario` y `eliminarUsuario`: Ejecución atómica vía RPCs `admin_crear_usuario` y `admin_eliminar_usuario` con `jsonb_build_object` y `SECURITY DEFINER`.
+     3. RESULTADO DE BATERÍA DE PRUEBAS E2E (27/27 PASSED):
+        - Creación y actualización de empresas y cuentas bancarias.
+        - Bloqueo de duplicados por restricciones UNIQUE a nivel de motor BD.
+        - Triggers de horómetro y mantenimiento en cascada.
+        - Inserción de cotizaciones con ítems JSONB, cálculo de impuestos e integridad de folios.
+        - Cascada de eliminación referencial (`ON DELETE CASCADE`) comprobando 0 registros huérfanos.
+        - Creación y eliminación limpia de perfiles y usuarios de autenticación.
+     4. PRÓXIMOS PUNTOS DE ATENCIÓN ARQUITECTURAL:
+        - Monitoreo continuo de tamaño de JSONB en `cotizaciones.items` para cotizaciones con más de 100 partidas.
+        - Mantener sincronizada la vista `v_flota_mantenimiento` con las reglas de negocio del frontend.
+- Tue Aug 25 13:36:00 -05 2026: Corrección de Flujo de Datos en Cotizador - Preservación de Precios Editables:
+     1. DESACOPLAMIENTO DE EVENTOS EN FORMULARIO REACTIVO DE COTIZACIONES:
+        - **Antes**: `recalcularItem(item)` se ejecutaba en `(ngModelChange)` del input de precio unitario y contenía una regla que reinyectaba `prodMatch.precio_unitario_base` cuando `item.precio_unitario` era `null` (lo cual ocurre al borrar el input para tipear un nuevo valor).
+        - **Después**: Se creó `alCambiarDescripcion(item)` para gestionar exclusivamente el autocompletado de descripción y catálogo, mientras que `recalcularItem(item)` quedó como función pura de recálculo matemático de subtotal y total sin alterar el valor del input.
+     2. PRUEBAS Y VERIFICACIÓN:
+        - Nuevos casos de prueba agregados en `cotizador.spec.ts` validando la preservación de valores `null` transitorios, precios negociados y precio `0`.
+        - 22/22 pruebas unitarias superadas en Vitest y compilación `ng build` 100% limpia.
+

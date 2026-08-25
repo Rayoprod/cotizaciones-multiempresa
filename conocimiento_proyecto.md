@@ -157,13 +157,31 @@
     - **Estandarización de `cotizaciones.oculta`**: Se configuró la columna `oculta` como `NOT NULL DEFAULT false` en PostgreSQL y se optimizó la consulta `getHistorial()` en `SupabaseService` para filtrar `eq('oculta', false)` mediante el índice B-tree `idx_cotizaciones_empresa_oculta`.
     - **Optimización de Política RLS**: Se optimizó la política `vendedor no ve ocultas` en `cotizaciones` con el patrón subquery caching `(SELECT auth.uid())` en PostgreSQL.
     - **Sanitización de Payloads & Tipado**: Se actualizó `guardarMaquinaria()` para remover campos calculados frontend (`horas_desde_mantenimiento`, `horas_restantes`, `porcentaje_progreso`, `estado_mantenimiento`) antes de enviarlos a PostgREST. Se corrigió `IProducto.precio_unitario_base` a `number` y se agregó coerción en `guardarProducto()`.
-149. **Solución a la Creación de Usuarios mediante Función RPC PostgreSQL (`admin_crear_usuario`)**:
-    - **Implementación de RPC Atómica SECURITY DEFINER**: Se creó la función PostgreSQL `admin_crear_usuario(p_email, p_password, p_rol)` con `SECURITY DEFINER`. Esta función realiza en una sola transacción atómica de BD:
-      1. Validación de duplicados en `auth.users` lanzando una excepción clara si el correo ya existe.
-      2. Inserción directa en `auth.users` fijando `email_confirmed_at = now()`.
-      3. Actualización/inserción explícita en `public.profiles` estableciendo el rol asignado (`admin`, `admin_empresa`, `vendedor`) y `activo = true`.
-    - **Cero Límite de Envío de Correos (Bypass de Error 429)**: Al confirmar la cuenta inmediatamente en PostgreSQL, no se envían correos SMTP de verificación ni se sufren límites de tasa (*rate limit 429*).
-    - **Cero Deslogueo de Administración**: Al ejecutarse vía PostgREST RPC (`this.client.rpc('admin_crear_usuario', ...)`), la sesión activa del administrador en la aplicación jamás se sobrescribe ni invalida.
-    - **Verificación AOT**: Compilación de producción `npx ng build` ejecutada y aprobada con 0 errores.
+150. **Auditoría Exhaustiva de Integración Supabase-PostgreSQL, Triggers de Horómetro, RPCs de Administración y Certificación E2E**:
+    - **Ajuste y Resiliencia en Disparador `fn_sync_horometro_maquinaria`**:
+      - Se detectó que el disparador recalculaba `ultimo_mantenimiento` como `NULL` si una maquinaria tenía lecturas estándar pero ninguna de tipo `mantenimiento`, sobreescribiendo el valor inicial.
+      - Se corrigió la función en PostgreSQL utilizando `COALESCE(v_ultimo_mant, ultimo_mantenimiento, horometro_inicial, 0)` con `SECURITY DEFINER` y `SET search_path = public`, preservando el valor histórico/inicial ante cualquier ingreso de lecturas ordinarias.
+    - **Estandarización de `admin_crear_usuario` y `admin_eliminar_usuario`**:
+      - Se configuró explícitamente `SET search_path = public, extensions, auth` en las funciones RPC para garantizar la correcta resolución de funciones criptográficas (`extensions.crypt`, `extensions.gen_salt('bf')`).
+      - Se estandarizó el uso de `jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email'))` para la construcción segura de metadatos de autenticación en `auth.users`, eliminando posibles fallos de serialización de cadenas en PostgreSQL.
+    - **Certificación de Compatibilidad de Tipos & Esquemas (27/27 PASSED)**:
+      - Ejecución completa de la suite de integración E2E automatizada (`test_db_e2e.cjs`) contra el pooler de Supabase (`aws-1-us-east-1.pooler.supabase.com`), certificando el 100% de compatibilidad en:
+        1. Generación atómica y correlativa de folios vía RPC `getnextfolioempresa` (`QA-00000001`, `QA-00000002`).
+        2. Integridad de tipos y restricciones compuestas UNIQUE (`uq_clientes_empresa_documento`, `uq_productos_empresa_sku`, `uq_cotizaciones_empresa_folio`).
+        3. Recálculo automático de horómetro y mantenimiento en cascada.
+        4. Inserción de cotizaciones con estructura JSONB compleja y totales numéricos consistentes.
+        5. Planes de ejecución de índices B-Tree (`idx_cotizaciones_empresa_fecha`, `idx_cotizaciones_empresa_oculta`).
+        6. Integridad referencial con eliminación en cascada (`ON DELETE CASCADE`) sin registros huérfanos.
+        7. Creación y eliminación de usuarios por RPC.
+    - **Validación Angular 17.3+**: Compilación AOT de producción `npm run build` y suite unitaria Vitest (`20/20 passed`) finalizadas con 0 errores.
+151. **Desacoplamiento de Autocompletado de Catálogo y Preservación de Precios Editables en Cotizador**:
+    - **Diagnóstico del Bug**: En `CotizadorComponent`, el método `recalcularItem()` contenía una lógica de fallback que detectaba si `item.descripcion` coincidía con un producto de `productosBD` y, en caso de que `item.precio_unitario` fuera `null` o `undefined`, reinyectaba automáticamente `prodMatch.precio_unitario_base`. Al estar `(ngModelChange)="recalcularItem(item)"` vinculado directamente al `p-inputNumber` del precio, cuando el usuario borraba el valor para ingresar un precio negociado o personalizado, el campo pasaba transitoriamente por `null`, provocando que el sistema restaurara de inmediato el precio base del catálogo e hiciera imposible editar o borrar el precio de la cotización.
+    - **Solución Aplicada**:
+      1. Se desacopló la lógica de autocompletado de descripción creando el método específico `alCambiarDescripcion(item: any)` en `CotizadorComponent`, el cual sólo se dispara ante cambios en el input de descripción (`p-autoComplete`).
+      2. Se refactorizó `recalcularItem(item: any)` para actuar estrictamente como función matemática pura de cálculo de subtotal (`item.cantidad * item.precio_unitario`) y actualización de totales generales (`recalcularTodo()`), sin mutar ni sobreescribir jamás `precio_unitario`.
+      3. Se actualizó el binding de `p-autoComplete` en `cotizador.html` (versión desktop y tarjetas mobile) a `(ngModelChange)="alCambiarDescripcion(item)"`.
+      4. Se agregaron pruebas unitarias en `cotizador.spec.ts` validando que borrar el precio (`null`), modificarlo a un valor negociado o asignar precio `0` (bonificación/muestra gratis) no sufra reinyecciones no deseadas del catálogo.
+
+
 
 

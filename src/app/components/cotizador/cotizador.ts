@@ -493,7 +493,7 @@ export class CotizadorComponent implements OnInit {
     if (item.descripcion?.length > 100) item.descripcion = item.descripcion.substring(0, 100);
   }
 
-  recalcularItem(item: any) {
+  alCambiarDescripcion(item: any) {
     if (item.descripcion?.trim()) {
       const prodMatch = this.productosBD.find(
         p => p.descripcion?.toLowerCase().trim() === String(item.descripcion).toLowerCase().trim()
@@ -513,8 +513,12 @@ export class CotizadorComponent implements OnInit {
         }
       }
     }
+    this.recalcularItem(item);
+  }
+
+  recalcularItem(item: any) {
     const qty = Number(item.cantidad) || 0;
-    const price = Number(item.precio_unitario) || 0;
+    const price = (item.precio_unitario !== null && item.precio_unitario !== undefined) ? Number(item.precio_unitario) : 0;
     item.subtotal = Math.round(qty * price * 100) / 100;
     this.recalcularTodo();
   }
