@@ -157,43 +157,21 @@ export class ClientesComponent implements OnInit {
     this.cdr.markForCheck();
 
     try {
-      const datosCrudos = await this.apiPeru.buscarDocumento(doc);
-      if (!datosCrudos) throw new Error('No encontrado');
+      const datos = await this.apiPeru.buscarDocumento(doc);
 
-      const datos = datosCrudos.data || datosCrudos.result || datosCrudos;
-      let nombreFinal = '';
-
-      if (doc.length === 8) {
-        nombreFinal = datos.full_name || datos.nombre_completo || '';
-        if (!nombreFinal) {
-          const nom = datos.first_name || datos.nombres || datos.nombre || '';
-          const pat = datos.first_last_name || datos.apellidoPaterno || datos.apellido_paterno || '';
-          const mat = datos.second_last_name || datos.apellidoMaterno || datos.apellido_materno || '';
-          nombreFinal = `${nom} ${pat} ${mat}`.trim();
-        }
-      } else {
-        nombreFinal =
-          datos.nombre_o_razon_social ||
-          datos.razon_social ||
-          datos.razonSocial ||
-          datos.nombre_comercial ||
-          datos.name || '';
-      }
-
-      this.clienteActual.nombre_razon_social = nombreFinal;
-      this.clienteActual.direccion = datos.direccion_completa || datos.direccion || datos.address || '';
+      this.clienteActual.nombre_razon_social = datos.nombre;
+      this.clienteActual.direccion = datos.direccion;
       if (!this.clienteActual.telefono) this.clienteActual.telefono = '';
       if (!this.clienteActual.correo) this.clienteActual.correo = '';
 
       this.messageService.add({ severity: 'success', summary: 'API', detail: 'Datos obtenidos de SUNAT/RENIEC.' });
       this.cdr.markForCheck();
 
-    } catch (e) {
-      console.error('Error de red:', e);
+    } catch (e: any) {
       this.messageService.add({
         severity: 'error',
-        summary: 'Error de conexión',
-        detail: 'No se pudo obtener datos de SUNAT/RENIEC.'
+        summary: 'No encontrado',
+        detail: e?.message || 'No se pudo obtener datos de SUNAT/RENIEC.'
       });
     } finally {
       this.buscandoApi = false;

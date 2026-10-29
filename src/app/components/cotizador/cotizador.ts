@@ -288,33 +288,16 @@ export class CotizadorComponent implements OnInit {
     this.messageService.add({ severity: 'info', summary: 'Consultando', detail: 'Buscando en SUNAT/RENIEC...' });
 
     try {
-      const datosCrudos = await this.apiPeru.buscarDocumento(doc);
-      if (!datosCrudos) throw new Error('No encontrado');
+      const datos = await this.apiPeru.buscarDocumento(doc);
 
-      const datos = datosCrudos.data || datosCrudos.result || datosCrudos;
-      let nombreFinal = '';
-
-      if (doc.length === 8) {
-        nombreFinal = datos.full_name || datos.nombre_completo || '';
-        if (!nombreFinal) {
-          const nom = datos.first_name || datos.nombres || datos.nombre || '';
-          const pat = datos.first_last_name || datos.apellidoPaterno || datos.apellido_paterno || '';
-          const mat = datos.second_last_name || datos.apellidoMaterno || datos.apellido_materno || '';
-          nombreFinal = `${nom} ${pat} ${mat}`.trim();
-        }
-      } else {
-        nombreFinal = datos.nombre_o_razon_social || datos.razon_social ||
-          datos.razonSocial || datos.nombre_comercial || datos.name || '';
-      }
-
-      this.clienteNombre = nombreFinal;
-      this.clienteDireccion = datos.direccion_completa || datos.direccion || datos.address || '';
+      this.clienteNombre = datos.nombre;
+      this.clienteDireccion = datos.direccion;
       this.clienteTelefono = '';
       this.clienteCorreo = '';
 
       this.messageService.add({ severity: 'success', summary: 'API', detail: 'Datos obtenidos de SUNAT/RENIEC.' });
-    } catch {
-      this.messageService.add({ severity: 'error', summary: 'No Encontrado', detail: 'El documento no existe.' });
+    } catch (e: any) {
+      this.messageService.add({ severity: 'error', summary: 'No encontrado', detail: e?.message || 'No se pudo consultar el documento.' });
     } finally {
       this.buscandoDocumento = false;
       this.cdr.markForCheck();

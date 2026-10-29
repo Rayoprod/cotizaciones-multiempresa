@@ -363,42 +363,32 @@ export class EmpresasComponent implements OnInit, OnDestroy {
       });
       
       const data = await this.apiPeru.buscarDocumento(rucControl.value);
-      
-      if (data && data.success) {
-        const razon = data.razonSocial || '';
-        const patchData: any = {
-          razon_social: razon,
-          direccion: data.direccion || ''
-        };
+      const razon = data.nombre;
+      const patchData: any = {
+        razon_social: razon,
+        direccion: data.direccion
+      };
 
-        if (!this.empresaForm.get('prefijo')?.value) {
-          patchData.prefijo = this.generarPrefijo(razon);
-        }
-
-        if (!this.empresaForm.get('nombre_comercial')?.value) {
-          patchData.nombre_comercial = razon;
-        }
-
-        this.empresaForm.patchValue(patchData);
-        
-        this.msg.add({
-          severity: 'success',
-          summary: 'RUC encontrado',
-          detail: `Datos de ${razon} cargados` 
-        });
-      } else {
-        this.msg.add({
-          severity: 'warn',
-          summary: 'RUC no encontrado',
-          detail: 'No se encontró información para este RUC'
-        });
+      if (!this.empresaForm.get('prefijo')?.value) {
+        patchData.prefijo = this.generarPrefijo(razon);
       }
-    } catch (error: any) {
-      console.error('Error consultando RUC:', error);
+
+      if (!this.empresaForm.get('nombre_comercial')?.value) {
+        patchData.nombre_comercial = razon;
+      }
+
+      this.empresaForm.patchValue(patchData);
+
       this.msg.add({
-        severity: 'error',
-        summary: 'Error de consulta',
-        detail: 'No se pudo consultar el RUC: ' + error.message
+        severity: 'success',
+        summary: 'RUC encontrado',
+        detail: `Datos de ${razon} cargados`
+      });
+    } catch (error: any) {
+      this.msg.add({
+        severity: 'warn',
+        summary: 'RUC no encontrado',
+        detail: error?.message || 'No se pudo consultar el RUC.'
       });
     }
   }
