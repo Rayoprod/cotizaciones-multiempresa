@@ -21,8 +21,6 @@
     "@angular/service-worker": "^17.3.12",
     "@supabase/supabase-js": "^2.102.1",
     "chart.js": "^4.5.1",
-    "jspdf": "^4.2.1",
-    "jspdf-autotable": "^5.0.7",
     "pdfmake": "^0.3.7",
     "primeflex": "^4.0.0",
     "primeicons": "^7.0.0",

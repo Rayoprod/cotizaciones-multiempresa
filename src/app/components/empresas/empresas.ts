@@ -182,7 +182,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   }
   
   editarEmpresa(empresa: IEmpresa) {
-    console.log('🔄 Iniciando edición de empresa:', empresa);
     
     this.esEdicion = true;
     this.empresaActual = empresa;
@@ -192,7 +191,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
       this.cargarDatosEnFormulario(empresa);
       this.empresaForm.get('id')?.disable();
       this.empresaDialog = true;
-      console.log('✅ Empresa cargada para edición exitosamente');
     } catch (error) {
       console.error('❌ Error al preparar edición:', error);
       this.msg.add({
@@ -235,9 +233,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   }
   
   private cargarDatosEnFormulario(empresa: IEmpresa) {
-    console.log('📝 Cargando datos en formulario...');
-    console.log('🏢 Empresa a cargar:', empresa);
-    console.log('🆔 ID de la empresa:', empresa.id);
     
     this.empresaForm.patchValue({
       id: empresa.id,
@@ -256,8 +251,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
       contacto_aprobacion: (empresa.contacto_aprobacion || '').trim()
     });
     
-    console.log('✅ Datos cargados en formulario');
-    console.log('📋 Valor del ID después de cargar:', this.empresaForm.get('id')?.value);
     
     this.cuentasFormArray.clear();
     if (empresa.cuentas_bancarias && empresa.cuentas_bancarias.length > 0) {
@@ -270,9 +263,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   // ── CUENTAS BANCARIAS ─────────────────────────────────────────────────
   
   agregarCuenta(cuenta?: ICuentaBancaria) {
-    console.log('➕ Agregando cuenta bancaria:', cuenta);
-    console.log('📋 FormArray actual:', this.cuentasFormArray.controls);
-    console.log('📋 Longitud actual:', this.cuentasFormArray.length);
     
     const cuentaLimpia: ICuentaBancaria = {
       banco: (cuenta?.banco || '').trim(),
@@ -282,7 +272,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
       moneda: cuenta?.moneda || 'PEN',
     };
     
-    console.log('🧹 Cuenta limpia:', cuentaLimpia);
     
     const cuentaGroup = this.fb.group({
       banco: [cuentaLimpia.banco, Validators.required],
@@ -293,8 +282,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     
     try {
       this.cuentasFormArray.push(cuentaGroup);
-      console.log('✅ Cuenta agregada exitosamente');
-      console.log('📋 FormArray después de agregar:', this.cuentasFormArray.controls);
     } catch (error) {
       console.error('❌ Error al agregar cuenta:', error);
     }
@@ -499,7 +486,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   // ── GUARDADO ─────────────────────────────────────────────────────────
   
   async guardarEmpresa() {
-    console.log('🔍 Validando formulario...');
 
     this.empresaForm.markAllAsTouched();
 
@@ -509,11 +495,8 @@ export class EmpresasComponent implements OnInit, OnDestroy {
       return ctrl?.invalid && ctrl?.errors;
     });
 
-    console.log('📋 Formulario válido:', this.empresaForm.valid);
-    console.log('📋 Formulario completo:', this.empresaForm.value);
 
     if (hayErrorEnPrincipales) {
-      console.log('❌ Formulario inválido - errores en campos principales');
       this.msg.add({
         severity: 'warn',
         summary: 'Formulario inválido',
@@ -523,7 +506,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     }
 
     if (this.cuentasFormArray.length > 0 && this.cuentasFormArray.invalid) {
-      console.log('❌ Hay cuentas bancarias con datos incompletos');
       this.msg.add({
         severity: 'warn',
         summary: 'Cuentas incompletas',
@@ -538,15 +520,12 @@ export class EmpresasComponent implements OnInit, OnDestroy {
       const idControl = this.empresaForm.get('id');
       const idValue = idControl?.disabled ? idControl?.value : this.empresaForm.value.id;
 
-      console.log('📝 ID final a usar:', idValue);
 
       const formData = {
         ...this.empresaForm.value,
         id: idValue
       };
 
-      console.log('📝 Datos a guardar:', formData);
-      console.log('📝 Es edición:', this.esEdicion);
 
       if (!idValue || idValue.trim() === '') {
         this.msg.add({
