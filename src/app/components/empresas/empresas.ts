@@ -1,12 +1,15 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy, Inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy, Inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { FormBuilder, FormGroup, Validators, FormArray, FormControl, AbstractControl } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 
 import { IEmpresa, ICuentaBancaria } from '../../models/empresa.model';
 import { SupabaseService } from '../../services/supabase.service';
 import { ApiPeruService } from '../../services/api-peru.service';
+import {
+  prepararImagen, blobADataUrl, dataUrlABlob, extensionDeImagen, PESO_MAXIMO_IMAGEN
+} from '../../services/imagenes';
 import { EmpresaValidators } from '../../validators/empresa.validators';
 
 import { TableModule } from 'primeng/table';
@@ -24,9 +27,6 @@ import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { InputNumberModule } from 'primeng/inputnumber';
 
-import { Observable, Subject, Subscription, of, timer } from 'rxjs';
-import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
-
 import { SessionContextService } from '../../services/session-context.service';
 
 @Component({
@@ -43,7 +43,7 @@ import { SessionContextService } from '../../services/session-context.service';
   templateUrl: './empresas.html',
   styleUrls: ['./empresas.scss']
 })
-export class EmpresasComponent implements OnInit, OnDestroy {
+export class EmpresasComponent implements OnInit {
   
   empresas: IEmpresa[] = [];
   cargando = true;
@@ -69,13 +69,10 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   empresaForm!: FormGroup;
   cuentasFormArray!: FormArray;
   
-  readonly MAX_FILE_SIZE = 5 * 1024 * 1024;
+  // Tope del archivo elegido; antes de subirlo se reduce a 800 px (ver imagenes.ts).
+  readonly MAX_FILE_SIZE = 10 * 1024 * 1024;
   readonly SUPPORTED_FORMATS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-  
-  private destroy$ = new Subject<void>();
-  private autoSaveTimer$ = new Subject<void>();
-  private autoSaveSub?: Subscription;
-  
+
   constructor(
     private supabase: SupabaseService,
     private apiPeru: ApiPeruService,
@@ -88,21 +85,14 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   ) {}
   
   ngOnInit() {
-  const rol = this.session.usuario()?.rol; // ← cambio
-  this.esAdminGeneral = rol === 'admin';
-  this.esAdminEmpresa = rol === 'admin_empresa';
-  this.inicializarFormularios();
-  this.cargarEmpresas();
-}
-  
-  ngOnDestroy() {
-    if (this.autoSaveSub) {
-      this.autoSaveSub.unsubscribe();
-    }
-    this.destroy$.next();
-    this.destroy$.complete();
-    this.autoSaveTimer$.next();
-    this.autoSaveTimer$.complete();
+    const rol = this.session.usuario()?.rol;
+    this.esAdminGeneral = rol === 'admin';
+    this.esAdminEmpresa = rol === 'admin_empresa';
+    this.inicializarFormularios();
+    this.cargarEmpresas();
+    // Versiones anteriores guardaban aquí el formulario (con cuentas
+    // bancarias) cada 2 s y nunca lo leían.
+    try { localStorage.removeItem('empresa_borrador'); } catch { /* sin almacenamiento */ }
   }
   
   private inicializarFormularios() {
@@ -131,24 +121,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     });
     
     this.cuentasFormArray = this.empresaForm.get('cuentas_bancarias') as FormArray;
-    this.configurarAutosave();
-  }
-  
-  private configurarAutosave() {
-    if (this.autoSaveSub) {
-      this.autoSaveSub.unsubscribe();
-    }
-    this.autoSaveSub = this.empresaForm.valueChanges
-      .pipe(
-        takeUntil(this.destroy$),
-        debounceTime(2000),
-        distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr))
-      )
-      .subscribe(() => {
-        if (this.empresaDialog && this.empresaForm.valid) {
-          this.guardarBorrador();
-        }
-      });
   }
   
   async cargarEmpresas() {
@@ -382,74 +354,59 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   
   // ── UPLOAD DE ARCHIVOS ───────────────────────────────────────────────
   
-  async subirLogo(event: any) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    if (!this.validarArchivo(file)) return;
-    
+  // La imagen elegida se reduce y queda como vista previa en el formulario;
+  // se sube a Storage recién al guardar la empresa (ver subirImagenesPendientes).
+
+  subirLogo(event: any) {
+    return this.cargarImagen(event, 'ruta_logo', 'Logo');
+  }
+
+  subirFirma(event: any) {
+    return this.cargarImagen(event, 'ruta_firma', 'Firma');
+  }
+
+  private async cargarImagen(event: any, campo: 'ruta_logo' | 'ruta_firma', nombre: string) {
+    const file: File | undefined = event.target.files[0];
+    event.target.value = '';
+    if (!file || !this.validarArchivo(file)) return;
+
     try {
-      const base64 = await this.convertirABase64(file);
-      this.empresaForm.patchValue({
-        ruta_logo: base64
-      });
-      
-      this.msg.add({
-        severity: 'success',
-        summary: 'Logo subido',
-        detail: 'El logo se cargó correctamente'
-      });
-      
-      event.target.value = '';
+      const imagen = await prepararImagen(file);
+      if (imagen.size > PESO_MAXIMO_IMAGEN) {
+        this.msg.add({ severity: 'error', summary: 'Imagen muy pesada', detail: `${nombre}: incluso reducida supera los 2 MB.` });
+        return;
+      }
+      this.empresaForm.patchValue({ [campo]: await blobADataUrl(imagen) });
+      this.msg.add({ severity: 'info', summary: `${nombre} listo`, detail: 'Se subirá al guardar la empresa.' });
     } catch (error: any) {
-      console.error('Error subiendo logo:', error);
-      this.msg.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudo subir el logo: ' + error.message
-      });
-      
-      event.target.value = '';
+      console.error(`Error preparando ${nombre}:`, error);
+      this.msg.add({ severity: 'error', summary: 'Error', detail: `No se pudo procesar la imagen: ${error?.message ?? ''}` });
+    } finally {
+      this.cdr.markForCheck();
     }
   }
-  
-  async subirFirma(event: any) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    if (!this.validarArchivo(file)) return;
-    
-    try {
-      const base64 = await this.convertirABase64(file);
-      this.empresaForm.patchValue({
-        ruta_firma: base64
-      });
-      
-      this.msg.add({
-        severity: 'success',
-        summary: 'Firma subida',
-        detail: 'La firma se cargó correctamente'
-      });
-      
-      event.target.value = '';
-    } catch (error: any) {
-      console.error('Error subiendo firma:', error);
-      this.msg.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudo subir la firma: ' + error.message
-      });
-      
-      event.target.value = '';
+
+  /**
+   * Sube a Storage las imágenes que estén como data URL (recién elegidas o
+   * heredadas de cuando se guardaban en base64) y devuelve las URLs.
+   */
+  private async subirImagenesPendientes(empresaId: string, datos: { ruta_logo?: string; ruta_firma?: string }) {
+    const resultado = { ...datos };
+    for (const [campo, tipo] of [['ruta_logo', 'logo'], ['ruta_firma', 'firma']] as const) {
+      const valor = datos[campo];
+      if (!valor?.startsWith('data:')) continue;
+      const imagen = await prepararImagen(await dataUrlABlob(valor));
+      resultado[campo] = await this.supabase.subirImagenEmpresa(empresaId, tipo, imagen, extensionDeImagen(imagen.type));
     }
+    return resultado;
   }
-  
+
   private validarArchivo(file: File): boolean {
     if (file.size > this.MAX_FILE_SIZE) {
       this.msg.add({
         severity: 'error',
         summary: 'Archivo muy grande',
-        detail: 'Máximo 5MB permitido'
+        detail: `Máximo ${this.MAX_FILE_SIZE / 1024 / 1024} MB por imagen`
       });
       return false;
     }
@@ -465,22 +422,6 @@ export class EmpresasComponent implements OnInit, OnDestroy {
     }
     
     return true;
-  }
-  
-  private convertirABase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        if (result && result.startsWith('data:')) {
-          resolve(result);
-        } else {
-          reject(new Error('El archivo no se pudo convertir correctamente'));
-        }
-      };
-      reader.onerror = () => reject(new Error('Error al leer el archivo'));
-      reader.readAsDataURL(file);
-    });
   }
   
   // ── GUARDADO ─────────────────────────────────────────────────────────
@@ -567,7 +508,19 @@ export class EmpresasComponent implements OnInit, OnDestroy {
         }
       }
 
-      await this.supabase.guardarEmpresa(formData);
+      let imagenes;
+      try {
+        imagenes = await this.subirImagenesPendientes(formData.id, formData);
+      } catch (error: any) {
+        console.error('Error subiendo imágenes:', error);
+        this.msg.add({
+          severity: 'error', summary: 'No se guardó la empresa',
+          detail: 'No se pudo subir el logo o la firma: ' + (error?.message ?? 'error desconocido')
+        });
+        return;
+      }
+
+      await this.supabase.guardarEmpresa({ ...formData, ...imagenes });
 
       await this.supabase.sincronizarCuentasBancarias(
         formData.id,
@@ -629,19 +582,7 @@ export class EmpresasComponent implements OnInit, OnDestroy {
   }
   
   // ── UTILIDADES ───────────────────────────────────────────────────────
-  
-  private guardarBorrador() {
-    try {
-      const formData = this.empresaForm.value;
-      localStorage.setItem('empresa_borrador', JSON.stringify({
-        ...formData,
-        fechaGuardado: new Date().toISOString()
-      }));
-    } catch (error) {
-      console.warn('No se pudo guardar el borrador:', error);
-    }
-  }
-  
+
   get colorEmpresa(): string {
     return this.empresaForm.get('color')?.value || '#01696f';
   }

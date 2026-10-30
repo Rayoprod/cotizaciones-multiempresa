@@ -223,8 +223,8 @@ export class UsuariosComponent implements OnInit {
       await this.supabase.eliminarUsuario(usuario.id);
       this.usuarios = this.usuarios.filter(u => u.id !== usuario.id);
       this.msg.add({ severity: 'success', summary: 'Eliminado', detail: 'Usuario eliminado' });
-    } catch {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar' });
+    } catch (e: any) {
+      this.msg.add({ severity: 'error', summary: 'No se eliminó', detail: e?.message || 'No se pudo eliminar' });
     } finally {
       this.cdr.markForCheck();
     }
@@ -280,8 +280,8 @@ export class UsuariosComponent implements OnInit {
       this.msg.add({ severity: 'success', summary: '¡Guardado!',
         detail: `Empresas actualizadas para ${this.usuarioSeleccionado.email}` });
       this.drawerVisible = false;
-    } catch {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar' });
+    } catch (e: any) {
+      this.msg.add({ severity: 'error', summary: 'No se guardó', detail: e?.message || 'No se pudo guardar' });
     } finally {
       this.guardandoEmpresas = false;
       this.cdr.markForCheck();

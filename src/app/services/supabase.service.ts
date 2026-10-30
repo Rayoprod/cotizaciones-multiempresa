@@ -384,42 +384,35 @@ export class SupabaseService {
     }
   }
 
-  async guardarCuentaBancaria(cuenta: any): Promise<any> {
-    const { data, error } = await this.client
-      .from('cuentas_bancarias').insert([cuenta]).select().single();
-    if (error) throw error;
-    return data;
-  }
-
-  async actualizarCuentaBancaria(id: string, datos: any): Promise<any> {
-    const { data, error } = await this.client
-      .from('cuentas_bancarias').update(datos).eq('id', id).select().single();
-    if (error) throw error;
-    return data;
-  }
-
-  async eliminarCuentaBancaria(id: string): Promise<void> {
-    const { error } = await this.client.from('cuentas_bancarias').delete().eq('id', id);
-    if (error) throw error;
-  }
-
-  async sincronizarCuentasBancarias(empresaId: string, cuentas: any[]): Promise<void> {
-    await this.client.from('cuentas_bancarias').delete().eq('empresa_id', empresaId);
-    if (cuentas.length > 0) {
-      const filas = cuentas.map((c, i) => ({
-        empresa_id: empresaId,
+  /** Reemplaza las cuentas de la empresa en una sola transacción (guardar_cuentas_bancarias). */
+  async sincronizarCuentasBancarias(empresaId: string, cuentas: ICuentaBancaria[]): Promise<void> {
+    const { error } = await this.client.rpc('guardar_cuentas_bancarias', {
+      p_empresa_id: empresaId,
+      p_cuentas: cuentas.map(c => ({
         banco: c.banco,
-        tipo_cuenta: c.tipo_cuenta || 'Corriente',
-        moneda: c.moneda || 'PEN',
+        tipo_cuenta: c.tipo_cuenta,
+        moneda: c.moneda,
         numero: c.numero,
-        cci: c.cci || null,
-        titular: c.titular || null,
-        activa: c.activa ?? true,
-        orden: c.orden ?? i
-      }));
-      const { error } = await this.client.from('cuentas_bancarias').insert(filas);
-      if (error) throw error;
-    }
+        cci: c.cci,
+        titular: c.titular,
+        activa: c.activa
+      }))
+    });
+    if (error) throw error;
+  }
+
+  // ─── LOGOS Y FIRMAS ───────────────────────────────────────────────────────
+
+  /** Sube la imagen al bucket `empresas` (carpeta de la empresa) y devuelve su URL pública. */
+  async subirImagenEmpresa(empresaId: string, tipo: 'logo' | 'firma', imagen: Blob, extension: string): Promise<string> {
+    const ruta = `${empresaId}/${tipo}-${Date.now()}.${extension}`;
+    const { error } = await this.client.storage.from('empresas').upload(ruta, imagen, {
+      contentType: imagen.type,
+      cacheControl: '31536000',
+      upsert: false
+    });
+    if (error) throw error;
+    return this.client.storage.from('empresas').getPublicUrl(ruta).data.publicUrl;
   }
 
   // ─── PERFILES Y ROLES ─────────────────────────────────────────────────────
@@ -477,13 +470,10 @@ export class SupabaseService {
     if (error) throw error;
   }
 
+  /** Borra la cuenta en auth (y en cascada su perfil y asignaciones). */
   async eliminarUsuario(id: string): Promise<void> {
     const { error } = await this.client.rpc('admin_eliminar_usuario', { p_user_id: id });
-    if (error) {
-      const { error: profErr } = await this.client
-        .from('profiles').delete().eq('id', id);
-      if (profErr) throw profErr;
-    }
+    if (error) throw error;
   }
 
   async getEmpresasDeUsuario(usuarioId: string): Promise<string[]> {
@@ -494,20 +484,12 @@ export class SupabaseService {
     return (data || []).map((r: any) => r.empresa_id);
   }
 
+  /** Deja al usuario exactamente con estas empresas, conservando las que ya tenía (asignar_empresas_usuario). */
   async guardarEmpresasDeUsuario(usuarioId: string, empresaIds: string[]): Promise<void> {
-    const { error: delError } = await this.client
-      .from('usuario_empresa').delete().eq('usuario_id', usuarioId);
-    if (delError) throw delError;
-
-    if (!empresaIds.length) return;
-
-    const filas = empresaIds.map(eid => ({
-      usuario_id: usuarioId,
-      empresa_id: eid,
-      activo: true
-    }));
-
-    const { error } = await this.client.from('usuario_empresa').insert(filas);
+    const { error } = await this.client.rpc('asignar_empresas_usuario', {
+      p_usuario_id: usuarioId,
+      p_empresa_ids: empresaIds
+    });
     if (error) throw error;
   }
 
@@ -606,36 +588,6 @@ export class SupabaseService {
   async eliminarLecturaHorometro(id: string): Promise<void> {
     const { error } = await this.client.from('lecturas_horometro').delete().eq('id', id);
     if (error) throw error;
-  }
-
-  async recalcularHorometroMaquina(maquinaId: string): Promise<void> {
-    const { data } = await this.client
-      .from('lecturas_horometro')
-      .select('horometro, tipo_evento')
-      .eq('maquina_id', maquinaId)
-      .order('horometro', { ascending: false })
-      .limit(1);
-
-    if (!data || data.length === 0) return;
-    const maxLectura = data[0].horometro;
-    const updateData: any = { horometro_actual: maxLectura };
-
-    const { data: ultimoMant } = await this.client
-      .from('lecturas_horometro')
-      .select('horometro')
-      .eq('maquina_id', maquinaId)
-      .eq('tipo_evento', 'mantenimiento')
-      .order('horometro', { ascending: false })
-      .limit(1);
-
-    if (ultimoMant && ultimoMant.length > 0) {
-      updateData.ultimo_mantenimiento = ultimoMant[0].horometro;
-    }
-
-    await this.client
-      .from('maquinaria')
-      .update(updateData)
-      .eq('id', maquinaId);
   }
 }
 

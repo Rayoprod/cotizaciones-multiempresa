@@ -390,7 +390,7 @@ export class MaquinariaComponent implements OnInit {
       await this.supabase.eliminarLecturaHorometro(id);
       this.msg.add({ severity: 'success', summary: 'Eliminado', detail: 'Registro eliminado del historial' });
       await this.cargarHistorialOperaciones();
-      await this.supabase.recalcularHorometroMaquina(this.maquinaSeleccionada!.id!);
+      // El horómetro de la máquina lo recalcula el trigger trg_sync_horometro_maquinaria.
       await this.cargar();
     } catch (e: any) {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el registro' });
