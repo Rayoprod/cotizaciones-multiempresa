@@ -19,6 +19,18 @@
 
 begin;
 
+-- Cotizaciones que el frontend anterior insertó entre 20261029020000 y el
+-- despliegue: llegaron sin incluye_igv (tomaron el valor por defecto) ni autor.
+-- crear_cotizacion() siempre guarda condiciones, así que se reconocen por eso.
+update public.cotizaciones
+   set incluye_igv = (igv > 0)
+ where condiciones = '{}'::jsonb and incluye_igv is distinct from (igv > 0);
+
+update public.cotizaciones c
+   set creado_por = p.id
+  from public.profiles p
+ where c.creado_por is null and lower(c.vendedor) = lower(p.email);
+
 revoke insert, update, delete on public.cotizaciones from authenticated;
 grant update (estado, oculta) on public.cotizaciones to authenticated;
 
