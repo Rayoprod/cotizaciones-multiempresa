@@ -1,5 +1,126 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CotizadorComponent } from './cotizador';
+import { CLAVE_BORRADOR_COTIZADOR } from '../../models';
+
+function almacenamientoEnMemoria() {
+  const datos = new Map<string, string>();
+  return {
+    getItem: (k: string) => datos.get(k) ?? null,
+    setItem: (k: string, v: string) => { datos.set(k, v); },
+    removeItem: (k: string) => { datos.delete(k); },
+    clear: () => datos.clear()
+  };
+}
+
+describe('CotizadorComponent - Guardar cotización', () => {
+  const empresa = { id: 'VDC', nombre_comercial: 'VDC', mostrar_cuentas: true };
+  let supabase: any;
+  let pdf: any;
+  let mensajes: any;
+  let comp: any;
+
+  beforeEach(() => {
+    vi.stubGlobal('sessionStorage', almacenamientoEnMemoria());
+    vi.stubGlobal('navigator', { onLine: true });
+    supabase = {
+      crearCotizacion: vi.fn(async (datos: any) => ({ id: 'nueva', folio: 'VDC-00000072', ...datos })),
+      getClientes: vi.fn(async () => [])
+    };
+    pdf = { generarYDescargarCotizacion: vi.fn(async () => {}) };
+    mensajes = { add: vi.fn() };
+    comp = new CotizadorComponent(
+      { markForCheck: () => {} } as any,
+      supabase, pdf, {} as any, mensajes, {} as any, {} as any,
+      { empresaActiva: () => empresa } as any
+    );
+    comp.empresaActiva = empresa;
+    comp.clienteNombre = 'CLIENTE SAC';
+    comp.clienteDocumento = '20123456789';
+    comp.carrito = [
+      { sku: null, descripcion: 'Arena', unidad: 'm3', cantidad: 2.5, precio_unitario: 16, subtotal: 40 },
+      { sku: null, descripcion: '', unidad: '', cantidad: null, precio_unitario: null, subtotal: 0 }
+    ];
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('envía solo ítems válidos y deja el folio y los totales al servidor', async () => {
+    await comp.generarPDF();
+
+    const enviado = supabase.crearCotizacion.mock.calls[0][0];
+    expect(enviado.empresaId).toBe('VDC');
+    expect(enviado.items).toEqual([{ sku: null, descripcion: 'Arena', unidad: 'm3', cantidad: 2.5, precio_unitario: 16 }]);
+    expect(enviado).not.toHaveProperty('folio');
+    expect(enviado).not.toHaveProperty('total');
+    expect(enviado.condiciones).toEqual({ mostrarValidez: true, diasValidez: 15, mostrarCuentas: true, mostrarContacto: false });
+    expect(enviado.origen).toBeNull();
+    expect(enviado.guardarCliente).toBe(true);
+    // El PDF se arma con lo que devolvió el servidor
+    expect(pdf.generarYDescargarCotizacion.mock.calls[0][0].folio).toBe('VDC-00000072');
+    // Y el formulario queda listo para la siguiente
+    expect(comp.clienteNombre).toBe('');
+    expect(comp.carrito).toHaveLength(1);
+  });
+
+  it('las observaciones solo se envían si el campo está activado', async () => {
+    comp.clienteObservaciones = 'Entrega en la mañana';
+    await comp.generarPDF();
+    expect(supabase.crearCotizacion.mock.calls[0][0].observaciones).toBeNull();
+  });
+
+  it('una revisión manda su origen; la anulación la hace el servidor al guardar', async () => {
+    comp.borradorModo = 'revision';
+    comp.borradorOrigenId = 'orig-1';
+    await comp.generarPDF();
+    expect(supabase.crearCotizacion.mock.calls[0][0].origen).toEqual({ id: 'orig-1', tipo: 'revision' });
+  });
+
+  it('si el servidor rechaza, muestra su motivo y no borra el formulario', async () => {
+    supabase.crearCotizacion.mockRejectedValueOnce({ code: 'P0001', message: 'La cotización VDC-1 ya fue reemplazada por la revisión VDC-2.' });
+    await comp.generarPDF();
+
+    expect(mensajes.add).toHaveBeenCalledWith(expect.objectContaining({
+      severity: 'error', detail: 'La cotización VDC-1 ya fue reemplazada por la revisión VDC-2.'
+    }));
+    expect(pdf.generarYDescargarCotizacion).not.toHaveBeenCalled();
+    expect(comp.clienteNombre).toBe('CLIENTE SAC');
+  });
+
+  it('sin conexión no intenta guardar', async () => {
+    vi.stubGlobal('navigator', { onLine: false });
+    await comp.generarPDF();
+    expect(supabase.crearCotizacion).not.toHaveBeenCalled();
+  });
+
+  it('rechaza una validez fuera de 1 a 365 días antes de llamar al servidor', async () => {
+    comp.condiciones.diasValidez = '0';
+    await comp.generarPDF();
+    expect(supabase.crearCotizacion).not.toHaveBeenCalled();
+  });
+
+  it('el borrador del historial limpia notas y códigos viejos', () => {
+    sessionStorage.setItem(CLAVE_BORRADOR_COTIZADOR, JSON.stringify({
+      modo: 'revision', origen_id: 'orig-1', folio_origen: 'VDC-00000045',
+      cliente_nombre: 'CLIENTE SAC', cliente_documento: '20123456789',
+      observaciones: '[Revisión de VDC-00000040] Precio puesto en obra',
+      condiciones: { diasValidez: 30, mostrarCuentas: false },
+      incluye_igv: false,
+      items: [{ sku: 'VAR-1234', descripcion: 'Arena', cantidad: 1, precio_unitario: 16, subtotal: 16 },
+              { sku: 'PRD-0001', descripcion: 'Piedra', cantidad: 1, precio_unitario: 20, subtotal: 20 }]
+    }));
+
+    expect(comp['cargarBorradorSiExiste']()).toBe(true);
+    expect(comp.borradorOrigenId).toBe('orig-1');
+    expect(comp.borradorFolioPadre).toBe('VDC-00000045');
+    expect(comp.clienteObservaciones).toBe('Precio puesto en obra');
+    expect(comp.condiciones.mostrarObservaciones).toBe(true);
+    expect(comp.condiciones.diasValidez).toBe('30');
+    expect(comp.condiciones.mostrarCuentas).toBe(false);
+    expect(comp.carrito.map((i: any) => i.sku)).toEqual([null, 'PRD-0001']);
+    expect(comp.totalFinal).toBe(36);
+    expect(sessionStorage.getItem(CLAVE_BORRADOR_COTIZADOR)).toBeNull();
+  });
+});
 
 describe('CotizadorComponent - Customer Name Logic', () => {
   let comp: any;

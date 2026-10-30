@@ -1,14 +1,17 @@
-import { Component, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectorRef, ChangeDetectionStrategy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../services/auth';
-import { SupabaseService } from '../../services/supabase.service';
-import { SessionContextService } from '../../services/session-context.service';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { RippleModule } from 'primeng/ripple';
+
+const MENSAJES_CIERRE: Record<string, string> = {
+  desactivada: 'Tu cuenta está desactivada. Pide al administrador que la vuelva a activar.',
+  sin_perfil: 'Tu usuario no tiene un perfil asignado. Contacta al administrador.'
+};
 
 @Component({
   selector: 'app-login',
@@ -17,7 +20,7 @@ import { RippleModule } from 'primeng/ripple';
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.html'
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   correo: string = '';
   contrasena: string = '';
   mensajeError: string = '';
@@ -25,11 +28,17 @@ export class LoginComponent {
 
   constructor(
     private authService: AuthService,
-    private supabaseSvc: SupabaseService,
-    private session: SessionContextService,
     private router: Router,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
   ) {}
+
+  ngOnInit() {
+    const motivo = this.route.snapshot.queryParamMap.get('motivo');
+    if (motivo && MENSAJES_CIERRE[motivo]) {
+      this.mensajeError = MENSAJES_CIERRE[motivo];
+    }
+  }
 
   async iniciarSesion() {
     this.mensajeError = '';
@@ -44,29 +53,22 @@ export class LoginComponent {
     }
 
     try {
-      const { data, error } = await this.authService.login(this.correo, this.contrasena);
+      const { error } = await this.authService.login(this.correo, this.contrasena);
 
       if (error) {
         this.mensajeError = 'Correo o contraseña incorrectos.';
         return;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      const perfil = await this.supabaseSvc.obtenerPerfil(data.user?.id);
-
-      if (perfil) {
-        this.session.setUsuario({
-          id: data.user?.id ?? '',
-          email: data.user?.email ?? '',
-          rol: perfil.rol ?? 'vendedor',
-          activo: true
-        });
+      // Confirma que la cuenta tiene perfil y está activa; si no, cierra la sesión.
+      const perfil = await this.authService.asegurarPerfil();
+      if (!perfil) {
+        const motivo = this.authService.consumirMotivoCierre();
+        this.mensajeError = (motivo && MENSAJES_CIERRE[motivo]) || 'No se pudo verificar tu cuenta. Inténtalo de nuevo.';
+        return;
       }
 
-      const rol = perfil?.rol ?? 'vendedor';
-
-      if (rol === 'admin') {
+      if (perfil.rol === 'admin') {
         this.router.navigate(['/admin/empresas']);
       } else {
         this.router.navigate(['/selector']);

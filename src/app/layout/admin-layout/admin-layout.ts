@@ -13,7 +13,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 
 import { AuthService } from '../../services/auth';
-import { SupabaseService } from '../../services/supabase.service';
 import { SessionContextService } from '../../services/session-context.service';
 import { PwaUpdateService } from '../../services/pwa-update.service';
 
@@ -38,7 +37,6 @@ export class AdminLayoutComponent implements OnDestroy {
   private auth       = inject(AuthService);
   private router     = inject(Router);
   private cdr        = inject(ChangeDetectorRef);
-  private supabase   = inject(SupabaseService);
   private session    = inject(SessionContextService);
   private destroyRef = inject(DestroyRef);
   public pwaUpdate   = inject(PwaUpdateService);
@@ -178,38 +176,9 @@ export class AdminLayoutComponent implements OnDestroy {
     this.auth.logout();
   }
 
-  // ✅ Si ya hay sesión en el service, no necesita reintentar
+  // El guard ya verificó el perfil; esto solo cubre recargas de página.
   private async inicializarSesion() {
-    if (this.session.usuario()) {
-      this.cargandoAdmin = false;
-      this.cdr.markForCheck();
-      return;
-    }
-
-    // Fallback: reconstruir sesión si se recargó la página
-    let intentos = 0;
-    while (intentos < 3) {
-      try {
-        const sesion = await this.supabase.obtenerSesion();
-        const user = sesion?.data?.session?.user;
-        if (user?.email) {
-          const perfil = await this.supabase.obtenerPerfil(user.id);
-          if (perfil?.rol) {
-            this.session.setUsuario({
-              id: user.id,
-              email: user.email,
-              rol: perfil.rol,
-              activo: true
-            });
-            break;
-          }
-        }
-      } catch { /* reintentar */ }
-
-      intentos++;
-      if (intentos < 3) await new Promise(r => setTimeout(r, 800));
-    }
-
+    await this.auth.asegurarPerfil();
     this.cargandoAdmin = false;
     this.cdr.markForCheck();
   }

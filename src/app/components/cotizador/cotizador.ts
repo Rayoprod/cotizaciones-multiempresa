@@ -21,9 +21,14 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { CheckboxModule } from 'primeng/checkbox';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { SessionContextService } from '../../services/session-context.service';
-import { extraerNombreClienteTexto, extraerDocumentoClienteTexto } from '../../models';
+import {
+  extraerNombreClienteTexto, extraerDocumentoClienteTexto,
+  calcularTotales, redondear2, CLAVE_BORRADOR_COTIZADOR,
+  IBorradorCotizador, INuevaCotizacion
+} from '../../models';
 
 @Component({
   selector: 'app-cotizador',
@@ -34,7 +39,7 @@ import { extraerNombreClienteTexto, extraerDocumentoClienteTexto } from '../../m
     InputNumberModule, InputTextModule,
     ToggleButtonModule, SelectButtonModule, AutoCompleteModule,
     DialogModule, DropdownModule, TooltipModule, ToastModule, InputTextareaModule,
-    ProgressSpinnerModule, ConfirmDialogModule
+    ProgressSpinnerModule, ConfirmDialogModule, CheckboxModule
   ],
   templateUrl: './cotizador.html',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -43,9 +48,10 @@ export class CotizadorComponent implements OnInit {
 
   // ── Estado de empresa ─────────────────────────────────────────────────────
   empresaActiva: any = null;
-  datosActuales: any = null;
 
   // ── Condiciones PDF ───────────────────────────────────────────────────────
+  // Se guardan con la cotización (salvo mostrarObservaciones, que solo
+  // muestra u oculta el campo de observaciones en el formulario).
   condiciones = {
     mostrarValidez: true,
     diasValidez: '15',
@@ -65,13 +71,13 @@ export class CotizadorComponent implements OnInit {
   carrito: any[] = [];
 
   // ── Formulario cliente ────────────────────────────────────────────────────
-  clienteId: string | null = null;
   clienteNombre: string = '';
   clienteDocumento: string = '';
   clienteTelefono: string = '';
   clienteDireccion: string = '';
   clienteCorreo: string = '';
   clienteObservaciones: string = '';
+  guardarClienteEnCartera = true;
 
   // ── Opciones ──────────────────────────────────────────────────────────────
   incluyeIgv: boolean = true;
@@ -87,13 +93,16 @@ export class CotizadorComponent implements OnInit {
   igvTotal: number = 0;
   totalFinal: number = 0;
 
+  // ── Revisión / duplicado abierto desde el historial ──────────────────────
+  borradorModo: 'revision' | 'duplicar' | null = null;
+  borradorOrigenId: string | null = null;
+  borradorFolioPadre: string | null = null;
+
   // ── Selector maquinaria ───────────────────────────────────────────────────
   modalMaquinariaVisible = false;
-  borradorModo: 'revision' | 'duplicar' | null = null;
   cargando = true;
   generandoPDF = false;
   buscandoDocumento = false;
-  borradorFolioPadre: string | null = null;
   maquinaSeleccionada: any = null;
   modalidadMaquina: string = 'alquiler_dia';
   cantidadMaquina: number = 1;
@@ -122,9 +131,6 @@ export class CotizadorComponent implements OnInit {
     this.cargando = true;
 
     this.empresaActiva = this.session.empresaActiva();
-    this.datosActuales = this.empresaActiva;
-
-    const hayBorrador = !!sessionStorage.getItem('cotizador-borrador');
 
     if (!this.empresaActiva?.id) {
       this.cargando = false;
@@ -144,9 +150,7 @@ export class CotizadorComponent implements OnInit {
       this.agregarFila();
     }
 
-    if (this.empresaActiva?.id) {
-      await this.cargarDatosDesdeBD();
-    }
+    await this.cargarDatosDesdeBD();
 
     this.cargando = false;
     this.cdr.markForCheck();
@@ -154,10 +158,15 @@ export class CotizadorComponent implements OnInit {
 
   // ── Validación ────────────────────────────────────────────────────────────
 
+  private esItemValido(item: any): boolean {
+    return !!item.descripcion?.trim() &&
+      item.precio_unitario !== null && item.precio_unitario !== undefined &&
+      Number(item.precio_unitario) >= 0 &&
+      Number(item.cantidad) > 0;
+  }
+
   get tieneItemsValidos(): boolean {
-    return this.carrito.some(
-      item => item.descripcion?.trim() && item.precio_unitario !== null && item.precio_unitario !== undefined && Number(item.precio_unitario) >= 0 && Number(item.cantidad) > 0
-    );
+    return this.carrito.some(item => this.esItemValido(item));
   }
 
   get puedeGenerar(): boolean {
@@ -199,8 +208,6 @@ export class CotizadorComponent implements OnInit {
 
   // ── Clientes ──────────────────────────────────────────────────────────────
 
-  // ── Clientes ──────────────────────────────────────────────────────────────
-
   obtenerNombreClienteTexto(val: any): string {
     return extraerNombreClienteTexto(val);
   }
@@ -211,6 +218,11 @@ export class CotizadorComponent implements OnInit {
 
   get clienteDocumentoTexto(): string {
     return extraerDocumentoClienteTexto(this.clienteDocumento);
+  }
+
+  get clienteYaRegistrado(): boolean {
+    const doc = this.clienteDocumentoTexto;
+    return !!doc && this.clientesBD.some(c => String(c.documento_identidad || '').trim() === doc);
   }
 
   filtrarNombresClientes(event: any) {
@@ -315,135 +327,13 @@ export class CotizadorComponent implements OnInit {
     }
   }
 
-  async procesarClienteSilencioso(): Promise<string | null> {
-    const empresa = this.empresaActiva || this.session.empresaActiva();
-    const nombreTrim = this.clienteNombreTexto;
-    const docTrim = this.clienteDocumentoTexto;
-    if (!nombreTrim || !docTrim || !empresa?.id) return null;
-
-    let existe = this.clientesBD.find(c => String(c.documento_identidad || '').trim() === docTrim);
-
-    if (!existe) {
-      try {
-        const clienteGuardado = await this.supabaseSvc.guardarCliente({
-          nombre_razon_social: nombreTrim,
-          documento_identidad: docTrim,
-          telefono: this.clienteTelefono?.trim() || null,
-          direccion: this.clienteDireccion?.trim() || null,
-          correo: this.clienteCorreo?.trim() || null,
-          empresa_id: empresa.id
-        });
-        if (clienteGuardado) {
-          this.clientesBD = [...this.clientesBD, clienteGuardado];
-          existe = clienteGuardado;
-        }
-      } catch (e) {
-        console.error('Error guardando cliente silencioso:', e);
-      }
-    } else {
-      let necesitaActualizar = false;
-      const datosActualizar: any = {
-        id: existe.id,
-        empresa_id: empresa.id,
-        nombre_razon_social: nombreTrim,
-        documento_identidad: docTrim
-      };
-
-      if (nombreTrim && existe.nombre_razon_social !== nombreTrim) {
-        datosActualizar.nombre_razon_social = nombreTrim;
-        necesitaActualizar = true;
-      }
-      const telTrim = this.clienteTelefono?.trim() || null;
-      if (telTrim && telTrim !== (existe.telefono || null)) {
-        datosActualizar.telefono = telTrim;
-        necesitaActualizar = true;
-      }
-      const dirTrim = this.clienteDireccion?.trim() || null;
-      if (dirTrim && dirTrim !== (existe.direccion || null)) {
-        datosActualizar.direccion = dirTrim;
-        necesitaActualizar = true;
-      }
-      const correoTrim = this.clienteCorreo?.trim() || null;
-      if (correoTrim && correoTrim !== (existe.correo || null)) {
-        datosActualizar.correo = correoTrim;
-        necesitaActualizar = true;
-      }
-
-      if (necesitaActualizar) {
-        try {
-          const clienteAct = await this.supabaseSvc.guardarCliente(datosActualizar);
-          if (clienteAct) {
-            const idx = this.clientesBD.findIndex(c => c.id === existe.id);
-            if (idx !== -1) {
-              this.clientesBD[idx] = { ...this.clientesBD[idx], ...clienteAct };
-            }
-          }
-        } catch (e) {
-          console.error('Error actualizando cliente silencioso:', e);
-        }
-      }
-    }
-
-    return existe ? (existe.id || null) : null;
-  }
-
-  async procesarProductosSilenciosos() {
-    const empresa = this.empresaActiva || this.session.empresaActiva();
-    if (!empresa?.id) return;
-
-    const itemsValidos = this.carrito.filter(
-      item => item.descripcion?.trim() && Number(item.cantidad) > 0 && item.precio_unitario !== null && item.precio_unitario !== undefined && Number(item.precio_unitario) >= 0
-    );
-
-    for (const item of itemsValidos) {
-      const descTrim = String(item.descripcion).trim();
-      const yaExiste = this.productosBD.some(
-        p => p.descripcion?.toLowerCase().trim() === descTrim.toLowerCase()
-      );
-
-      if (!yaExiste) {
-        try {
-          const sku = (item.sku && !item.sku.startsWith('VAR-')) ? item.sku : this.generarSkuAutomaticoCotizador();
-          const nuevoProd = await this.supabaseSvc.guardarProducto({
-            codigo_sku: sku,
-            descripcion: descTrim,
-            unidad: item.unidad ? String(item.unidad).trim() : 'und',
-            precio_unitario_base: Number(item.precio_unitario) || 0,
-            empresa_id: empresa.id
-          });
-          if (nuevoProd) {
-            this.productosBD = [...this.productosBD, nuevoProd];
-          }
-        } catch (e) {
-          console.error('Error guardando producto silencioso:', e);
-        }
-      }
-    }
-  }
-
-  generarSkuAutomaticoCotizador(): string {
-    const numeros = this.productosBD
-      .map(p => p.codigo_sku)
-      .filter(Boolean)
-      .map(sku => {
-        const match = (sku || '').match(/PRD-(\d+)/i);
-        return match ? parseInt(match[1], 10) : 0;
-      });
-    const maxNum = numeros.length > 0 ? Math.max(...numeros) : 0;
-    let siguiente = maxNum + 1;
-    let skuCandidate = `PRD-${siguiente.toString().padStart(4, '0')}`;
-    while (this.productosBD.some(p => (p.codigo_sku || '').trim().toLowerCase() === skuCandidate.toLowerCase())) {
-      siguiente++;
-      skuCandidate = `PRD-${siguiente.toString().padStart(4, '0')}`;
-    }
-    return skuCandidate;
-  }
-
   // ── Carrito ───────────────────────────────────────────────────────────────
+  // `sku` solo se llena cuando la línea corresponde a un producto del
+  // catálogo o a un equipo con código; las líneas libres no llevan código.
 
   agregarFila() {
     this.carrito = [...this.carrito, {
-      sku: 'VAR-' + Math.floor(1000 + Math.random() * 9000),
+      sku: null,
       descripcion: '',
       unidad: '',
       cantidad: null,
@@ -483,51 +373,42 @@ export class CotizadorComponent implements OnInit {
     }
   }
 
-  validarTexto(item: any) {
-    if (item.descripcion?.length > 100) item.descripcion = item.descripcion.substring(0, 100);
-  }
-
   alCambiarDescripcion(item: any) {
-    if (item.descripcion?.trim()) {
-      const prodMatch = this.productosBD.find(
-        p => p.descripcion?.toLowerCase().trim() === String(item.descripcion).toLowerCase().trim()
-      );
-      if (prodMatch) {
-        if (!item.sku || item.sku.startsWith('VAR-')) {
-          item.sku = prodMatch.codigo_sku;
-        }
-        if (!item.unidad) {
-          item.unidad = prodMatch.unidad || item.unidad;
-        }
-        if (item.precio_unitario === null || item.precio_unitario === undefined) {
-          item.precio_unitario = prodMatch.precio_unitario_base;
-        }
-        if (!item.cantidad) {
-          item.cantidad = 1;
-        }
+    const prodMatch = item.descripcion?.trim()
+      ? this.productosBD.find(
+          p => p.descripcion?.toLowerCase().trim() === String(item.descripcion).toLowerCase().trim()
+        )
+      : null;
+
+    item.sku = prodMatch?.codigo_sku ?? null;
+    if (prodMatch) {
+      if (!item.unidad) {
+        item.unidad = prodMatch.unidad || item.unidad;
+      }
+      if (item.precio_unitario === null || item.precio_unitario === undefined) {
+        item.precio_unitario = prodMatch.precio_unitario_base;
+      }
+      if (!item.cantidad) {
+        item.cantidad = 1;
       }
     }
     this.recalcularItem(item);
   }
 
   recalcularItem(item: any) {
-    const qty = Number(item.cantidad) || 0;
-    const price = (item.precio_unitario !== null && item.precio_unitario !== undefined) ? Number(item.precio_unitario) : 0;
-    item.subtotal = Math.round(qty * price * 100) / 100;
+    item.subtotal = redondear2((Number(item.cantidad) || 0) * (Number(item.precio_unitario) || 0));
     this.recalcularTodo();
   }
 
   recalcularTodo() {
-    const rawSubtotal = this.carrito
-      .filter(item => item.descripcion?.trim() && Number(item.cantidad) > 0 && item.precio_unitario !== null && item.precio_unitario !== undefined && Number(item.precio_unitario) >= 0)
-      .reduce((acc, item) => acc + (Number(item.subtotal) || 0), 0);
-    this.subtotalGeneral = Math.round(rawSubtotal * 100) / 100;
-    this.igvTotal = this.incluyeIgv ? Math.round(this.subtotalGeneral * 0.18 * 100) / 100 : 0;
-    this.totalFinal = Math.round((this.subtotalGeneral + this.igvTotal) * 100) / 100;
+    const totales = calcularTotales(this.carrito.filter(item => this.esItemValido(item)), this.incluyeIgv);
+    this.subtotalGeneral = totales.subtotal;
+    this.igvTotal = totales.igv;
+    this.totalFinal = totales.total;
     this.cdr.markForCheck();
   }
 
-  // ── Generar PDF ───────────────────────────────────────────────────────────
+  // ── Guardar y generar PDF ─────────────────────────────────────────────────
 
   async generarPDF() {
     if (!this.puedeGenerar || this.generandoPDF) {
@@ -541,150 +422,125 @@ export class CotizadorComponent implements OnInit {
       return;
     }
 
-    this.generandoPDF = true;
-
-    const itemsValidos = this.carrito
-      .filter(item => item.descripcion?.trim() && Number(item.cantidad) > 0 && item.precio_unitario !== null && item.precio_unitario !== undefined && Number(item.precio_unitario) >= 0)
-      .map(item => ({
-        sku: item.sku || 'VAR-' + Math.floor(1000 + Math.random() * 9000),
-        descripcion: String(item.descripcion).trim(),
-        unidad: item.unidad ? String(item.unidad).trim() : 'und',
-        cantidad: Number(item.cantidad),
-        precio_unitario: Number(item.precio_unitario),
-        subtotal: Math.round(Number(item.cantidad) * Number(item.precio_unitario) * 100) / 100
-      }));
-
-    this.messageService.add({
-      severity: 'info', summary: 'Procesando', detail: 'Guardando cotización...', life: 2000
-    });
-
-    try {
-      const empresa = this.empresaActiva || this.session.empresaActiva();
-      if (!empresa?.id) {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Empresa no seleccionada',
-          detail: 'Por favor selecciona una empresa activa.'
-        });
-        this.generandoPDF = false;
-        return;
-      }
-      this.empresaActiva = empresa;
-
-      let clienteId: string | null = null;
-      if (navigator.onLine) {
-        try {
-          clienteId = await this.procesarClienteSilencioso();
-          await this.procesarProductosSilenciosos();
-        } catch (e) {
-          console.warn('Procesamiento silencioso no completado en red:', e);
-        }
-      }
-
-      let observacionesBD = this.clienteObservaciones?.trim() || '';
-      if (this.borradorFolioPadre) {
-        const prefijoModo = this.borradorModo === 'revision' ? 'Revisión de' : 'Duplicado de';
-        const notaBorrador = `[${prefijoModo} ${this.borradorFolioPadre}]`;
-        if (!observacionesBD.includes(notaBorrador)) {
-          observacionesBD = observacionesBD ? `${notaBorrador} ${observacionesBD}` : notaBorrador;
-        }
-      }
-
-      let vendedorEmail = this.session.usuario()?.email ?? null;
-      if (!vendedorEmail && navigator.onLine) {
-        try {
-          const usr = await this.supabaseSvc.obtenerUsuarioActual();
-          vendedorEmail = usr?.email ?? null;
-        } catch { /* ignore */ }
-      }
-
-      const cotizacionBase: any = {
-        fecha: new Date().toISOString(),
-        empresa_id: empresa.id,
-        cliente_id: clienteId,
-        cliente_nombre: this.clienteNombreTexto,
-        cliente_documento: this.clienteDocumentoTexto,
-        cliente_telefono: this.clienteTelefono ? String(this.clienteTelefono).trim() : null,
-        cliente_direccion: this.clienteDireccion ? String(this.clienteDireccion).trim() : null,
-        cliente_correo: this.clienteCorreo ? String(this.clienteCorreo).trim() : null,
-        subtotal: this.subtotalGeneral,
-        igv: this.igvTotal,
-        total: this.totalFinal,
-        estado: 'PENDIENTE',
-        items: itemsValidos,
-        vendedor: vendedorEmail,
-        lugar_entrega: this.lugarEntrega,
-        observaciones: observacionesBD || null
-      };
-
-      const prefijoFallback = empresa.prefijo || 'COT';
-      const folioSeguro = await this.supabaseSvc.obtenerSiguienteFolio(empresa.id, prefijoFallback);
-
-      const cotizacionParaBD = {
-        ...cotizacionBase,
-        folio: folioSeguro
-      };
-
-      await this.supabaseSvc.guardarCotizacion(cotizacionParaBD);
-
-      const cotizacionParaPdf = {
-        ...cotizacionParaBD,
-        clientenombre: cotizacionParaBD.cliente_nombre,
-        clientedocumento: cotizacionParaBD.cliente_documento,
-        clientetelefono: cotizacionParaBD.cliente_telefono,
-        clientedireccion: cotizacionParaBD.cliente_direccion,
-        clientecorreo: cotizacionParaBD.cliente_correo,
-        lugarentrega: cotizacionParaBD.lugar_entrega
-      };
-
-      try {
-        await this.pdfSvc.generarYDescargarCotizacion(
-          cotizacionParaPdf,
-          this.empresaActiva,
-          this.lugarEntrega,
-          this.condiciones
-        );
-
-        this.messageService.add({
-          severity: 'success', summary: '¡Listo!', detail: `Cotización ${folioSeguro} guardada en BD y descargada en tiempo real.`
-        });
-      } catch (pdfError) {
-        console.error('Error al generar PDF:', pdfError);
-        this.messageService.add({
-          severity: 'warn',
-          summary: 'Cotización guardada en BD',
-          detail: `La cotización ${folioSeguro} fue registrada en tiempo real, pero ocurrió un detalle al emitir el PDF. Puedes descargarlo desde el Historial.`,
-          life: 8000
-        });
-      }
-
-      this.resetearTrasGuardar();
-      this.cdr.markForCheck();
-
-    } catch (error) {
-      console.error('Error crítico al procesar cotización:', error);
+    const diasValidez = Number(this.condiciones.diasValidez);
+    if (this.condiciones.mostrarValidez && !(Number.isInteger(diasValidez) && diasValidez >= 1 && diasValidez <= 365)) {
       this.messageService.add({
-        severity: 'error', summary: 'Error', detail: 'Ocurrió un error al procesar la cotización.'
+        severity: 'warn', summary: 'Validez inválida', detail: 'La validez de la oferta debe ser un número de días entre 1 y 365.'
       });
-    } finally {
+      return;
+    }
+
+    if (!navigator.onLine) {
+      this.messageService.add({
+        severity: 'error', summary: 'Sin conexión', detail: 'Conéctate a internet para guardar la cotización.'
+      });
+      return;
+    }
+
+    const empresa = this.empresaActiva || this.session.empresaActiva();
+    if (!empresa?.id) {
+      this.messageService.add({
+        severity: 'error', summary: 'Empresa no seleccionada', detail: 'Por favor selecciona una empresa activa.'
+      });
+      return;
+    }
+    this.empresaActiva = empresa;
+
+    const nueva: INuevaCotizacion = {
+      empresaId: empresa.id,
+      cliente: {
+        nombre: this.clienteNombreTexto,
+        documento: this.clienteDocumentoTexto,
+        telefono: this.clienteTelefono?.trim() || null,
+        direccion: this.clienteDireccion?.trim() || null,
+        correo: this.clienteCorreo?.trim() || null
+      },
+      items: this.carrito
+        .filter(item => this.esItemValido(item))
+        .map(item => ({
+          sku: item.sku || null,
+          descripcion: String(item.descripcion).trim(),
+          unidad: item.unidad ? String(item.unidad).trim() : null,
+          cantidad: Number(item.cantidad),
+          precio_unitario: Number(item.precio_unitario)
+        })),
+      incluyeIgv: this.incluyeIgv,
+      lugarEntrega: this.lugarEntrega,
+      observaciones: this.condiciones.mostrarObservaciones ? (this.clienteObservaciones?.trim() || null) : null,
+      condiciones: {
+        mostrarValidez: this.condiciones.mostrarValidez,
+        diasValidez: this.condiciones.mostrarValidez ? diasValidez : 15,
+        mostrarCuentas: this.condiciones.mostrarCuentas,
+        mostrarContacto: this.condiciones.mostrarContacto
+      },
+      origen: this.borradorOrigenId && this.borradorModo
+        ? { id: this.borradorOrigenId, tipo: this.borradorModo === 'revision' ? 'revision' : 'duplicado' }
+        : null,
+      guardarCliente: this.guardarClienteEnCartera
+    };
+
+    this.generandoPDF = true;
+    this.cdr.markForCheck();
+
+    let guardada;
+    try {
+      guardada = await this.supabaseSvc.crearCotizacion(nueva);
+    } catch (error: any) {
+      console.error('Error al guardar la cotización:', error);
+      // Los errores de validación de crear_cotizacion() ya vienen en español.
+      const esDelServidor = ['22023', 'P0001', '42501'].includes(error?.code) && error?.message;
+      this.messageService.add({
+        severity: 'error',
+        summary: 'No se guardó la cotización',
+        detail: esDelServidor ? error.message : 'Revisa tu conexión e inténtalo de nuevo. No se generó ningún folio.',
+        life: 8000
+      });
       this.generandoPDF = false;
       this.cdr.markForCheck();
+      return;
     }
+
+    try {
+      await this.pdfSvc.generarYDescargarCotizacion(guardada, this.empresaActiva);
+      this.messageService.add({
+        severity: 'success', summary: '¡Listo!', detail: `Cotización ${guardada.folio} guardada y descargada.`
+      });
+    } catch (pdfError) {
+      console.error('Error al generar PDF:', pdfError);
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Cotización guardada',
+        detail: `La cotización ${guardada.folio} quedó registrada, pero no se pudo generar el PDF. Descárgalo desde el Historial.`,
+        life: 8000
+      });
+    }
+
+    if (nueva.guardarCliente) {
+      this.supabaseSvc.getClientes(empresa.id)
+        .then(clientes => { this.clientesBD = clientes || []; })
+        .catch(() => { /* la lista se recarga al volver a entrar */ });
+    }
+
+    this.resetearFormulario();
+    this.generandoPDF = false;
+    this.cdr.markForCheck();
   }
 
-  private resetearTrasGuardar() {
-    sessionStorage.removeItem('cotizador-borrador');
-    this.clienteNombre        = '';
-    this.clienteDocumento     = '';
-    this.clienteTelefono      = '';
-    this.clienteDireccion     = '';
-    this.clienteCorreo        = '';
-    this.clienteObservaciones = '';
-    this.lugarEntrega         = 'CANTERA';
-    this.incluyeIgv           = true;
-    this.carrito              = [];
-    this.borradorModo         = null;
-    this.borradorFolioPadre   = null;
+  private resetearFormulario() {
+    sessionStorage.removeItem(CLAVE_BORRADOR_COTIZADOR);
+    this.clienteNombre           = '';
+    this.clienteDocumento        = '';
+    this.clienteTelefono         = '';
+    this.clienteDireccion        = '';
+    this.clienteCorreo           = '';
+    this.clienteObservaciones    = '';
+    this.guardarClienteEnCartera = true;
+    this.lugarEntrega            = 'CANTERA';
+    this.incluyeIgv              = true;
+    this.carrito                 = [];
+    this.borradorModo            = null;
+    this.borradorOrigenId        = null;
+    this.borradorFolioPadre      = null;
     this.agregarFila();
     this.recalcularTodo();
   }
@@ -731,12 +587,12 @@ export class CotizadorComponent implements OnInit {
     const m = this.maquinaSeleccionada;
     const descripcion = `${this.labelModalidadSeleccionada}: ${m.nombre}${m.marca ? ' ' + m.marca : ''}${m.modelo ? ' ' + m.modelo : ''}`.substring(0, 100);
     const itemMaquinaria = {
-      sku: 'MAQ-' + Math.floor(1000 + Math.random() * 9000),
+      sku: m.codigo || null,
       descripcion,
       unidad: 'und',
       cantidad: this.cantidadMaquina,
       precio_unitario: this.precioMaquinaSeleccionada,
-      subtotal: Math.round(this.cantidadMaquina * this.precioMaquinaSeleccionada * 100) / 100
+      subtotal: redondear2(this.cantidadMaquina * this.precioMaquinaSeleccionada)
     };
 
     const esUnicoItemVacio = this.carrito.length === 1 &&
@@ -754,54 +610,63 @@ export class CotizadorComponent implements OnInit {
     this.messageService.add({ severity: 'success', summary: 'Agregado', detail: descripcion });
   }
 
+  // ── Borrador desde el historial ───────────────────────────────────────────
+
   private cargarBorradorSiExiste(): boolean {
-    const raw = sessionStorage.getItem('cotizador-borrador');
+    const raw = sessionStorage.getItem(CLAVE_BORRADOR_COTIZADOR);
     if (!raw) return false;
+    sessionStorage.removeItem(CLAVE_BORRADOR_COTIZADOR);
 
     try {
-      const b = JSON.parse(raw);
+      // Las claves folio_padre / cotizacion_id son de la versión anterior.
+      const b: IBorradorCotizador & { folio_padre?: string; cotizacion_id?: string } = JSON.parse(raw);
 
-      this.clienteId            = b.cliente_id        || null;
       this.clienteNombre        = b.cliente_nombre    || '';
       this.clienteDocumento     = b.cliente_documento || '';
       this.clienteTelefono      = b.cliente_telefono  || '';
       this.clienteDireccion     = b.cliente_direccion || '';
       this.clienteCorreo        = b.cliente_correo    || '';
-      this.clienteObservaciones = b.observaciones     || '';
+      // Las cotizaciones viejas guardaban "[Revisión de X]" en observaciones.
+      this.clienteObservaciones = (b.observaciones || '').replace(/^\[(Revisión|Duplicado) de [^\]]+\]\s*/, '');
+      this.condiciones.mostrarObservaciones = !!this.clienteObservaciones;
       this.lugarEntrega         = b.lugar_entrega     || 'CANTERA';
       if (b.incluye_igv !== undefined) {
         this.incluyeIgv         = b.incluye_igv;
       }
+      if (b.condiciones && Object.keys(b.condiciones).length > 0) {
+        const { diasValidez, ...resto } = b.condiciones;
+        Object.assign(this.condiciones, resto);
+        if (diasValidez) this.condiciones.diasValidez = String(diasValidez);
+      }
 
       if (b.items?.length > 0) {
-        this.carrito = b.items.map((item: any) => ({
-          sku:             item.sku             || 'VAR-' + Math.floor(1000 + Math.random() * 9000),
+        this.carrito = b.items.map(item => ({
+          // Los códigos VAR-/MAQ- eran aleatorios, no de un producto real.
+          sku:             item.sku && !/^(VAR|MAQ)-/.test(item.sku) ? item.sku : null,
           descripcion:     item.descripcion     || '',
           unidad:          item.unidad          || '',
           cantidad:        item.cantidad        ?? null,
           precio_unitario: item.precio_unitario ?? null,
-          subtotal:        Math.round((item.cantidad || 0) * (item.precio_unitario || 0) * 100) / 100
+          subtotal:        redondear2((item.cantidad || 0) * (item.precio_unitario || 0))
         }));
       }
 
-      this.borradorModo       = b.modo       || null;
-      this.borradorFolioPadre = b.folio_padre || null;
+      this.borradorModo       = b.modo || null;
+      this.borradorOrigenId   = b.origen_id ?? b.cotizacion_id ?? null;
+      this.borradorFolioPadre = b.folio_origen ?? b.folio_padre ?? null;
 
       this.recalcularTodo();
 
-      sessionStorage.removeItem('cotizador-borrador');
-
       this.messageService.add({
         severity: b.modo === 'revision' ? 'warn' : 'info',
-        summary:  b.modo === 'revision' ? 'Revisión Creada' : 'Cotización Duplicada',
+        summary:  b.modo === 'revision' ? `Revisando ${this.borradorFolioPadre}` : 'Cotización duplicada',
         detail:   b.modo === 'revision'
-          ? `Editando revisión de ${b.folio_padre}. La cotización original fue anulada.`
-          : `Datos cargados desde ${b.folio_padre || 'borrador'}.`
+          ? 'La original se anulará cuando guardes esta revisión.'
+          : `Datos cargados desde ${this.borradorFolioPadre || 'borrador'}.`
       });
       return true;
     } catch (e) {
       console.error('Error al cargar borrador:', e);
-      sessionStorage.removeItem('cotizador-borrador');
       return false;
     }
   }
@@ -823,45 +688,12 @@ export class CotizadorComponent implements OnInit {
   }
 
   limpiarFormulario() {
-    sessionStorage.removeItem('cotizador-borrador');
-    this.clienteNombre        = '';
-    this.clienteDocumento     = '';
-    this.clienteTelefono      = '';
-    this.clienteDireccion     = '';
-    this.clienteCorreo        = '';
-    this.clienteObservaciones = '';
-    this.lugarEntrega         = 'CANTERA';
-    this.incluyeIgv           = true;
-    this.carrito              = [];
-    this.borradorModo         = null;
-    this.borradorFolioPadre   = null;
-    this.agregarFila();
-    this.recalcularTodo();
-
+    this.resetearFormulario();
     this.messageService.add({
       severity: 'info',
       summary: 'Formulario limpiado',
       detail: 'Todos los campos restablecidos',
       life: 3000
     });
-  }
-
-  cambiarEmpresaConDatos() {
-    if (this.clienteNombre || this.tieneItemsValidos) {
-      const borrador = {
-        modo:              'duplicar',
-        cliente_nombre:    this.clienteNombre,
-        cliente_documento: this.clienteDocumento,
-        cliente_telefono:  this.clienteTelefono,
-        cliente_direccion: this.clienteDireccion,
-        cliente_correo:    this.clienteCorreo,
-        observaciones:     this.clienteObservaciones,
-        lugar_entrega:     this.lugarEntrega,
-        incluye_igv:        this.incluyeIgv,
-        items:             this.carrito
-      };
-      sessionStorage.setItem('cotizador-borrador', JSON.stringify(borrador));  // ← clave correcta
-    }
-    this.router.navigate(['/selector']);
   }
 }

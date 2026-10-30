@@ -1,18 +1,16 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { SessionContextService } from '../services/session-context.service';
 import { AuthService } from '../services/auth';
 
 export const adminGeneralGuard: CanActivateFn = async () => {
-  const auth    = inject(AuthService);
-  const session = inject(SessionContextService);
-  const router  = inject(Router);
+  const auth   = inject(AuthService);
+  const router = inject(Router);
 
-  const logueado = await auth.isLoggedIn();
-  if (!logueado) return router.createUrlTree(['/login']);
+  const perfil = await auth.asegurarPerfil();
+  if (!perfil) return auth.urlLogin();
 
-  // ✅ Solo admin general ve /admin/usuarios
-  if (session.esAdmin()) return true;
+  // Solo el admin general ve /admin/usuarios
+  if (perfil.rol === 'admin') return true;
 
   return router.createUrlTree(['/admin/empresas']);
 };

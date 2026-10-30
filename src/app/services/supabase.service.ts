@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
-import { IEmpresa, ICotizacion, ICuentaBancaria, IMaquinaria, ILecturaHorometro } from '../models';
+import { IEmpresa, ICotizacion, ICuentaBancaria, IMaquinaria, ILecturaHorometro, INuevaCotizacion, IProfile } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
@@ -299,7 +299,7 @@ export class SupabaseService {
 
     let query = this.client
       .from('cotizaciones')
-      .select('id, folio, fecha, empresa_id, cliente_id, cliente_nombre, cliente_documento, cliente_telefono, cliente_direccion, cliente_correo, subtotal, igv, total, estado, items, vendedor, lugar_entrega, observaciones, oculta')
+      .select('id, folio, fecha, empresa_id, cliente_id, cliente_nombre, cliente_documento, cliente_telefono, cliente_direccion, cliente_correo, subtotal, igv, total, incluye_igv, estado, items, vendedor, lugar_entrega, observaciones, condiciones, oculta, cotizacion_origen_id, tipo_origen, folio_origen')
       .eq('empresa_id', empresaId)
       .order('fecha', { ascending: false });
 
@@ -313,18 +313,26 @@ export class SupabaseService {
     return (data ?? []) as ICotizacion[];
   }
 
-  async guardarCotizacion(cotizacion: ICotizacion): Promise<ICotizacion> {
-    const payload: any = { ...cotizacion };
-    if (!payload.id || payload.id === '') delete payload.id;
-    if (!payload.created_at || payload.created_at === '') delete payload.created_at;
-    if (!payload.cliente_id || (typeof payload.cliente_id === 'string' && payload.cliente_id.trim() === '')) {
-      payload.cliente_id = null;
-    }
-
-    const { data, error } = await this.client
-      .from('cotizaciones').insert([payload]).select().single();
+  /**
+   * Crea la cotización en una sola transacción (crear_cotizacion en Postgres):
+   * folio, totales, cliente en la cartera y, si es una revisión, la anulación
+   * de la original. Si algo falla no se guarda nada.
+   */
+  async crearCotizacion(datos: INuevaCotizacion): Promise<ICotizacion> {
+    const { data, error } = await this.client.rpc('crear_cotizacion', {
+      p_empresa_id: datos.empresaId,
+      p_cliente: datos.cliente,
+      p_items: datos.items,
+      p_incluye_igv: datos.incluyeIgv,
+      p_lugar_entrega: datos.lugarEntrega ?? null,
+      p_observaciones: datos.observaciones ?? null,
+      p_condiciones: datos.condiciones,
+      p_origen_id: datos.origen?.id ?? null,
+      p_tipo_origen: datos.origen?.tipo ?? null,
+      p_guardar_cliente: datos.guardarCliente
+    });
     if (error) throw error;
-    return data;
+    return data as ICotizacion;
   }
 
   async actualizarEstado(id: string, nuevoEstado: string): Promise<ICotizacion> {
@@ -341,21 +349,6 @@ export class SupabaseService {
       .update({ oculta })
       .eq('id', id);
     if (error) throw error;
-  }
-
-  async obtenerSiguienteFolio(empresaId: string, prefijoFallback?: string): Promise<string> {
-    const { data, error } = await this.client.rpc('getnextfolioempresa', {
-      empresaid: empresaId
-    });
-
-    if (error || !data) {
-      console.error('Error al obtener folio:', error);
-      const prefijo = (prefijoFallback || (empresaId || 'EMP').substring(0, 3)).toUpperCase();
-      const seq = String(Date.now() % 100000000).padStart(8, '0');
-      return `${prefijo}-${seq}`;
-    }
-
-    return data;
   }
 
   // ─── CUENTAS BANCARIAS ────────────────────────────────────────────────────
@@ -431,15 +424,16 @@ export class SupabaseService {
 
   // ─── PERFILES Y ROLES ─────────────────────────────────────────────────────
 
-  async obtenerPerfil(userId?: string): Promise<{ rol: string } | null> {
+  /** null si el usuario no tiene perfil; lanza error si no se pudo consultar. */
+  async obtenerPerfil(userId?: string): Promise<IProfile | null> {
     const id = userId || (await this.obtenerUsuarioActual())?.id;
     if (!id) return null;
 
     const { data, error } = await this.client
-      .from('profiles').select('rol').eq('id', id).single();
+      .from('profiles').select('id, email, rol, activo').eq('id', id).maybeSingle();
 
-    if (error) return null;
-    return data;
+    if (error) throw error;
+    return data as IProfile | null;
   }
 
   async guardarPerfil(perfil: { id: string, email: string, rol: string, activo?: boolean }): Promise<void> {

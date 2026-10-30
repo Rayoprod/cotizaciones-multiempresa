@@ -18,7 +18,8 @@
       <div class="flex-1">
         <p class="font-bold text-orange-800 m-0 text-sm">✏️ Revisión de {{ borradorFolioPadre }}</p>
         <p class="text-orange-700 m-0 text-xs mt-1">
-          La cotización original fue marcada como <strong>Anulada</strong>. Al guardar se generará un folio nuevo.
+          Al guardar se generará un folio nuevo y {{ borradorFolioPadre }} pasará a <strong>Anulada</strong>.
+          Si sales sin guardar, la original sigue vigente.
         </p>
       </div>
       <button pButton icon="pi pi-times" class="p-button-text p-button-secondary p-button-sm flex-shrink-0"
@@ -126,10 +127,17 @@
                      placeholder="contacto@empresa.com" class="w-full" />
             </div>
 
-            <div class="col-12 md:col-4 mb-3 md:mb-0">
+            <div class="col-12 md:col-4 mb-3">
               <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">Dirección Fiscal / Entrega</label>
               <input pInputText [(ngModel)]="clienteDireccion"
                      placeholder="Dirección fiscal..." class="w-full" />
+            </div>
+
+            <div class="col-12 flex align-items-center gap-2">
+              <p-checkbox [(ngModel)]="guardarClienteEnCartera" [binary]="true" inputId="guardarCliente"></p-checkbox>
+              <label for="guardarCliente" class="text-sm text-700 cursor-pointer">
+                {{ clienteYaRegistrado ? 'Actualizar los datos de este cliente en la cartera' : 'Guardar este cliente en la cartera' }}
+              </label>
             </div>
 
           </div>
@@ -443,7 +451,7 @@
           </div>
 
           <button pButton type="button"
-                  label="Generar Cotización PDF"
+                  label="Guardar y descargar PDF"
                   icon="pi pi-file-pdf"
                   class="w-full p-button-lg font-bold border-round-xl shadow-3 transition-all transition-duration-200"
                   [disabled]="!puedeGenerar || generandoPDF"

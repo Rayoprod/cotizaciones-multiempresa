@@ -1,7 +1,28 @@
 import { Injectable } from '@angular/core';
-import { ICotizacion } from '../models/cotizacion.model';
+import { ICondicionesPdf, ICotizacion } from '../models/cotizacion.model';
 import { SupabaseService } from './supabase.service';
 import { extraerNombreClienteTexto, extraerDocumentoClienteTexto } from '../models/cliente.model';
+
+/**
+ * Condiciones con las que se imprime una cotización: las que se guardaron con
+ * ella, completadas con los valores por defecto de la empresa (cotizaciones
+ * anteriores a que se guardaran) y con los ajustes explícitos del llamador.
+ */
+export function condicionesPdf(
+  cotizacion: Pick<ICotizacion, 'condiciones'>,
+  empresa: { mostrar_cuentas?: boolean | null } | null | undefined,
+  ajustes: Partial<ICondicionesPdf> = {}
+): ICondicionesPdf {
+  const cuentasEmpresa = empresa?.mostrar_cuentas ?? true;
+  return {
+    mostrarValidez: true,
+    diasValidez: 15,
+    mostrarCuentas: cuentasEmpresa,
+    mostrarContacto: !cuentasEmpresa,
+    ...(cotizacion.condiciones ?? {}),
+    ...ajustes
+  };
+}
 
 @Injectable({ providedIn: 'root' })
 export class PdfService {
@@ -71,10 +92,10 @@ export class PdfService {
   async generarYDescargarCotizacion(
     data: ICotizacion,
     datosEmpresa: any,
-    lugarEntrega: string = '',
-    condiciones: any = {}
+    ajustes: Partial<ICondicionesPdf> = {}
   ) {
     if (!datosEmpresa) return;
+    const condiciones = condicionesPdf(data, datosEmpresa, ajustes);
 
     if (datosEmpresa.id) {
       datosEmpresa = await this.supabase.enriquecerConCuentasBancarias(datosEmpresa);
@@ -100,14 +121,14 @@ export class PdfService {
       day: '2-digit', month: 'long', year: 'numeric'
     });
 
-    const entregaRaw = String(lugarEntrega || (data as any).lugar_entrega || '').toUpperCase().trim();
+    const entregaRaw = String(data.lugar_entrega || '').toUpperCase().trim();
     let textoEntrega = 'NO ESPECIFICADO';
     if (entregaRaw.includes('CANTERA')) textoEntrega = 'PUESTO EN CANTERA';
     else if (entregaRaw.includes('OBRA')) textoEntrega = 'PUESTO EN OBRA (CON FLETE)';
 
-    const obsFinal = condiciones.observaciones || (data as any).observaciones || '';
-    const vendedor = (data as any).vendedor || '';
-    const tieneIgv = Number(data.igv) > 0;
+    const obsFinal = data.observaciones || '';
+    const vendedor = data.vendedor || '';
+    const tieneIgv = data.incluye_igv ?? Number(data.igv) > 0;
 
     // ── Header ─────────────────────────────────────────────────────────────
     const headerFn = () => {
@@ -234,20 +255,27 @@ export class PdfService {
 
     // ── Bloque condiciones (DENTRO del content, nunca en footer) ─────────
     const cuentas: any[] = datosEmpresa.cuentas_bancarias || [];
-    const mostrarCuentas = condiciones.mostrarCuentas !== false
+    const mostrarCuentas = condiciones.mostrarCuentas
       && datosEmpresa.mostrar_cuentas !== false
       && cuentas.length > 0;
+    const mostrarContacto = condiciones.mostrarContacto && !!datosEmpresa.contacto_aprobacion;
 
     // Columna izquierda: condiciones de entrega/impuestos
     const colCondiciones: any[] = [
       { text: 'CONDICIONES COMERCIALES', fontSize: 8, bold: true, color: colorEmpresa, margin: [0, 0, 0, 6] },
       { text: [{ text: '• Lugar de entrega: ', bold: true, fontSize: 7.5 }, { text: textoEntrega, fontSize: 7.5 }], margin: [0, 0, 0, 3] },
-      { text: [{ text: '• Impuestos: ', bold: true, fontSize: 7.5 }, { text: tieneIgv ? 'Los precios incluyen IGV (18%)' : 'Los precios NO incluyen IGV', fontSize: 7.5 }], margin: [0, 0, 0, 3] },
+      { text: [{ text: '• Impuestos: ', bold: true, fontSize: 7.5 }, { text: tieneIgv ? 'El total incluye IGV (18%)' : 'Los precios NO incluyen IGV', fontSize: 7.5 }], margin: [0, 0, 0, 3] },
     ];
 
-    if (condiciones.mostrarValidez !== false) {
+    if (condiciones.mostrarValidez) {
       colCondiciones.push(
-        { text: [{ text: '• Validez: ', bold: true, fontSize: 7.5 }, { text: `${condiciones.diasValidez || '15'} días calendario`, fontSize: 7.5 }], margin: [0, 0, 0, 3] }
+        { text: [{ text: '• Validez: ', bold: true, fontSize: 7.5 }, { text: `${condiciones.diasValidez} días calendario`, fontSize: 7.5 }], margin: [0, 0, 0, 3] }
+      );
+    }
+
+    if (data.tipo_origen === 'revision' && data.folio_origen) {
+      colCondiciones.push(
+        { text: [{ text: '• Reemplaza a: ', bold: true, fontSize: 7.5 }, { text: data.folio_origen, fontSize: 7.5 }], margin: [0, 0, 0, 3] }
       );
     }
 
@@ -283,19 +311,21 @@ export class PdfService {
           colPago.push({ text: '', margin: [0, 0, 0, 3] });
         }
       });
-    } else if (datosEmpresa.contacto_aprobacion) {
-      colPago.push({ text: 'CONTACTO DE APROBACIÓN', fontSize: 8, bold: true, color: colorEmpresa, margin: [0, 0, 0, 6] });
+    }
+    if (mostrarContacto) {
+      colPago.push({ text: 'CONTACTO DE APROBACIÓN', fontSize: 8, bold: true, color: colorEmpresa, margin: [0, mostrarCuentas ? 6 : 0, 0, 6] });
       colPago.push({ text: datosEmpresa.contacto_aprobacion, fontSize: 7.5, italics: true, color: '#374151' });
     }
 
     // Caja de condiciones
+    const conColumnaPago = colPago.length > 0;
     const bloqueCondicionesContent: any = {
       margin: [0, 20, 0, 0],
       unbreakable: true,
       table: {
-        widths: mostrarCuentas || datosEmpresa.contacto_aprobacion ? ['55%', '45%'] : ['100%'],
+        widths: conColumnaPago ? ['55%', '45%'] : ['100%'],
         body: [
-          mostrarCuentas || datosEmpresa.contacto_aprobacion
+          conColumnaPago
             ? [
               { stack: colCondiciones, border: [false, false, false, false], margin: [10, 10, 10, 10] },
               { stack: colPago, border: [false, false, false, false], margin: [10, 10, 10, 10] }
@@ -330,15 +360,12 @@ export class PdfService {
       ]
     } : { text: '', margin: [0, 0, 0, 0] };
 
-    // ── Extract client info with full property fallbacks ──────────────
-    const rawNombre = data.cliente_nombre || (data as any).clientenombre || (data as any).clienteNombre || (data as any).nombre_razon_social || (data as any).nombre;
-    const clienteNombreVal = extraerNombreClienteTexto(rawNombre) || '—';
-
-    const rawDoc = data.cliente_documento || (data as any).clientedocumento || (data as any).clienteDocumento || (data as any).documento_identidad;
-    const clienteDocVal = extraerDocumentoClienteTexto(rawDoc) || '—';
-    const clienteDirVal = (data as any).cliente_direccion || (data as any).clientedireccion || (data as any).clienteDireccion || (data as any).direccion || '';
-    const clienteTelVal = (data as any).cliente_telefono || (data as any).clientetelefono || (data as any).clienteTelefono || (data as any).telefono || '';
-    const clienteCorreoVal = (data as any).cliente_correo || (data as any).clientecorreo || (data as any).clienteCorreo || (data as any).correo || '';
+    // ── Datos del cliente (tal como se guardaron en la cotización) ────────
+    const clienteNombreVal = extraerNombreClienteTexto(data.cliente_nombre) || '—';
+    const clienteDocVal = extraerDocumentoClienteTexto(data.cliente_documento) || '—';
+    const clienteDirVal = data.cliente_direccion || '';
+    const clienteTelVal = data.cliente_telefono || '';
+    const clienteCorreoVal = data.cliente_correo || '';
 
     // ── Caja del cliente (fecha incluida) ────────────────────────────────
     const cajaCliente: any = {

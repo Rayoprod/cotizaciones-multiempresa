@@ -4,7 +4,10 @@ import { FormsModule } from '@angular/forms';
 
 import { SupabaseService } from '../../services/supabase.service';
 import { PdfService } from '../../services/pdf.service';
-import { EstadoCotizacion, ICotizacion, extraerNombreClienteTexto, extraerDocumentoClienteTexto } from '../../models';
+import {
+  EstadoCotizacion, ICotizacion, IBorradorCotizador, CLAVE_BORRADOR_COTIZADOR,
+  extraerNombreClienteTexto, extraerDocumentoClienteTexto
+} from '../../models';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { Router } from '@angular/router';
@@ -87,6 +90,9 @@ export class HistorialComponent implements OnInit {
   mostrarOcultas = false;
   cantidadOcultas = 0;
 
+  /** id de la cotización original → folio de la revisión que la reemplazó. */
+  private reemplazos = new Map<string, string>();
+
   terminoBusqueda = '';
   fechaDesde = '';
   fechaHasta = '';
@@ -155,6 +161,11 @@ export class HistorialComponent implements OnInit {
           oculta: c.oculta ?? false
         }));
         this.cantidadOcultas = this.cotizaciones.filter(c => c.oculta === true).length;
+        this.reemplazos = new Map(
+          this.cotizaciones
+            .filter(c => c.tipo_origen === 'revision' && c.cotizacion_origen_id)
+            .map(c => [c.cotizacion_origen_id!, c.folio])
+        );
         this.aplicarFiltros();
       });
     } catch (error: any) {
@@ -375,24 +386,29 @@ export class HistorialComponent implements OnInit {
       this.calcularInsights();
       this.msg.add({ severity: 'success', summary: 'Estado actualizado',
         detail: `${cotizacion.folio} → ${this.getEstadoLabel(nuevoEstado)}` });
-    } catch {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el estado' });
+    } catch (e: any) {
+      this.msg.add({ severity: 'error', summary: 'No se cambió el estado',
+        detail: e?.code === 'P0001' && e?.message ? e.message : 'No se pudo actualizar el estado' });
       await this.cargarDatos();
     }
+  }
+
+  /** Folio de la revisión que reemplazó a esta cotización, si la hay. */
+  reemplazadaPor(cot: ICotizacion): string | null {
+    return (cot.id && this.reemplazos.get(cot.id)) || null;
   }
 
   async descargarPDF(cotizacion: ICotizacion) {
     if (!cotizacion.id || !this.empresaActiva) return;
     this.descargando = cotizacion.id;
     try {
+      // Las cotizaciones anteriores a que se guardaran las condiciones se
+      // reimprimen sin validez, como hasta ahora.
+      const sinCondicionesGuardadas = !cotizacion.condiciones || Object.keys(cotizacion.condiciones).length === 0;
       await this.pdfSvc.generarYDescargarCotizacion(
         cotizacion,
         this.empresaActiva,
-        cotizacion.lugar_entrega || '',
-        {
-          mostrarValidez: false,
-          mostrarCuentas: this.empresaActiva.mostrar_cuentas ?? true
-        }
+        sinCondicionesGuardadas ? { mostrarValidez: false } : {}
       );
       this.msg.add({ severity: 'success', summary: 'PDF generado', detail: `${cotizacion.folio} descargada` });
     } catch {
@@ -458,7 +474,8 @@ export class HistorialComponent implements OnInit {
     this.opcionEditar = {
       empresaOrigen: 'misma',
       empresaSeleccionadaId: this.empresaActiva?.id || null,
-      accionOriginal: 'anular'
+      // Una cotización ya reemplazada solo se puede duplicar.
+      accionOriginal: this.reemplazadaPor(cot) ? 'mantener' : 'anular'
     };
     this.cotizacionCargandoModal = cot.id!;
     await this.cargarEmpresasDisponibles();
@@ -499,10 +516,8 @@ export class HistorialComponent implements OnInit {
     const cot = this.cotizacionParaEditar;
 
     try {
-      if (this.opcionEditar.accionOriginal === 'anular') {
-        await this.supabase.actualizarEstado(cot.id!, 'ANULADA');
-      }
-
+      // La original NO se toca aquí: crear_cotizacion() la anula en la misma
+      // transacción en que se guarda la revisión.
       let empresaDestino = this.empresaActiva;
       if (this.opcionEditar.empresaOrigen === 'otra') {
         empresaDestino = this.empresasDisponibles.find(
@@ -512,23 +527,24 @@ export class HistorialComponent implements OnInit {
         this.session.setEmpresaActiva(empresaDestino);
       }
 
-      const borrador = {
-        modo: this.opcionEditar.accionOriginal === 'anular' ? 'revision' : 'duplicar',
-        folio_padre: cot.folio,
-        cotizacion_id: cot.id,
-        cliente_id: cot.cliente_id || null,
-        cliente_nombre:     this.obtenerNombreCliente(cot) === 'Sin nombre' ? '' : this.obtenerNombreCliente(cot),
+      const nombre = this.obtenerNombreCliente(cot);
+      const borrador: IBorradorCotizador = {
+        modo:               this.opcionEditar.accionOriginal === 'anular' ? 'revision' : 'duplicar',
+        origen_id:          cot.id || null,
+        folio_origen:       cot.folio,
+        cliente_nombre:     nombre === 'Sin nombre' ? '' : nombre,
         cliente_documento:  this.obtenerDocumentoCliente(cot),
         cliente_telefono:   cot.cliente_telefono    || '',
         cliente_direccion:  cot.cliente_direccion   || '',
         cliente_correo:     cot.cliente_correo      || '',
         observaciones:      cot.observaciones       || '',
-        lugar_entrega:      cot.lugar_entrega       || 'CANTERA',
-        incluye_igv:         (cot.igv || 0) > 0,
+        lugar_entrega:      cot.lugar_entrega       || null,
+        incluye_igv:        cot.incluye_igv ?? (cot.igv || 0) > 0,
+        condiciones:        cot.condiciones,
         items:              cot.items               || []
       };
 
-      sessionStorage.setItem('cotizador-borrador', JSON.stringify(borrador));
+      sessionStorage.setItem(CLAVE_BORRADOR_COTIZADOR, JSON.stringify(borrador));
       this.msg.add({ severity: 'success', summary: 'Listo', detail: 'Redirigiendo al cotizador...', life: 1500 });
       this.modalEditarVisible = false;
       setTimeout(() => this.router.navigate(['/cotizador']), 900);

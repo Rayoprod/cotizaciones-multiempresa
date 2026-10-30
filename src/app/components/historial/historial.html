@@ -147,6 +147,15 @@
           </span>
         </div>
 
+        <div *ngIf="(cot.tipo_origen === 'revision' && cot.folio_origen) || reemplazadaPor(cot)" class="flex flex-wrap gap-2 -mt-2">
+          <span *ngIf="cot.tipo_origen === 'revision' && cot.folio_origen" class="text-xs text-500">
+            Rev. de {{ cot.folio_origen }}
+          </span>
+          <span *ngIf="reemplazadaPor(cot) as revision" class="text-xs text-orange-700 font-semibold">
+            Reemplazada por {{ revision }}
+          </span>
+        </div>
+
         <div class="min-w-0">
           <p class="font-bold text-900 text-base m-0 line-height-2 overflow-hidden text-overflow-ellipsis word-break-break-word">
             {{ obtenerNombreCliente(cot) }}
@@ -166,6 +175,7 @@
               [options]="opcionesEstado"
               [(ngModel)]="cot.estado"
               (onChange)="cambiarEstado(cot, $event.value)"
+              [disabled]="!!reemplazadaPor(cot)"
               optionLabel="label"
               optionValue="value"
               styleClass="p-inputtext-sm w-full border-round-xl"
@@ -225,6 +235,12 @@
                 <span class="font-mono font-bold text-sm text-sky-700 bg-sky-50 px-2 py-1 border-round-md">{{ cot.folio }}</span>
                 <p-tag *ngIf="cot.oculta" value="Oculta" severity="secondary" styleClass="font-bold text-xs px-2 py-0 border-round-md"></p-tag>
               </div>
+              <p *ngIf="cot.tipo_origen === 'revision' && cot.folio_origen" class="text-xs text-500 m-0 mt-1">
+                Rev. de {{ cot.folio_origen }}
+              </p>
+              <p *ngIf="reemplazadaPor(cot) as revision" class="text-xs text-orange-700 font-semibold m-0 mt-1">
+                Reemplazada por {{ revision }}
+              </p>
             </td>
             <td>
               <span class="text-sm font-medium text-700">
@@ -249,6 +265,8 @@
                 [options]="opcionesEstado"
                 [(ngModel)]="cot.estado"
                 (onChange)="cambiarEstado(cot, cot.estado)"
+                [disabled]="!!reemplazadaPor(cot)"
+                [pTooltip]="reemplazadaPor(cot) ? 'Reemplazada por ' + reemplazadaPor(cot) : ''"
                 optionLabel="label"
                 optionValue="value"
                 styleClass="p-inputtext-sm w-full border-round-xl"
@@ -405,20 +423,26 @@
       </p>
       <div class="flex flex-column gap-2">
 
-        <div class="flex align-items-start gap-3 p-3 border-round-xl cursor-pointer surface-ground border-1 surface-border"
+        <div class="flex align-items-start gap-3 p-3 border-round-xl surface-ground border-1 surface-border"
+             [class.cursor-pointer]="!reemplazadaPor(cotizacionParaEditar!)"
+             [class.opacity-50]="!!reemplazadaPor(cotizacionParaEditar!)"
              [class.border-amber-500]="opcionEditar.accionOriginal === 'anular'"
-             (click)="opcionEditar.accionOriginal = 'anular'">
+             (click)="!reemplazadaPor(cotizacionParaEditar!) && (opcionEditar.accionOriginal = 'anular')">
           <p-radioButton name="accionOriginal" value="anular"
                          [(ngModel)]="opcionEditar.accionOriginal"
+                         [disabled]="!!reemplazadaPor(cotizacionParaEditar!)"
                          inputId="opAnular">
           </p-radioButton>
           <div>
             <label for="opAnular" class="font-bold text-sm cursor-pointer text-900 flex align-items-center gap-2">
-              Marcar original como ANULADA
-              <span class="text-xs bg-amber-100 text-amber-800 font-semibold px-2 py-1 border-round">Recomendado</span>
+              Crear una revisión que la reemplace
+              <span *ngIf="!reemplazadaPor(cotizacionParaEditar!)" class="text-xs bg-amber-100 text-amber-800 font-semibold px-2 py-1 border-round">Recomendado</span>
             </label>
-            <p class="text-xs text-500 m-0 mt-1">
-              Guarda el historial anterior como anulado y abre la nueva propuesta en el cotizador.
+            <p class="text-xs text-500 m-0 mt-1" *ngIf="!reemplazadaPor(cotizacionParaEditar!)">
+              La original pasa a Anulada recién cuando guardes la revisión. Si no la guardas, sigue vigente.
+            </p>
+            <p class="text-xs text-orange-700 font-semibold m-0 mt-1" *ngIf="reemplazadaPor(cotizacionParaEditar!) as revision">
+              Ya fue reemplazada por {{ revision }}. Para cambiarla, revisa {{ revision }}.
             </p>
           </div>
         </div>
@@ -432,10 +456,10 @@
           </p-radioButton>
           <div>
             <label for="opMantener" class="font-bold text-sm cursor-pointer text-900">
-              Mantener original intacto
+              Duplicar y mantener la original
             </label>
             <p class="text-xs text-500 m-0 mt-1">
-              Conserva el estado de la cotización existente sin modificaciones.
+              Crea una cotización nueva con los mismos datos; la original no cambia.
             </p>
           </div>
         </div>

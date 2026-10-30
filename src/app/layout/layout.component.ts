@@ -240,32 +240,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   private async inicializarSesion() {
-    // Si ya hay usuario y empresa en el service, solo notifica a Angular
-    if (!this.session.usuario()) {
-      // Fallback: reconstruir si se recargó la página
-      let intentos = 0;
-      while (intentos < 3) {
-        try {
-          const sesion = await this.supabaseSvc.obtenerSesion();
-          const user = sesion?.data?.session?.user;
-          if (user?.email) {
-            const perfil = await this.supabaseSvc.obtenerPerfil(user.id);
-            if (perfil?.rol) {
-              this.session.setUsuario({
-                id: user.id,
-                email: user.email,
-                rol: perfil.rol,
-                activo: true
-              });
-              break;
-            }
-          }
-        } catch { /* reintentar */ }
-
-        intentos++;
-        if (intentos < 3) await new Promise(r => setTimeout(r, 800));
-      }
-    }
+    // El guard ya verificó el perfil; esto solo cubre recargas de página.
+    await this.auth.asegurarPerfil();
 
     // Si la empresa activa aún es null, intentar cargarla del usuario
     if (!this.session.empresaActiva() && this.session.usuario()) {
