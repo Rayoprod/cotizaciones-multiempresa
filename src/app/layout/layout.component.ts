@@ -13,10 +13,10 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 
-import { SupabaseService } from '../services/supabase.service';
 import { SessionContextService } from '../services/session-context.service';
 import { AuthService } from '../services/auth';
 import { PwaUpdateService } from '../services/pwa-update.service';
+import { EmpresasUsuarioService } from '../services/empresas-usuario.service';
 import { IEmpresa } from '../models/empresa.model';
 
 import { FormsModule } from '@angular/forms';
@@ -40,7 +40,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
-    private supabaseSvc: SupabaseService,
+    private empresasUsuario: EmpresasUsuarioService,
     private session: SessionContextService,
     private auth: AuthService,
     private cdr: ChangeDetectorRef,
@@ -240,18 +240,19 @@ export class LayoutComponent implements OnInit, OnDestroy {
     // El guard ya verificó el perfil; esto solo cubre recargas de página.
     await this.auth.asegurarPerfil();
 
-    // Refresca las empresas y la activa: la copia de sessionStorage puede tener
-    // un rol o unas opciones de la empresa que ya cambiaron.
+    // Refresca las empresas y la activa (la copia de sessionStorage puede
+    // tener un rol o unas opciones que ya cambiaron). Si el selector las acaba
+    // de cargar, se reutilizan sin otro pedido.
     if (this.session.usuario()) {
       try {
-        const empresas = await this.supabaseSvc.getEmpresasDelUsuario();
-        this.session.setEmpresas(empresas);
+        const empresas = await this.empresasUsuario.obtener();
         const activa = this.session.empresaActiva();
-        const actualizada = (activa && empresas.find(e => e.id === activa.id)) || empresas[0];
-        if (actualizada) {
-          this.session.setEmpresaActiva(actualizada);
-        } else {
-          this.session.clearEmpresaActiva();
+        if (!activa || !empresas.some(e => e.id === activa.id)) {
+          if (empresas.length > 0) {
+            this.session.setEmpresaActiva(empresas[0]);
+          } else {
+            this.session.clearEmpresaActiva();
+          }
         }
       } catch (e) {
         console.error('Error al refrescar las empresas del usuario:', e);

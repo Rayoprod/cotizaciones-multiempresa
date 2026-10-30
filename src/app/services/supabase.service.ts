@@ -3,7 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 import {
   IEmpresa, ICotizacion, ICuentaBancaria, INuevaCotizacion, IProfile,
-  IAsignacionEmpresa, RolEmpresa, RolGlobal
+  IAsignacionEmpresa, RolGlobal
 } from '../models';
 
 @Injectable({ providedIn: 'root' })
@@ -53,109 +53,24 @@ export class SupabaseService {
   // ─── EMPRESAS DEL USUARIO ─────────────────────────────────────────────────
 
   /**
-   * Empresas activas del usuario actual, cada una con sus cuentas bancarias y
-   * `mi_rol` (su rol en esa empresa). El superadmin ve todas, como admin.
+   * Empresas que el usuario actual puede ver, cada una con sus cuentas
+   * bancarias y `mi_rol`, en un solo pedido (mis_empresas). El superadmin ve
+   * todas como admin. Para no repetir el pedido, usar EmpresasUsuarioService.
    */
-  async getEmpresasDelUsuario(): Promise<IEmpresa[]> {
-    const usuario = await this.obtenerUsuarioActual();
-    if (!usuario) return [];
-
-    const esSuperadmin = (await this.obtenerPerfil(usuario.id))?.rol === 'admin';
-
-    const roles = new Map<string, RolEmpresa>();
-    if (!esSuperadmin) {
-      const { data: asignaciones, error: errAsig } = await this.client
-        .from('usuario_empresa')
-        .select('empresa_id, rol')
-        .eq('usuario_id', usuario.id)
-        .eq('activo', true);
-
-      if (errAsig || !asignaciones?.length) return [];
-      for (const a of asignaciones) roles.set(a.empresa_id, a.rol);
-    }
-
-    const ids = [...roles.keys()];
-    let consultaEmpresas = this.client.from('empresas').select('*').eq('activa', true).order('id');
-    let consultaCuentas = this.client.from('cuentas_bancarias').select('*').order('orden', { ascending: true });
-    if (!esSuperadmin) {
-      consultaEmpresas = consultaEmpresas.in('id', ids);
-      consultaCuentas = consultaCuentas.in('empresa_id', ids);
-    }
-
-    const [empresasRes, cuentasRes] = await Promise.all([consultaEmpresas, consultaCuentas]);
-
-    if (empresasRes.error) throw empresasRes.error;
-    const empresas = (empresasRes.data || []) as IEmpresa[];
-
-    const cuentasMap = new Map<string, ICuentaBancaria[]>();
-    if (cuentasRes.data) {
-      for (const c of cuentasRes.data) {
-        const list = cuentasMap.get(c.empresa_id) || [];
-        list.push({
-          id: c.id,
-          empresa_id: c.empresa_id,
-          banco: c.banco,
-          tipo_cuenta: c.tipo_cuenta,
-          moneda: c.moneda,
-          numero: c.numero,
-          cci: c.cci || '',
-          titular: c.titular || '',
-          activa: c.activa,
-          orden: c.orden
-        });
-        cuentasMap.set(c.empresa_id, list);
-      }
-    }
-
-    return empresas.map(e => ({
-      ...e,
-      cuentas_bancarias: cuentasMap.get(e.id) ?? [],
-      mi_rol: esSuperadmin ? 'admin' : roles.get(e.id)
-    }));
+  async getEmpresasDelUsuario(incluirInactivas = false): Promise<IEmpresa[]> {
+    const { data, error } = await this.client.rpc('mis_empresas', { p_incluir_inactivas: incluirInactivas });
+    if (error) throw error;
+    return (data ?? []) as IEmpresa[];
   }
 
+  /** Lista liviana de todas las empresas (sin cuentas), para asignarlas a usuarios. */
   async getEmpresas(): Promise<IEmpresa[]> {
     const { data, error } = await this.client
       .from('empresas')
-      .select('*')
+      .select('id, nombre_comercial, ruc, ruta_logo, color, activa')
       .order('id');
     if (error) throw error;
     return data as IEmpresa[];
-  }
-
-  async getEmpresasConCuentas(): Promise<IEmpresa[]> {
-    const empresas = await this.getEmpresas();
-    if (!empresas.length) return [];
-    const ids = empresas.map(e => e.id);
-    const { data: todasCuentas } = await this.client
-      .from('cuentas_bancarias')
-      .select('*')
-      .in('empresa_id', ids)
-      .order('orden', { ascending: true });
-
-    const cuentasMap = new Map<string, ICuentaBancaria[]>();
-    if (todasCuentas) {
-      for (const c of todasCuentas) {
-        const list = cuentasMap.get(c.empresa_id) || [];
-        list.push({
-          id: c.id,
-          empresa_id: c.empresa_id,
-          banco: c.banco,
-          tipo_cuenta: c.tipo_cuenta,
-          moneda: c.moneda,
-          numero: c.numero,
-          cci: c.cci || '',
-          titular: c.titular || '',
-          activa: c.activa,
-          orden: c.orden
-        });
-        cuentasMap.set(c.empresa_id, list);
-      }
-    }
-    return empresas.map(e => ({
-      ...e,
-      cuentas_bancarias: cuentasMap.get(e.id) ?? []
-    }));
   }
 
   // ─── EMPRESAS CRUD ────────────────────────────────────────────────────────
@@ -369,29 +284,6 @@ export class SupabaseService {
     return data || [];
   }
 
-  /** Carga cuentas desde la tabla cuentas_bancarias (ya no vienen embebidas en empresas). */
-  async enriquecerConCuentasBancarias(empresa: IEmpresa): Promise<IEmpresa> {
-    if (!empresa?.id) return empresa;
-    try {
-      const cuentasDB = await this.getCuentasBancarias(empresa.id);
-      return {
-        ...empresa,
-        cuentas_bancarias: cuentasDB.map((c: any): ICuentaBancaria => ({
-          banco: c.banco,
-          tipo_cuenta: c.tipo_cuenta,
-          moneda: c.moneda,
-          numero: c.numero,
-          cci: c.cci || '',
-          titular: c.titular || '',
-          activa: c.activa,
-          orden: c.orden
-        }))
-      };
-    } catch {
-      return { ...empresa, cuentas_bancarias: empresa.cuentas_bancarias ?? [] };
-    }
-  }
-
   /** Reemplaza las cuentas de la empresa en una sola transacción (guardar_cuentas_bancarias). */
   async sincronizarCuentasBancarias(empresaId: string, cuentas: ICuentaBancaria[]): Promise<void> {
     const { error } = await this.client.rpc('guardar_cuentas_bancarias', {
@@ -483,6 +375,14 @@ export class SupabaseService {
   async eliminarUsuario(id: string): Promise<void> {
     const { error } = await this.client.rpc('admin_eliminar_usuario', { p_user_id: id });
     if (error) throw error;
+  }
+
+  /** Asignaciones activas de todos los usuarios (las ve completas solo el superadmin). */
+  async getAsignaciones(): Promise<Array<IAsignacionEmpresa & { usuario_id: string }>> {
+    const { data, error } = await this.client
+      .from('usuario_empresa').select('usuario_id, empresa_id, rol').eq('activo', true);
+    if (error) throw error;
+    return (data || []) as Array<IAsignacionEmpresa & { usuario_id: string }>;
   }
 
   async getEmpresasDeUsuario(usuarioId: string): Promise<IAsignacionEmpresa[]> {

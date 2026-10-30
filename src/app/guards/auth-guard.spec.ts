@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Injector, runInInjectionContext } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth';
-import { SupabaseService } from '../services/supabase.service';
+import { EmpresasUsuarioService } from '../services/empresas-usuario.service';
 import { authGuard } from './auth-guard';
 import { adminGuard } from './admin-guard';
 import { adminGeneralGuard } from './admin-general-guard';
@@ -13,14 +13,14 @@ function ejecutar(guard: any, perfil: { rol: string } | null, rolesEnEmpresas: s
     asegurarPerfil: async () => perfil,
     urlLogin: () => 'LOGIN'
   };
-  const supabase = {
-    getEmpresasDelUsuario: async () => rolesEnEmpresas.map((mi_rol, i) => ({ id: `E${i}`, mi_rol }))
+  const empresasUsuario = {
+    obtener: async () => rolesEnEmpresas.map((mi_rol, i) => ({ id: `E${i}`, mi_rol }))
   };
   const router = { createUrlTree: (ruta: string[]) => ruta.join('/') };
   const injector = Injector.create({
     providers: [
       { provide: AuthService, useValue: auth },
-      { provide: SupabaseService, useValue: supabase },
+      { provide: EmpresasUsuarioService, useValue: empresasUsuario },
       { provide: Router, useValue: router }
     ]
   });

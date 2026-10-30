@@ -2,7 +2,7 @@
 -- vendedora en la B; se comprueba qué puede hacer en cada una. Simula
 -- usuarios reales sin iniciar sesión; todo se deshace al final.
 --
--- Requiere aplicada 20261030000000.
+-- Requiere aplicadas 20261030000000 y 20261030030000.
 -- Uso: supabase db query --linked -f supabase/pruebas_roles.sql
 
 begin;
@@ -70,6 +70,13 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
   set local role authenticated;
 
+  select coalesce(jsonb_object_agg(e->>'id', e->>'mi_rol'), '{}') into v_cuentas from jsonb_array_elements(public.mis_empresas()) e;
+  r := r || jsonb_build_object('prueba', 'mis_empresas: sus empresas con el rol de cada una y ninguna ajena',
+         'ok', v_cuentas->>v_emp_a = 'admin' and v_cuentas->>v_emp_b = 'vendedor' and (v_emp_c is null or not v_cuentas ? v_emp_c),
+         'detalle', v_cuentas::text);
+  select count(*) into v_n from jsonb_array_elements(public.mis_empresas()) e where jsonb_typeof(e->'cuentas_bancarias') = 'array';
+  r := r || jsonb_build_object('prueba', 'mis_empresas trae las cuentas bancarias de cada empresa', 'ok', v_n = jsonb_array_length(public.mis_empresas()), 'detalle', v_n || ' empresas');
+
   r := r || jsonb_build_object('prueba', 'es admin solo donde tiene rol admin',
          'ok', public.es_admin_de_empresa(v_emp_a) and not public.es_admin_de_empresa(v_emp_b) and not public.es_admin_de_empresa(v_emp_c),
          'detalle', v_emp_a || ' sí, ' || v_emp_b || ' no, ' || coalesce(v_emp_c, '-') || ' no');
@@ -129,6 +136,9 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_super, 'role', 'authenticated')::text, true);
   set local role authenticated;
   r := r || jsonb_build_object('prueba', 'superadmin es admin en todas', 'ok', public.es_admin_de_empresa(v_emp_b), 'detalle', '');
+  select count(*) into v_n from jsonb_array_elements(public.mis_empresas(true)) e where e->>'mi_rol' = 'admin';
+  r := r || jsonb_build_object('prueba', 'mis_empresas(true): el superadmin ve todas como admin',
+         'ok', v_n = (select count(*) from public.empresas), 'detalle', v_n || ' empresas');
   perform public.asignar_empresas_usuario(v_user, jsonb_build_array(
     jsonb_build_object('empresa_id', v_emp_a, 'rol', 'vendedor'),
     jsonb_build_object('empresa_id', v_emp_b, 'rol', 'admin')

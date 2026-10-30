@@ -28,6 +28,7 @@ import { DividerModule } from 'primeng/divider';
 
 
 import { SessionContextService } from '../../services/session-context.service';
+import { EmpresasUsuarioService } from '../../services/empresas-usuario.service';
 
 
 interface EstadoOption {
@@ -128,7 +129,8 @@ export class HistorialComponent implements OnInit {
     private zone: NgZone,
     private confirmSvc: ConfirmationService,
     private router: Router,
-    private session: SessionContextService
+    private session: SessionContextService,
+    private empresasUsuario: EmpresasUsuarioService
   ) {
     this.initChartOptions();
   }
@@ -191,7 +193,7 @@ export class HistorialComponent implements OnInit {
 
     this.cargandoEmpresas = true;
     try {
-      const empresasUser = await this.supabase.getEmpresasDelUsuario();
+      const empresasUser = await this.empresasUsuario.obtener();
       this.empresasDisponibles = (empresasUser || []).filter(
         (emp: any) => emp.id !== this.empresaActiva?.id
       );

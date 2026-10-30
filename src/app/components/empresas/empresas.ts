@@ -29,6 +29,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { ChipsModule } from 'primeng/chips';
 
 import { SessionContextService } from '../../services/session-context.service';
+import { EmpresasUsuarioService } from '../../services/empresas-usuario.service';
 
 @Component({
   selector: 'app-empresas',
@@ -81,7 +82,8 @@ export class EmpresasComponent implements OnInit {
     private msg: MessageService,
     private confirm: ConfirmationService,
     private cdr: ChangeDetectorRef,
-     private session: SessionContextService,
+    private session: SessionContextService,
+    private empresasUsuario: EmpresasUsuarioService,
     @Inject(DOCUMENT) public document: Document
   ) {}
   
@@ -130,10 +132,10 @@ export class EmpresasComponent implements OnInit {
       let data: IEmpresa[];
 
       if (this.esAdminGeneral) {
-        data = await this.supabase.getEmpresasConCuentas();
+        data = await this.supabase.getEmpresasDelUsuario(true);
       } else {
         // Un admin de empresa solo ve las empresas donde tiene rol admin.
-        data = (await this.supabase.getEmpresasDelUsuario()).filter(e => e.mi_rol === 'admin');
+        data = (await this.empresasUsuario.obtener()).filter(e => e.mi_rol === 'admin');
       }
 
       this.empresas = data;
@@ -538,7 +540,9 @@ export class EmpresasComponent implements OnInit {
       });
 
       this.cerrarModal();
-      await this.cargarEmpresas();
+      // Logo, lugares o cuentas nuevas: que el resto de la app tome la versión guardada.
+      this.empresasUsuario.invalidar();
+      await Promise.all([this.empresasUsuario.obtener(true), this.cargarEmpresas()]);
 
     } catch (error: any) {
       console.error('Error guardando empresa:', error);

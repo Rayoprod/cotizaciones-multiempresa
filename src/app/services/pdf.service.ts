@@ -51,6 +51,8 @@ export function lineasCondicionesComerciales(
 export class PdfService {
 
   private pdfMakeInstance: any = null;
+  /** Logos y firmas ya descargados, por URL: el siguiente PDF no los vuelve a pedir. */
+  private imagenes = new Map<string, Promise<string | null>>();
 
   constructor(private supabase: SupabaseService) {}
 
@@ -74,9 +76,19 @@ export class PdfService {
 
   // ── Utilidades ───────────────────────────────────────────────────────────
 
-  private async cargarImagen(url: string): Promise<string | null> {
-    if (!url) return null;
-    if (url.startsWith('data:')) return url;
+  private cargarImagen(url: string): Promise<string | null> {
+    if (!url) return Promise.resolve(null);
+    if (url.startsWith('data:')) return Promise.resolve(url);
+    if (!this.imagenes.has(url)) {
+      this.imagenes.set(url, this.descargarImagen(url).then(imagen => {
+        if (!imagen) this.imagenes.delete(url);
+        return imagen;
+      }));
+    }
+    return this.imagenes.get(url)!;
+  }
+
+  private async descargarImagen(url: string): Promise<string | null> {
     try {
       const response = await fetch(url);
       if (!response.ok) return null;
@@ -120,13 +132,19 @@ export class PdfService {
     if (!datosEmpresa) return;
     const condiciones = condicionesPdf(data, datosEmpresa, ajustes);
 
-    if (datosEmpresa.id) {
-      datosEmpresa = await this.supabase.enriquecerConCuentasBancarias(datosEmpresa);
-    }
+    // Todo en paralelo: cada pedido tarda cientos de ms. Las cuentas se piden
+    // frescas porque son los datos de pago que verá el cliente.
+    const pdfMake = this.getPdfMake();
+    const [cuentasFrescas, logoConvertido, firmaConvertida] = await Promise.all([
+      datosEmpresa.id
+        ? this.supabase.getCuentasBancarias(datosEmpresa.id).catch(() => datosEmpresa.cuentas_bancarias ?? [])
+        : Promise.resolve(datosEmpresa.cuentas_bancarias ?? []),
+      this.cargarImagen(datosEmpresa.ruta_logo),
+      this.cargarImagen(datosEmpresa.ruta_firma)
+    ]);
+    datosEmpresa = { ...datosEmpresa, cuentas_bancarias: cuentasFrescas };
 
     const colorEmpresa = this.color(datosEmpresa);
-    const logoConvertido = await this.cargarImagen(datosEmpresa.ruta_logo);
-    const firmaConvertida = await this.cargarImagen(datosEmpresa.ruta_firma);
 
     // ── Datos comunes ─────────────────────────────────────────────────────
     const fechaRaw = data.fecha;
@@ -454,7 +472,7 @@ export class PdfService {
     const nombreCliente = clienteNombreVal.replace(/\s+/g, '_');
     const nombreArchivo = `${data.folio}_${nombreEmpresa}_${nombreCliente}.pdf`;
 
-    const generadorPdf = await this.getPdfMake();
+    const generadorPdf = await pdfMake;
     generadorPdf.createPdf(docDefinition).download(nombreArchivo);
   }
 }

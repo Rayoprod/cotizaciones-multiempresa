@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../../services/supabase.service';
+import { SessionContextService } from '../../services/session-context.service';
 
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -17,14 +18,40 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { CheckboxModule } from 'primeng/checkbox';
+import { InputSwitchModule } from 'primeng/inputswitch';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { RolEmpresa, RolGlobal } from '../../models';
+import { IAsignacionEmpresa, IEmpresa, RolEmpresa, RolGlobal } from '../../models';
 
 interface Usuario {
   id: string;
   email?: string;
   rol: RolGlobal;
   activo: boolean;
+}
+
+/** Lo que se muestra en la columna "Acceso": una etiqueta por empresa. */
+export interface EtiquetaAcceso {
+  texto: string;
+  severidad: 'danger' | 'warning' | 'info' | 'secondary';
+}
+
+/**
+ * Etiquetas de acceso de un usuario: el superadmin entra a todas las empresas;
+ * el resto, a las asignadas, con su rol en cada una.
+ */
+export function etiquetasDeAcceso(
+  usuario: Pick<Usuario, 'rol'>,
+  asignaciones: IAsignacionEmpresa[],
+  nombres: Map<string, string>
+): EtiquetaAcceso[] {
+  if (usuario.rol === 'admin') return [{ texto: 'Superadmin · todas las empresas', severidad: 'danger' }];
+  if (asignaciones.length === 0) return [{ texto: 'Sin empresas', severidad: 'secondary' }];
+  return [...asignaciones]
+    .sort((a, b) => (nombres.get(a.empresa_id) ?? a.empresa_id).localeCompare(nombres.get(b.empresa_id) ?? b.empresa_id))
+    .map(a => ({
+      texto: `${nombres.get(a.empresa_id) ?? a.empresa_id} · ${a.rol === 'admin' ? 'Admin' : 'Vendedor'}`,
+      severidad: a.rol === 'admin' ? 'warning' : 'info'
+    }));
 }
 
 @Component({
@@ -35,7 +62,7 @@ interface Usuario {
     TableModule, ButtonModule, InputTextModule, PasswordModule,
     TagModule, DialogModule, SidebarModule, DropdownModule,
     ToastModule, ConfirmDialogModule, TooltipModule, CheckboxModule,
-    ProgressSpinnerModule
+    InputSwitchModule, ProgressSpinnerModule
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './usuarios.html',
@@ -47,42 +74,82 @@ export class UsuariosComponent implements OnInit {
   cargando = true;
   terminoBusqueda: string = '';
 
-  get usuariosFiltrados(): Usuario[] {
-    const q = (this.terminoBusqueda || '').trim().toLowerCase();
-    if (!q) return this.usuarios;
-    return this.usuarios.filter(u =>
-      (u.email && u.email.toLowerCase().includes(q)) ||
-      (u.rol && u.rol.toLowerCase().includes(q)) ||
-      (u.id && u.id.toLowerCase().includes(q))
-    );
-  }
+  todasLasEmpresas: IEmpresa[] = [];
+  private nombresEmpresa = new Map<string, string>();
+  private asignaciones = new Map<string, IAsignacionEmpresa[]>();
 
   // Modal nuevo usuario
-  modalVisible  = false;
-  nuevoEmail    = '';
-  nuevoPassword = '';
-  nuevoRol: RolGlobal = 'usuario';
-  guardando     = false;
-  errorModal    = '';
+  modalVisible   = false;
+  nuevoEmail     = '';
+  nuevoPassword  = '';
+  nuevoSuperadmin = false;
+  guardando      = false;
+  errorModal     = '';
 
-  // Drawer empresas
+  // Panel "Acceso" de un usuario
   drawerVisible       = false;
   usuarioSeleccionado: Usuario | null = null;
-  todasLasEmpresas:   any[] = [];
+  borradorSuperadmin  = false;
   /** empresa_id → rol del usuario seleccionado en esa empresa. */
   empresasAsignadas = new Map<string, RolEmpresa>();
-  guardandoEmpresas   = false;
-
-  /** profiles.rol: el superadmin ve y gestiona todo; el resto depende de su rol en cada empresa. */
-  tiposCuenta: { label: string; value: RolGlobal }[] = [
-    { label: 'Usuario', value: 'usuario' },
-    { label: 'Superadmin', value: 'admin' }
-  ];
+  guardandoAcceso     = false;
 
   rolesEmpresa: { label: string; value: RolEmpresa }[] = [
     { label: 'Vendedor', value: 'vendedor' },
     { label: 'Admin', value: 'admin' }
   ];
+
+  constructor(
+    private supabase: SupabaseService,
+    private session: SessionContextService,
+    private msg: MessageService,
+    private confirm: ConfirmationService,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  async ngOnInit() {
+    await this.cargarTodo();
+  }
+
+  /** Usuarios, empresas y asignaciones a la vez: un solo tiempo de espera. */
+  async cargarTodo() {
+    this.cargando = true;
+    try {
+      const [usuarios, empresas, asignaciones] = await Promise.all([
+        this.supabase.getUsuarios(),
+        this.supabase.getEmpresas(),
+        this.supabase.getAsignaciones()
+      ]);
+      this.usuarios = usuarios;
+      this.todasLasEmpresas = empresas;
+      this.nombresEmpresa = new Map(empresas.map(e => [e.id, e.nombre_comercial]));
+      this.asignaciones = new Map();
+      for (const a of asignaciones) {
+        this.asignaciones.set(a.usuario_id, [...(this.asignaciones.get(a.usuario_id) ?? []), { empresa_id: a.empresa_id, rol: a.rol }]);
+      }
+    } catch {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar los usuarios' });
+    } finally {
+      this.cargando = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  // ── Listado ──────────────────────────────────────
+
+  get usuariosFiltrados(): Usuario[] {
+    const q = (this.terminoBusqueda || '').trim().toLowerCase();
+    if (!q) return this.usuarios;
+    return this.usuarios.filter(u =>
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.id && u.id.toLowerCase().includes(q)) ||
+      this.acceso(u).some(e => e.texto.toLowerCase().includes(q))
+    );
+  }
+
+  acceso(usuario: Usuario): EtiquetaAcceso[] {
+    return etiquetasDeAcceso(usuario, this.asignaciones.get(usuario.id) ?? [], this.nombresEmpresa);
+  }
 
   get usuariosActivos(): number {
     return this.usuarios.filter(u => u.activo).length;
@@ -92,51 +159,32 @@ export class UsuariosComponent implements OnInit {
     return this.usuarios.filter(u => u.rol === 'admin').length;
   }
 
-  get usuariosNormales(): number {
-    return this.usuarios.filter(u => u.rol === 'usuario').length;
+  /** Cuentas que no son superadmin y no tienen ninguna empresa: no pueden hacer nada. */
+  get usuariosSinEmpresas(): number {
+    return this.usuarios.filter(u => u.rol !== 'admin' && !(this.asignaciones.get(u.id)?.length)).length;
   }
 
-  constructor(
-  private supabase: SupabaseService,
-  private msg: MessageService,
-  private confirm: ConfirmationService,
-  private cdr: ChangeDetectorRef   // ← agregar esto
-) {}
-
-  async ngOnInit() {
-    await this.cargarUsuarios();
-    // Precargamos empresas para el drawer
-    this.todasLasEmpresas = await this.supabase.getEmpresas();
+  esUnoMismo(usuario: Usuario | null): boolean {
+    return !!usuario && usuario.id === this.session.usuario()?.id;
   }
 
-  async cargarUsuarios() {
-    this.cargando = true;
-    try {
-      this.usuarios = await this.supabase.getUsuarios();
-    } catch {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar los usuarios' });
-    } finally {
-      this.cargando = false;
-      this.cdr.markForCheck();
-    }
-  }
+  // ── Nuevo usuario ────────────────────────────────
 
-  // ── NUEVO USUARIO ────────────────────────────────
   abrirModal() {
-    this.nuevoEmail    = '';
-    this.nuevoPassword = '';
-    this.nuevoRol      = 'usuario';
-    this.errorModal    = '';
-    this.modalVisible  = true;
+    this.nuevoEmail      = '';
+    this.nuevoPassword   = '';
+    this.nuevoSuperadmin = false;
+    this.errorModal      = '';
+    this.modalVisible    = true;
   }
 
   cerrarModal() {
-    this.modalVisible  = false;
-    this.nuevoEmail    = '';
-    this.nuevoPassword = '';
-    this.nuevoRol      = 'usuario';
-    this.errorModal    = '';
-    this.guardando     = false;
+    this.modalVisible    = false;
+    this.nuevoEmail      = '';
+    this.nuevoPassword   = '';
+    this.nuevoSuperadmin = false;
+    this.errorModal      = '';
+    this.guardando       = false;
   }
 
   async crearUsuario() {
@@ -155,20 +203,20 @@ export class UsuariosComponent implements OnInit {
     this.cdr.markForCheck();
 
     try {
-      // Crear usuario y perfil de forma atómica mediante RPC sin colisión de correos ni cierre de sesión
-      const res = await this.supabase.crearUsuario(this.nuevoEmail, this.nuevoPassword, this.nuevoRol);
-
+      const email = this.nuevoEmail.trim().toLowerCase();
+      const res = await this.supabase.crearUsuario(email, this.nuevoPassword, this.nuevoSuperadmin ? 'admin' : 'usuario');
       if (!res?.id) {
         throw new Error('No se pudo obtener la respuesta de creación de usuario.');
       }
 
-      this.msg.add({ severity: 'success', summary: '¡Listo!', detail: `Usuario ${this.nuevoEmail} creado exitosamente` });
-      this.modalVisible  = false;
-      this.nuevoEmail    = '';
-      this.nuevoPassword = '';
-      this.nuevoRol      = 'usuario';
-      this.errorModal    = '';
-      await this.cargarUsuarios();
+      this.msg.add({ severity: 'success', summary: 'Usuario creado', detail: email });
+      const esSuperadmin = this.nuevoSuperadmin;
+      this.cerrarModal();
+      await this.cargarTodo();
+
+      // Un usuario normal sin empresas no puede hacer nada: se abre su acceso.
+      const nuevo = this.usuarios.find(u => u.id === res.id);
+      if (nuevo && !esSuperadmin) this.abrirAcceso(nuevo);
     } catch (err: any) {
       console.error('Error creando usuario:', err);
       this.errorModal = err?.message || err?.details || 'Error al crear el usuario.';
@@ -178,25 +226,13 @@ export class UsuariosComponent implements OnInit {
     }
   }
 
-  // ── ROL / ACTIVO ─────────────────────────────────
-  async cambiarRol(usuario: Usuario, nuevoRol: RolGlobal) {
-    if (!nuevoRol || nuevoRol === usuario.rol) return;
-
-    const rolAnterior = usuario.rol;
-    try {
-      await this.supabase.actualizarRolUsuario(usuario.id, nuevoRol);
-      usuario.rol = nuevoRol;
-      this.msg.add({ severity: 'success', summary: 'Tipo de cuenta actualizado',
-        detail: `${usuario.email || usuario.id}: ${nuevoRol === 'admin' ? 'Superadmin' : 'Usuario'}` });
-    } catch (e: any) {
-      usuario.rol = rolAnterior;
-      this.msg.add({ severity: 'error', summary: 'No se cambió', detail: e?.message || 'No se pudo cambiar el tipo de cuenta' });
-    } finally {
-      this.cdr.markForCheck();
-    }
-  }
+  // ── Activar / eliminar ───────────────────────────
 
   async toggleActivo(usuario: Usuario) {
+    if (this.esUnoMismo(usuario)) {
+      this.msg.add({ severity: 'warn', summary: 'No permitido', detail: 'No puedes desactivar tu propia cuenta.' });
+      return;
+    }
     const nuevo = !usuario.activo;
     try {
       await this.supabase.toggleActivoUsuario(usuario.id, nuevo);
@@ -210,10 +246,9 @@ export class UsuariosComponent implements OnInit {
     }
   }
 
-  // ── ELIMINAR ─────────────────────────────────────
   confirmarEliminar(usuario: Usuario) {
     this.confirm.confirm({
-      message: '¿Eliminar permanentemente este usuario?',
+      message: `¿Eliminar permanentemente a ${usuario.email || 'este usuario'}?`,
       header: 'Confirmar eliminación',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Sí, eliminar',
@@ -227,6 +262,7 @@ export class UsuariosComponent implements OnInit {
     try {
       await this.supabase.eliminarUsuario(usuario.id);
       this.usuarios = this.usuarios.filter(u => u.id !== usuario.id);
+      this.asignaciones.delete(usuario.id);
       this.msg.add({ severity: 'success', summary: 'Eliminado', detail: 'Usuario eliminado' });
     } catch (e: any) {
       this.msg.add({ severity: 'error', summary: 'No se eliminó', detail: e?.message || 'No se pudo eliminar' });
@@ -235,34 +271,18 @@ export class UsuariosComponent implements OnInit {
     }
   }
 
-  // ── DRAWER EMPRESAS ───────────────────────────────
-  async abrirEmpresas(usuario: Usuario) {
-    // Solo admin general tiene acceso a todas las empresas sin asignación
-    if (usuario.rol === 'admin') {
-      this.msg.add({ 
-        severity: 'info', 
-        summary: 'Acceso completo', 
-        detail: 'Los administradores generales tienen acceso a todas las empresas automáticamente' 
-      });
-      return;
-    }
-    
+  // ── Panel "Acceso" ───────────────────────────────
+
+  abrirAcceso(usuario: Usuario) {
     this.usuarioSeleccionado = usuario;
-    this.empresasAsignadas   = new Map();
-    this.drawerVisible       = true;      // abrir drawer primero
-    this.cdr.markForCheck();             // forzar render del drawer
-
-    try {
-      const asignaciones = await this.supabase.getEmpresasDeUsuario(usuario.id);
-      this.empresasAsignadas = new Map(asignaciones.map(a => [a.empresa_id, a.rol]));
-    } catch {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas' });
-    }
-
+    this.borradorSuperadmin  = usuario.rol === 'admin';
+    this.empresasAsignadas   = new Map((this.asignaciones.get(usuario.id) ?? []).map(a => [a.empresa_id, a.rol]));
+    this.drawerVisible       = true;
     this.cdr.markForCheck();
   }
 
   toggleEmpresa(empresaId: string) {
+    if (this.borradorSuperadmin) return;
     if (this.empresasAsignadas.has(empresaId)) {
       this.empresasAsignadas.delete(empresaId);
     } else {
@@ -282,21 +302,51 @@ export class UsuariosComponent implements OnInit {
     if (this.empresasAsignadas.has(empresaId)) this.empresasAsignadas.set(empresaId, rol);
   }
 
-  async guardarEmpresas() {
-    if (!this.usuarioSeleccionado) return;
-    this.guardandoEmpresas = true;
+  guardarAcceso() {
+    const usuario = this.usuarioSeleccionado;
+    if (!usuario) return;
+    const eraSuperadmin = usuario.rol === 'admin';
+
+    if (eraSuperadmin && !this.borradorSuperadmin && this.esUnoMismo(usuario)) {
+      this.msg.add({ severity: 'warn', summary: 'No permitido', detail: 'No puedes quitarte tu propio acceso de superadmin.' });
+      return;
+    }
+    if (!eraSuperadmin && this.borradorSuperadmin) {
+      this.confirm.confirm({
+        header: 'Dar acceso total',
+        message: `${usuario.email || 'Este usuario'} podrá ver y cambiar todas las empresas, usuarios y cotizaciones. ¿Continuar?`,
+        icon: 'pi pi-shield',
+        acceptLabel: 'Sí, hacer superadmin',
+        rejectLabel: 'Cancelar',
+        acceptButtonStyleClass: 'p-button-danger',
+        accept: () => this.persistirAcceso(usuario)
+      });
+      return;
+    }
+    this.persistirAcceso(usuario);
+  }
+
+  private async persistirAcceso(usuario: Usuario) {
+    this.guardandoAcceso = true;
+    this.cdr.markForCheck();
     try {
-      await this.supabase.guardarEmpresasDeUsuario(
-        this.usuarioSeleccionado.id,
-        [...this.empresasAsignadas].map(([empresa_id, rol]) => ({ empresa_id, rol }))
-      );
-      this.msg.add({ severity: 'success', summary: '¡Guardado!',
-        detail: `Empresas actualizadas para ${this.usuarioSeleccionado.email}` });
+      const nuevoRol: RolGlobal = this.borradorSuperadmin ? 'admin' : 'usuario';
+      if (nuevoRol !== usuario.rol) {
+        await this.supabase.actualizarRolUsuario(usuario.id, nuevoRol);
+        usuario.rol = nuevoRol;
+      }
+      // Al superadmin no le hacen falta asignaciones: se conservan como estaban.
+      if (!this.borradorSuperadmin) {
+        const asignaciones = [...this.empresasAsignadas].map(([empresa_id, rol]) => ({ empresa_id, rol }));
+        await this.supabase.guardarEmpresasDeUsuario(usuario.id, asignaciones);
+        this.asignaciones.set(usuario.id, asignaciones);
+      }
+      this.msg.add({ severity: 'success', summary: 'Acceso guardado', detail: usuario.email || usuario.id });
       this.drawerVisible = false;
     } catch (e: any) {
-      this.msg.add({ severity: 'error', summary: 'No se guardó', detail: e?.message || 'No se pudo guardar' });
+      this.msg.add({ severity: 'error', summary: 'No se guardó', detail: e?.message || 'No se pudo guardar el acceso' });
     } finally {
-      this.guardandoEmpresas = false;
+      this.guardandoAcceso = false;
       this.cdr.markForCheck();
     }
   }

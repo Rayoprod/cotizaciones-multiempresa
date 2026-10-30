@@ -6,7 +6,7 @@ describe('HistorialComponent - Customer Name and Document Extraction', () => {
   let comp: any;
 
   beforeEach(() => {
-    comp = new HistorialComponent({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    comp = new HistorialComponent({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
   });
 
   it('should extract client name from all quotation variations', () => {
@@ -47,14 +47,14 @@ describe('HistorialComponent - Revisiones', () => {
     vi.useFakeTimers();
     supabase = {
       getHistorial: vi.fn(async () => [original, revision]),
-      getEmpresasDelUsuario: vi.fn(async () => []),
       actualizarEstado: vi.fn()
     };
     router = { navigate: vi.fn() };
     comp = new HistorialComponent(
       supabase, { add: vi.fn() } as any, {} as any, { markForCheck: () => {} } as any,
       { run: (fn: () => void) => fn() } as any, {} as any, router,
-      { empresaActiva: () => ({ id: 'VDC' }), setEmpresaActiva: vi.fn() } as any
+      { empresaActiva: () => ({ id: 'VDC' }), setEmpresaActiva: vi.fn() } as any,
+      { obtener: vi.fn(async () => []) } as any
     );
   });
 

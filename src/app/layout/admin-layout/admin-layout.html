@@ -117,7 +117,8 @@
                 severity="success" size="small" class="font-bold text-xs border-round-lg shadow-2 px-3"
                 (click)="instalarPwa()"></button>
         <p-tag value="RLS Activo" severity="success" styleClass="font-bold text-xs px-2 py-1 border-round-md hidden sm:inline-flex"></p-tag>
-        <p-tag value="Super Admin" severity="danger" styleClass="font-bold text-xs px-2 py-1 border-round-md"></p-tag>
+        <p-tag [value]="esAdminGeneral ? 'Super Admin' : 'Admin de empresa'" [severity]="esAdminGeneral ? 'danger' : 'warning'"
+               styleClass="font-bold text-xs px-2 py-1 border-round-md"></p-tag>
         <p-button icon="pi pi-external-link" label="Modo Operación" severity="secondary" [outlined]="true" size="small"
                   styleClass="border-round-lg font-bold text-white border-white-alpha-40 hidden md:inline-flex" (onClick)="operarEmpresa()"></p-button>
       </div>

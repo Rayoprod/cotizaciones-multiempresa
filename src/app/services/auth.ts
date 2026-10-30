@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Router, UrlTree } from '@angular/router';
 import { SupabaseService } from './supabase.service';
 import { SessionContextService } from './session-context.service';
+import { EmpresasUsuarioService } from './empresas-usuario.service';
 import { IProfile } from '../models';
 
 /** Cada cuánto se vuelve a confirmar contra la BD que la cuenta sigue activa. */
@@ -18,7 +19,8 @@ export class AuthService {
   constructor(
     private supabase: SupabaseService,
     private router: Router,
-    private session: SessionContextService
+    private session: SessionContextService,
+    private empresasUsuario: EmpresasUsuarioService
   ) {}
 
   async login(email: string, password: string) {
@@ -32,6 +34,7 @@ export class AuthService {
   async logout() {
     await this.supabase.cerrarSesion();
     this.session.clearAll();
+    this.empresasUsuario.invalidar();
     this.perfilVerificadoEn = 0;
     this.router.navigate(['/login']);
   }

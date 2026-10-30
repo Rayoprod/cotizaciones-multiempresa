@@ -27,7 +27,7 @@ function crearEscenario(opciones: { sesion?: boolean; perfil?: IProfile | null |
     navigate: vi.fn()
   };
 
-  const auth = new AuthService(supabase as any, router as any, session as any);
+  const auth = new AuthService(supabase as any, router as any, session as any, { invalidar: vi.fn() } as any);
   return { auth, supabase, session, router };
 }
 

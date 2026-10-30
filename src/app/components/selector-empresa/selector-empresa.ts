@@ -2,7 +2,8 @@ import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { SupabaseService } from '../../services/supabase.service';
+import { AuthService } from '../../services/auth';
+import { EmpresasUsuarioService } from '../../services/empresas-usuario.service';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { SessionContextService } from '../../services/session-context.service';
 
@@ -25,19 +26,17 @@ export class SelectorComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private supabaseSvc: SupabaseService,
+    private auth: AuthService,
+    private empresasUsuario: EmpresasUsuarioService,
     private cdr: ChangeDetectorRef,
     private session: SessionContextService
   ) {}
 
   async ngOnInit() {
-    const usuario = await this.supabaseSvc.obtenerUsuarioActual();
-    const email = this.session.usuario()?.email || usuario?.email || '';
-    this.nombreUsuario = email.split('@')[0];
+    this.nombreUsuario = (this.session.usuario()?.email || '').split('@')[0];
 
     try {
-      this.empresas = await this.supabaseSvc.getEmpresasDelUsuario();
-      this.session.setEmpresas(this.empresas);
+      this.empresas = await this.empresasUsuario.obtener();
 
       if (this.empresas.length === 1) {
         this.seleccionar(this.empresas[0]);
@@ -57,8 +56,6 @@ export class SelectorComponent implements OnInit {
   }
 
   async cerrarSesion() {
-    await this.supabaseSvc.cerrarSesion();
-    this.session.clearAll();
-    this.router.navigate(['/login']);
+    await this.auth.logout();
   }
 }

@@ -6,14 +6,14 @@
   <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
     <div>
       <h1 class="text-2xl md:text-3xl font-bold text-900 m-0 tracking-tight flex align-items-center gap-2">
-        <i class="pi pi-users text-sky-600"></i>Gestión de Usuarios
+        <i class="pi pi-users text-sky-600"></i>Usuarios
       </h1>
       <p class="text-500 text-sm mt-1 mb-0 font-medium">
-        Administración de credenciales, roles y asignación de empresas habilitadas
+        Cada persona tiene una cuenta. En cada empresa que le asignes es <strong>Admin</strong> o <strong>Vendedor</strong>.
       </p>
     </div>
     <div>
-      <p-button label="Nuevo Usuario" icon="pi pi-plus" class="border-round-xl font-bold" (onClick)="abrirModal()" />
+      <p-button label="Nuevo usuario" icon="pi pi-plus" class="border-round-xl font-bold" (onClick)="abrirModal()" />
     </div>
   </div>
 
@@ -21,10 +21,7 @@
   <ng-container *ngIf="cargando">
     <div class="flex flex-column align-items-center justify-content-center gap-4 py-6">
       <p-progressSpinner strokeWidth="4" animationDuration=".8s" [style]="{ width: '60px', height: '60px' }" />
-      <div class="text-center">
-        <p class="text-900 font-bold text-lg m-0 mb-1">Cargando usuarios...</p>
-        <p class="text-500 text-sm m-0">Sincronizando información de cuentas</p>
-      </div>
+      <p class="text-900 font-bold text-lg m-0">Cargando usuarios...</p>
     </div>
   </ng-container>
 
@@ -34,111 +31,91 @@
     <!-- KPI Cards -->
     <div class="grid mb-4">
       <div class="col-6 md:col-3">
-        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-sky-500 h-full card-hover-effect">
-          <div class="flex align-items-center justify-content-between mb-2">
-            <span class="text-500 text-xs font-bold uppercase tracking-wider">Total</span>
-            <div class="w-2rem h-2rem border-circle bg-sky-100 text-sky-600 flex align-items-center justify-content-center">
-              <i class="pi pi-users text-sm"></i>
-            </div>
-          </div>
-          <p class="text-3xl font-bold text-sky-600 m-0">{{ usuarios.length }}</p>
-          <p class="text-xs text-500 font-medium m-0 mt-1">usuarios registrados</p>
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-sky-500 h-full">
+          <span class="text-500 text-xs font-bold uppercase tracking-wider">Total</span>
+          <p class="text-3xl font-bold text-sky-600 m-0 mt-2">{{ usuarios.length }}</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">cuentas registradas</p>
         </div>
       </div>
 
       <div class="col-6 md:col-3">
-        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-emerald-500 h-full card-hover-effect">
-          <div class="flex align-items-center justify-content-between mb-2">
-            <span class="text-500 text-xs font-bold uppercase tracking-wider">Activos</span>
-            <div class="w-2rem h-2rem border-circle bg-emerald-100 text-emerald-600 flex align-items-center justify-content-center">
-              <i class="pi pi-check-circle text-sm"></i>
-            </div>
-          </div>
-          <p class="text-3xl font-bold text-emerald-600 m-0">{{ usuariosActivos }}</p>
-          <p class="text-xs text-500 font-medium m-0 mt-1">con acceso habilitado</p>
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-emerald-500 h-full">
+          <span class="text-500 text-xs font-bold uppercase tracking-wider">Activos</span>
+          <p class="text-3xl font-bold text-emerald-600 m-0 mt-2">{{ usuariosActivos }}</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">pueden iniciar sesión</p>
         </div>
       </div>
 
       <div class="col-6 md:col-3">
-        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-indigo-500 h-full card-hover-effect">
-          <div class="flex align-items-center justify-content-between mb-2">
-            <span class="text-500 text-xs font-bold uppercase tracking-wider">Superadmins</span>
-            <div class="w-2rem h-2rem border-circle bg-indigo-100 text-indigo-600 flex align-items-center justify-content-center">
-              <i class="pi pi-shield text-sm"></i>
-            </div>
-          </div>
-          <p class="text-3xl font-bold text-indigo-600 m-0">{{ usuariosAdmin }}</p>
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-red-400 h-full">
+          <span class="text-500 text-xs font-bold uppercase tracking-wider">Superadmins</span>
+          <p class="text-3xl font-bold text-red-500 m-0 mt-2">{{ usuariosAdmin }}</p>
           <p class="text-xs text-500 font-medium m-0 mt-1">acceso total al sistema</p>
         </div>
       </div>
 
       <div class="col-6 md:col-3">
-        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-purple-500 h-full card-hover-effect">
-          <div class="flex align-items-center justify-content-between mb-2">
-            <span class="text-500 text-xs font-bold uppercase tracking-wider">Usuarios</span>
-            <div class="w-2rem h-2rem border-circle bg-purple-100 text-purple-600 flex align-items-center justify-content-center">
-              <i class="pi pi-briefcase text-sm"></i>
-            </div>
-          </div>
-          <p class="text-3xl font-bold text-purple-600 m-0">{{ usuariosNormales }}</p>
-          <p class="text-xs text-500 font-medium m-0 mt-1">con un rol en cada empresa</p>
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 h-full"
+             [class.border-amber-500]="usuariosSinEmpresas > 0" [class.border-300]="usuariosSinEmpresas === 0">
+          <span class="text-500 text-xs font-bold uppercase tracking-wider">Sin empresas</span>
+          <p class="text-3xl font-bold m-0 mt-2" [class.text-amber-600]="usuariosSinEmpresas > 0" [class.text-400]="usuariosSinEmpresas === 0">
+            {{ usuariosSinEmpresas }}
+          </p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">{{ usuariosSinEmpresas > 0 ? 'no pueden trabajar aún' : 'todos tienen empresa' }}</p>
         </div>
       </div>
     </div>
 
-    <!-- Buscador Global y Contador -->
+    <!-- Buscador -->
     <div class="bg-white border-round-2xl shadow-1 p-3 md:p-4 mb-4 border-1 surface-border">
       <div class="flex flex-column sm:flex-row align-items-stretch sm:align-items-center justify-content-between gap-3">
         <span class="font-bold text-900 text-base">
-          Usuarios Registrados (<span class="text-sky-600 font-extrabold">{{ usuariosFiltrados.length }}</span>)
+          Usuarios (<span class="text-sky-600 font-extrabold">{{ usuariosFiltrados.length }}</span>)
         </span>
         <div class="relative flex align-items-center w-full sm:w-20rem">
           <i class="pi pi-search absolute pl-3 text-400"></i>
           <input pInputText type="text" [(ngModel)]="terminoBusqueda" class="w-full border-round-xl pl-6 text-sm"
-                 placeholder="Buscar por correo o ID..." />
+                 placeholder="Buscar por correo o empresa..." />
         </div>
       </div>
     </div>
 
     <!-- Tabla Desktop -->
     <div class="bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border hidden md:block">
-      <p-table [value]="usuariosFiltrados" [rows]="10" [paginator]="true"
+      <p-table [value]="usuariosFiltrados" [rows]="10" [paginator]="usuariosFiltrados.length > 10"
                [rowHover]="true" styleClass="p-datatable-sm">
 
         <ng-template pTemplate="header">
           <tr>
-            <th pSortableColumn="email">Usuario / Correo <p-sortIcon field="email" /></th>
-            <th style="width:180px">Tipo de cuenta</th>
-            <th style="width:120px" class="text-center">Estado</th>
-            <th style="width:100px" class="text-center">Empresas</th>
-            <th style="width:120px" class="text-center">Acciones</th>
+            <th pSortableColumn="email">Usuario <p-sortIcon field="email" /></th>
+            <th>Acceso</th>
+            <th style="width:110px" class="text-center">Estado</th>
+            <th style="width:150px" class="text-center">Acciones</th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-u>
-          <tr>
+          <tr [class.opacity-60]="!u.activo">
             <td>
               <div class="flex align-items-center gap-3 max-w-22rem overflow-hidden">
                 <div class="flex align-items-center justify-content-center border-circle flex-shrink-0"
-                     [style]="{'width':'40px','height':'40px',
-                               'background': u.rol === 'admin' ? 'var(--sky-100)' : 'var(--indigo-100)'}">
-                  <i [class]="u.rol === 'admin' ? 'pi pi-shield text-sky-600' : 'pi pi-user text-indigo-600'"
-                     class="text-lg"></i>
+                     [style]="{'width':'40px','height':'40px','background': u.rol === 'admin' ? 'var(--red-50)' : 'var(--sky-50)'}">
+                  <i [class]="u.rol === 'admin' ? 'pi pi-shield text-red-500' : 'pi pi-user text-sky-600'" class="text-lg"></i>
                 </div>
                 <div class="min-w-0 flex-1 overflow-hidden">
-                  <p class="font-bold text-900 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="u.email || u.id">{{ u.email || u.id }}</p>
-                  <p class="text-xs text-500 m-0 font-mono text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ u.id }}</p>
+                  <p class="font-bold text-900 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="u.email || u.id">
+                    {{ u.email || u.id }}
+                  </p>
+                  <p *ngIf="esUnoMismo(u)" class="text-xs text-sky-600 font-semibold m-0">Tú</p>
                 </div>
               </div>
             </td>
 
             <td>
-              <p-dropdown [options]="tiposCuenta"
-                        [ngModel]="u.rol"
-                        (onChange)="cambiarRol(u, $event.value)"
-                        optionLabel="label" optionValue="value"
-                        appendTo="body"
-                        styleClass="w-full border-round-xl" />
+              <div class="flex flex-wrap gap-1">
+                <p-tag *ngFor="let etiqueta of acceso(u)" [value]="etiqueta.texto" [severity]="etiqueta.severidad"
+                       styleClass="font-semibold text-xs border-round-md" />
+              </div>
             </td>
 
             <td class="text-center">
@@ -147,22 +124,18 @@
             </td>
 
             <td class="text-center">
-              <p-button icon="pi pi-building" [text]="true" [rounded]="true"
-                        severity="info" size="small"
-                        pTooltip="Gestionar empresas asignadas"
-                        (onClick)="abrirEmpresas(u)" />
-            </td>
-
-            <td class="text-center">
               <div class="flex gap-1 justify-content-center">
+                <p-button icon="pi pi-key" [text]="true" [rounded]="true" severity="info" size="small"
+                          pTooltip="Editar acceso" (onClick)="abrirAcceso(u)" />
                 <p-button [icon]="u.activo ? 'pi pi-ban' : 'pi pi-check-circle'"
                           [severity]="u.activo ? 'warning' : 'success'"
                           [text]="true" [rounded]="true" size="small"
-                          [pTooltip]="u.activo ? 'Desactivar Cuenta' : 'Activar Cuenta'"
+                          [disabled]="esUnoMismo(u)"
+                          [pTooltip]="u.activo ? 'Desactivar cuenta' : 'Activar cuenta'"
                           (onClick)="toggleActivo(u)" />
                 <p-button icon="pi pi-trash" severity="danger"
                           [text]="true" [rounded]="true" size="small"
-                          pTooltip="Eliminar (solo inactivos)"
+                          pTooltip="Eliminar (primero desactívala)"
                           [disabled]="u.activo"
                           (onClick)="confirmarEliminar(u)" />
               </div>
@@ -172,7 +145,7 @@
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="5">
+            <td colspan="4">
               <div class="flex flex-column align-items-center py-8 text-500">
                 <i class="pi pi-users text-5xl mb-3 opacity-30"></i>
                 <p class="font-bold text-900 m-0">No se encontraron usuarios</p>
@@ -185,55 +158,42 @@
 
     <!-- Cards Móvil (< 768px) -->
     <div class="flex flex-column gap-3 md:hidden mb-4">
-      <div *ngFor="let u of usuariosFiltrados" class="bg-white border-round-2xl shadow-1 p-3 border-1 surface-border flex flex-column gap-3">
+      <div *ngFor="let u of usuariosFiltrados" class="bg-white border-round-2xl shadow-1 p-3 border-1 surface-border flex flex-column gap-3"
+           [class.opacity-60]="!u.activo">
         <div class="flex align-items-center gap-3 min-w-0">
           <div class="flex align-items-center justify-content-center border-circle flex-shrink-0"
-               [style]="{'width':'40px','height':'40px',
-                         'background': u.rol === 'admin' ? 'var(--sky-100)' : 'var(--indigo-100)'}">
-            <i [class]="u.rol === 'admin' ? 'pi pi-shield text-sky-600' : 'pi pi-user text-indigo-600'"></i>
+               [style]="{'width':'40px','height':'40px','background': u.rol === 'admin' ? 'var(--red-50)' : 'var(--sky-50)'}">
+            <i [class]="u.rol === 'admin' ? 'pi pi-shield text-red-500' : 'pi pi-user text-sky-600'"></i>
           </div>
           <div class="flex-1 min-w-0 overflow-hidden">
-            <p class="font-bold text-900 m-0 text-base line-height-2 overflow-hidden text-overflow-ellipsis word-break-break-word" [pTooltip]="u.email || u.id">
+            <p class="font-bold text-900 m-0 text-base line-height-2 overflow-hidden text-overflow-ellipsis word-break-break-word">
               {{ u.email || u.id }}
             </p>
-            <div class="flex align-items-center gap-2 mt-1">
-              <p-tag [value]="u.activo ? 'Activo' : 'Inactivo'"
-                     [severity]="u.activo ? 'success' : 'warning'"
-                     styleClass="font-bold border-round-md text-xs" />
-              <span class="text-xs text-400 font-mono overflow-hidden text-overflow-ellipsis white-space-nowrap">ID: {{ u.id | slice:0:8 }}...</span>
-            </div>
+            <p-tag [value]="u.activo ? 'Activo' : 'Inactivo'" [severity]="u.activo ? 'success' : 'warning'"
+                   styleClass="font-bold border-round-md text-xs mt-1" />
           </div>
         </div>
 
-        <div>
-          <label class="text-xs font-bold text-700 uppercase mb-1 block">Tipo de cuenta</label>
-          <p-dropdown [options]="tiposCuenta" [ngModel]="u.rol"
-                    (onChange)="cambiarRol(u, $event.value)"
-                    optionLabel="label" optionValue="value"
-                    appendTo="body" styleClass="w-full border-round-xl" />
+        <div class="flex flex-wrap gap-1">
+          <p-tag *ngFor="let etiqueta of acceso(u)" [value]="etiqueta.texto" [severity]="etiqueta.severidad"
+                 styleClass="font-semibold text-xs border-round-md" />
         </div>
 
         <div class="flex gap-2 pt-2 border-top-1 surface-border">
-          <p-button icon="pi pi-building" label="Empresas"
-                    severity="info" [outlined]="true" size="small"
-                    class="flex-1 border-round-xl font-bold" (onClick)="abrirEmpresas(u)" />
+          <p-button icon="pi pi-key" label="Acceso" severity="info" [outlined]="true" size="small"
+                    class="flex-1 border-round-xl font-bold" (onClick)="abrirAcceso(u)" />
           <p-button [icon]="u.activo ? 'pi pi-ban' : 'pi pi-check-circle'"
                     [severity]="u.activo ? 'warning' : 'success'"
-                    [outlined]="true" size="small"
-                    class="border-round-xl"
-                    (onClick)="toggleActivo(u)" />
-          <p-button icon="pi pi-trash" severity="danger"
-                    [outlined]="true" size="small"
-                    class="border-round-xl"
-                    [disabled]="u.activo"
-                    (onClick)="confirmarEliminar(u)" />
+                    [outlined]="true" size="small" class="border-round-xl"
+                    [disabled]="esUnoMismo(u)" (onClick)="toggleActivo(u)" />
+          <p-button icon="pi pi-trash" severity="danger" [outlined]="true" size="small" class="border-round-xl"
+                    [disabled]="u.activo" (onClick)="confirmarEliminar(u)" />
         </div>
       </div>
 
       <div *ngIf="usuariosFiltrados.length === 0" class="bg-white border-round-2xl p-5 text-center text-500 shadow-1 surface-border border-1">
         <i class="pi pi-users text-5xl mb-3 opacity-30"></i>
         <p class="font-bold text-900 m-0">No se encontraron usuarios</p>
-        <p class="text-sm m-0 mt-1">Intenta cambiar los parámetros de búsqueda</p>
       </div>
     </div>
 
@@ -241,10 +201,10 @@
 </div>
 
 <!-- Modal Nuevo Usuario -->
-<p-dialog header="Crear Nuevo Usuario" [(visible)]="modalVisible" [modal]="true"
+<p-dialog header="Nuevo usuario" [(visible)]="modalVisible" [modal]="true"
   [breakpoints]="{ '960px': '85vw', '640px': '96vw' }"
   [resizable]="false" [draggable]="false" [dismissableMask]="true"
-  [style]="{'width':'90vw','max-width':'480px'}" (onHide)="cerrarModal()" appendTo="body">
+  [style]="{'width':'90vw','max-width':'460px'}" (onHide)="cerrarModal()" appendTo="body">
 
   <div class="flex flex-column gap-3 pt-2">
     <div *ngIf="errorModal" class="p-3 bg-red-50 text-red-700 border-round-xl text-sm font-medium border-1 border-red-200">
@@ -252,99 +212,109 @@
     </div>
 
     <div class="flex flex-column gap-2">
-      <label class="font-semibold text-900 text-sm">Correo Electrónico <span class="text-red-500">*</span></label>
+      <label class="font-semibold text-900 text-sm">Correo electrónico <span class="text-red-500">*</span></label>
       <input pInputText type="email" [(ngModel)]="nuevoEmail" placeholder="usuario@empresa.com" class="w-full border-round-xl" />
     </div>
 
     <div class="flex flex-column gap-2">
-      <label class="font-semibold text-900 text-sm">Contraseña Temporal <span class="text-red-500">*</span></label>
+      <label class="font-semibold text-900 text-sm">Contraseña temporal <span class="text-red-500">*</span></label>
       <p-password [(ngModel)]="nuevoPassword" [toggleMask]="true" [feedback]="false" placeholder="Mínimo 6 caracteres" styleClass="w-full" inputStyleClass="w-full border-round-xl" />
     </div>
 
-    <div class="flex flex-column gap-2">
-      <label class="font-semibold text-900 text-sm">Tipo de cuenta <span class="text-red-500">*</span></label>
-      <p-dropdown [options]="tiposCuenta" [(ngModel)]="nuevoRol" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full border-round-xl" />
-      <small class="text-500">El rol en cada empresa (Admin o Vendedor) se elige después, en "Empresas".</small>
+    <div class="flex align-items-start gap-3 p-3 border-round-xl surface-ground border-1 surface-border">
+      <p-inputSwitch [(ngModel)]="nuevoSuperadmin" inputId="nuevoSuperadmin" />
+      <label for="nuevoSuperadmin" class="cursor-pointer">
+        <span class="font-bold text-900 text-sm block">Superadmin</span>
+        <span class="text-xs text-500">Acceso total a todas las empresas y usuarios. Déjalo apagado para un vendedor o admin de empresa.</span>
+      </label>
     </div>
+
+    <p *ngIf="!nuevoSuperadmin" class="text-xs text-500 m-0">
+      Al crearlo se abre su acceso para que elijas sus empresas y su rol en cada una.
+    </p>
   </div>
 
   <ng-template pTemplate="footer">
     <div class="flex gap-2 pt-3">
       <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="cerrarModal()" [disabled]="guardando" />
-      <p-button label="Crear Usuario" icon="pi pi-check" class="border-round-xl font-bold" [loading]="guardando" (onClick)="crearUsuario()" />
+      <p-button label="Crear usuario" icon="pi pi-check" class="border-round-xl font-bold" [loading]="guardando" (onClick)="crearUsuario()" />
     </div>
   </ng-template>
 </p-dialog>
 
-<!-- Sidebar Empresas -->
-<p-sidebar [(visible)]="drawerVisible"
-          position="right"
-          appendTo="body"
-          [style]="{'width':'100%','max-width':'440px'}">
+<!-- Panel de acceso -->
+<p-sidebar [(visible)]="drawerVisible" position="right" appendTo="body"
+          [style]="{'width':'100%','max-width':'460px'}">
 
   <ng-template pTemplate="header">
-    <div class="flex flex-column gap-1">
-      <span class="font-bold text-900 text-lg">Empresas Asignadas</span>
+    <div class="flex flex-column gap-1 min-w-0">
+      <span class="font-bold text-900 text-lg">Acceso</span>
       <span class="text-sm text-sky-600 font-medium text-overflow-ellipsis overflow-hidden white-space-nowrap">
         {{ usuarioSeleccionado?.email }}
       </span>
     </div>
   </ng-template>
 
-  <div class="flex flex-column gap-2 py-2">
-    <p class="text-sm text-500 font-medium m-0 mb-3">
-      Marca las empresas de este usuario y elige su rol en cada una.
-      <strong>Admin</strong> además edita la ficha, las cuentas bancarias, los logos y los lugares de entrega;
-      <strong>Vendedor</strong> cotiza y gestiona clientes y productos.
-    </p>
+  <div class="flex flex-column gap-3 py-2">
 
-    <div *ngFor="let emp of todasLasEmpresas"
-         class="flex align-items-center gap-3 p-3 border-round-xl cursor-pointer transition-colors"
-         [class.bg-sky-50]="estaAsignada(emp.id)"
-         [class.bg-white]="!estaAsignada(emp.id)"
-         [class.border-sky-500]="estaAsignada(emp.id)"
-         style="border: 2px solid var(--surface-border)"
-         (click)="toggleEmpresa(emp.id)">
-
-      <div class="flex align-items-center justify-content-center border-round-lg flex-shrink-0 overflow-hidden"
-           style="width:42px;height:42px;background:#f8fafc;border:1px solid #e2e8f0">
-        <img *ngIf="emp.ruta_logo" [src]="emp.ruta_logo"
-             style="max-width:90%;max-height:90%;object-fit:contain">
-        <i *ngIf="!emp.ruta_logo" class="pi pi-building text-400"></i>
-      </div>
-
-      <div class="flex-1 overflow-hidden">
-        <p class="font-bold text-900 m-0">{{ emp.nombre_comercial }}</p>
-        <p class="text-xs text-500 font-mono m-0">RUC: {{ emp.ruc }}</p>
-      </div>
-
-      <div *ngIf="estaAsignada(emp.id)" (click)="$event.stopPropagation()" style="width:8.5rem">
-        <p-dropdown [options]="rolesEmpresa" [ngModel]="rolEnEmpresa(emp.id)"
-                    (onChange)="cambiarRolEnEmpresa(emp.id, $event.value)"
-                    optionLabel="label" optionValue="value" appendTo="body"
-                    styleClass="w-full p-inputtext-sm border-round-lg" />
-      </div>
-
-      <i [class]="estaAsignada(emp.id)
-           ? 'pi pi-check-circle text-sky-600 text-xl'
-           : 'pi pi-circle text-400 text-xl'">
-      </i>
+    <div class="flex align-items-start gap-3 p-3 border-round-xl border-1"
+         [class.border-red-300]="borradorSuperadmin" [class.bg-red-50]="borradorSuperadmin"
+         [class.surface-border]="!borradorSuperadmin" [class.surface-ground]="!borradorSuperadmin">
+      <p-inputSwitch [(ngModel)]="borradorSuperadmin" inputId="borradorSuperadmin"
+                     [disabled]="esUnoMismo(usuarioSeleccionado) && borradorSuperadmin" />
+      <label for="borradorSuperadmin" class="cursor-pointer">
+        <span class="font-bold text-900 text-sm block">Superadmin</span>
+        <span class="text-xs text-600">
+          {{ borradorSuperadmin
+              ? 'Ve y gestiona todas las empresas, usuarios y cotizaciones. No necesita empresas asignadas.'
+              : 'Apagado: solo entra a las empresas marcadas abajo, con el rol que elijas en cada una.' }}
+        </span>
+      </label>
     </div>
 
-    <div *ngIf="todasLasEmpresas.length === 0"
-         class="text-center py-6 text-500">
-      <i class="pi pi-building text-4xl mb-2 opacity-30"></i>
-      <p class="text-sm m-0">No hay empresas registradas en el sistema</p>
+    <div [class.opacity-40]="borradorSuperadmin" [style.pointer-events]="borradorSuperadmin ? 'none' : 'auto'">
+      <p class="text-sm text-600 m-0 mb-2">
+        <strong>Admin</strong>: además edita la ficha, cuentas bancarias, logos y lugares de entrega.
+        <strong>Vendedor</strong>: cotiza y gestiona clientes y productos.
+      </p>
+
+      <div class="flex flex-column gap-2">
+        <div *ngFor="let emp of todasLasEmpresas"
+             class="flex align-items-center gap-3 p-3 border-round-xl cursor-pointer transition-colors"
+             [class.bg-sky-50]="estaAsignada(emp.id)"
+             [class.bg-white]="!estaAsignada(emp.id)"
+             [style.border]="estaAsignada(emp.id) ? '2px solid var(--sky-500)' : '2px solid var(--surface-border)'"
+             (click)="toggleEmpresa(emp.id)">
+
+          <i [class]="estaAsignada(emp.id) ? 'pi pi-check-square text-sky-600 text-xl' : 'pi pi-stop text-400 text-xl'"></i>
+
+          <div class="flex align-items-center justify-content-center border-round-lg flex-shrink-0 overflow-hidden"
+               style="width:38px;height:38px;background:#f8fafc;border:1px solid #e2e8f0">
+            <img *ngIf="emp.ruta_logo" [src]="emp.ruta_logo" loading="lazy" style="max-width:90%;max-height:90%;object-fit:contain">
+            <i *ngIf="!emp.ruta_logo" class="pi pi-building text-400"></i>
+          </div>
+
+          <div class="flex-1 overflow-hidden">
+            <p class="font-bold text-900 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ emp.nombre_comercial }}</p>
+            <p class="text-xs text-500 m-0">{{ emp.activa === false ? 'Empresa inactiva' : 'RUC ' + emp.ruc }}</p>
+          </div>
+
+          <div *ngIf="estaAsignada(emp.id)" (click)="$event.stopPropagation()" style="width:8rem">
+            <p-dropdown [options]="rolesEmpresa" [ngModel]="rolEnEmpresa(emp.id)"
+                        (onChange)="cambiarRolEnEmpresa(emp.id, $event.value)"
+                        optionLabel="label" optionValue="value" appendTo="body"
+                        styleClass="w-full p-inputtext-sm border-round-lg" />
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <ng-template pTemplate="footer">
     <div class="flex gap-2 pt-3">
-      <p-button label="Cancelar" severity="secondary" [text]="true"
-                class="flex-1" (onClick)="drawerVisible = false" />
-      <p-button label="Guardar Asignación" icon="pi pi-check"
-                [loading]="guardandoEmpresas"
-                class="flex-1 border-round-xl font-bold" (onClick)="guardarEmpresas()" />
+      <p-button label="Cancelar" severity="secondary" [text]="true" class="flex-1" (onClick)="drawerVisible = false" />
+      <p-button label="Guardar acceso" icon="pi pi-check" [loading]="guardandoAcceso"
+                class="flex-1 border-round-xl font-bold" (onClick)="guardarAcceso()" />
     </div>
   </ng-template>
 </p-sidebar>
