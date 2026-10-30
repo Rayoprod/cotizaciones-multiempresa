@@ -24,6 +24,29 @@ export function condicionesPdf(
   };
 }
 
+/**
+ * Líneas "• Etiqueta: valor" de la caja de condiciones comerciales, en orden.
+ * El lugar de entrega es el texto que se guardó con la cotización y solo
+ * aparece si la empresa usa lugares de entrega.
+ */
+export function lineasCondicionesComerciales(
+  cotizacion: Pick<ICotizacion, 'lugar_entrega' | 'incluye_igv' | 'igv' | 'tipo_origen' | 'folio_origen' | 'vendedor' | 'observaciones'>,
+  condiciones: ICondicionesPdf
+): Array<[string, string]> {
+  const lineas: Array<[string, string]> = [];
+  const lugar = cotizacion.lugar_entrega?.trim();
+  if (lugar) lineas.push(['Lugar de entrega', lugar]);
+
+  const tieneIgv = cotizacion.incluye_igv ?? Number(cotizacion.igv) > 0;
+  lineas.push(['Impuestos', tieneIgv ? 'El total incluye IGV (18%)' : 'Los precios NO incluyen IGV']);
+
+  if (condiciones.mostrarValidez) lineas.push(['Validez', `${condiciones.diasValidez} días calendario`]);
+  if (cotizacion.tipo_origen === 'revision' && cotizacion.folio_origen) lineas.push(['Reemplaza a', cotizacion.folio_origen]);
+  if (cotizacion.vendedor) lineas.push(['Vendedor', cotizacion.vendedor]);
+  if (cotizacion.observaciones) lineas.push(['Observaciones', cotizacion.observaciones]);
+  return lineas;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PdfService {
 
@@ -121,13 +144,6 @@ export class PdfService {
       day: '2-digit', month: 'long', year: 'numeric'
     });
 
-    const entregaRaw = String(data.lugar_entrega || '').toUpperCase().trim();
-    let textoEntrega = 'NO ESPECIFICADO';
-    if (entregaRaw.includes('CANTERA')) textoEntrega = 'PUESTO EN CANTERA';
-    else if (entregaRaw.includes('OBRA')) textoEntrega = 'PUESTO EN OBRA (CON FLETE)';
-
-    const obsFinal = data.observaciones || '';
-    const vendedor = data.vendedor || '';
     const tieneIgv = data.incluye_igv ?? Number(data.igv) > 0;
 
     // ── Header ─────────────────────────────────────────────────────────────
@@ -263,33 +279,10 @@ export class PdfService {
     // Columna izquierda: condiciones de entrega/impuestos
     const colCondiciones: any[] = [
       { text: 'CONDICIONES COMERCIALES', fontSize: 8, bold: true, color: colorEmpresa, margin: [0, 0, 0, 6] },
-      { text: [{ text: '• Lugar de entrega: ', bold: true, fontSize: 7.5 }, { text: textoEntrega, fontSize: 7.5 }], margin: [0, 0, 0, 3] },
-      { text: [{ text: '• Impuestos: ', bold: true, fontSize: 7.5 }, { text: tieneIgv ? 'El total incluye IGV (18%)' : 'Los precios NO incluyen IGV', fontSize: 7.5 }], margin: [0, 0, 0, 3] },
+      ...lineasCondicionesComerciales(data, condiciones).map(([etiqueta, valor]) => (
+        { text: [{ text: `• ${etiqueta}: `, bold: true, fontSize: 7.5 }, { text: valor, fontSize: 7.5 }], margin: [0, 0, 0, 3] }
+      ))
     ];
-
-    if (condiciones.mostrarValidez) {
-      colCondiciones.push(
-        { text: [{ text: '• Validez: ', bold: true, fontSize: 7.5 }, { text: `${condiciones.diasValidez} días calendario`, fontSize: 7.5 }], margin: [0, 0, 0, 3] }
-      );
-    }
-
-    if (data.tipo_origen === 'revision' && data.folio_origen) {
-      colCondiciones.push(
-        { text: [{ text: '• Reemplaza a: ', bold: true, fontSize: 7.5 }, { text: data.folio_origen, fontSize: 7.5 }], margin: [0, 0, 0, 3] }
-      );
-    }
-
-    if (vendedor) {
-      colCondiciones.push(
-        { text: [{ text: '• Vendedor: ', bold: true, fontSize: 7.5 }, { text: vendedor, fontSize: 7.5 }], margin: [0, 0, 0, 3] }
-      );
-    }
-
-    if (obsFinal) {
-      colCondiciones.push(
-        { text: [{ text: '• Observaciones: ', bold: true, fontSize: 7.5 }, { text: obsFinal, fontSize: 7.5 }], margin: [0, 0, 0, 3] }
-      );
-    }
 
     // Columna derecha: cuentas bancarias o contacto
     const colPago: any[] = [];

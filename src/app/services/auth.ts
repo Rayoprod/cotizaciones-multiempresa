@@ -79,7 +79,7 @@ export class AuthService {
     const actual: IProfile = {
       id: usuario.id,
       email: perfil.email || usuario.email || '',
-      rol: perfil.rol || 'vendedor',
+      rol: perfil.rol || 'usuario',
       activo: true
     };
     this.session.setUsuario(actual);

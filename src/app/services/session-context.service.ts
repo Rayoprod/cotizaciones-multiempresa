@@ -27,11 +27,11 @@ export class SessionContextService {
   readonly tieneEmpresa = computed(() => !!this._empresaActiva());
   readonly empresaColor = computed(() => this._empresaActiva()?.color || '#0284c7');
 
-  readonly esAdmin = computed(() =>
-    this._usuario()?.rol === 'admin'
-  );
-  readonly esAdminEmpresa = computed(() =>
-    this._usuario()?.rol === 'admin' || this._usuario()?.rol === 'admin_empresa'
+  readonly esSuperadmin = computed(() => this._usuario()?.rol === 'admin');
+
+  /** Puede editar la ficha, cuentas, logos y lugares de la empresa activa. */
+  readonly esAdminEmpresaActiva = computed(() =>
+    this.esSuperadmin() || this._empresaActiva()?.mi_rol === 'admin'
   );
 
   constructor() {

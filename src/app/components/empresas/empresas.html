@@ -309,6 +309,16 @@
           <label class="font-semibold text-900 text-sm">Contacto de Aprobación</label>
           <input pInputText type="text" formControlName="contacto_aprobacion" class="w-full border-round-xl" placeholder="Persona autorizada">
         </div>
+
+        <div class="col-12 flex flex-column gap-2">
+          <label class="font-semibold text-900 text-sm">Lugares de entrega</label>
+          <p-chips formControlName="lugares_entrega" [allowDuplicate]="false" [addOnBlur]="true" [max]="10"
+                   styleClass="w-full" inputStyleClass="w-full"
+                   placeholder="Escribe una opción y presiona Enter (p. ej. PUESTO EN OBRA)"></p-chips>
+          <small class="text-500">
+            Aparecen en el cotizador y en el PDF tal como se escriben. Déjalo vacío si la empresa no los usa.
+          </small>
+        </div>
       </div>
     </div>
 

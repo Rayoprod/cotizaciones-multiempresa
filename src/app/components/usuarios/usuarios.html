@@ -62,26 +62,26 @@
       <div class="col-6 md:col-3">
         <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-indigo-500 h-full card-hover-effect">
           <div class="flex align-items-center justify-content-between mb-2">
-            <span class="text-500 text-xs font-bold uppercase tracking-wider">Admins</span>
+            <span class="text-500 text-xs font-bold uppercase tracking-wider">Superadmins</span>
             <div class="w-2rem h-2rem border-circle bg-indigo-100 text-indigo-600 flex align-items-center justify-content-center">
               <i class="pi pi-shield text-sm"></i>
             </div>
           </div>
           <p class="text-3xl font-bold text-indigo-600 m-0">{{ usuariosAdmin }}</p>
-          <p class="text-xs text-500 font-medium m-0 mt-1">administradores globales</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">acceso total al sistema</p>
         </div>
       </div>
 
       <div class="col-6 md:col-3">
         <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-purple-500 h-full card-hover-effect">
           <div class="flex align-items-center justify-content-between mb-2">
-            <span class="text-500 text-xs font-bold uppercase tracking-wider">Vendedores</span>
+            <span class="text-500 text-xs font-bold uppercase tracking-wider">Usuarios</span>
             <div class="w-2rem h-2rem border-circle bg-purple-100 text-purple-600 flex align-items-center justify-content-center">
               <i class="pi pi-briefcase text-sm"></i>
             </div>
           </div>
-          <p class="text-3xl font-bold text-purple-600 m-0">{{ usuariosVendedor }}</p>
-          <p class="text-xs text-500 font-medium m-0 mt-1">usuarios comerciales</p>
+          <p class="text-3xl font-bold text-purple-600 m-0">{{ usuariosNormales }}</p>
+          <p class="text-xs text-500 font-medium m-0 mt-1">con un rol en cada empresa</p>
         </div>
       </div>
     </div>
@@ -95,7 +95,7 @@
         <div class="relative flex align-items-center w-full sm:w-20rem">
           <i class="pi pi-search absolute pl-3 text-400"></i>
           <input pInputText type="text" [(ngModel)]="terminoBusqueda" class="w-full border-round-xl pl-6 text-sm"
-                 placeholder="Buscar por correo, ID o rol..." />
+                 placeholder="Buscar por correo o ID..." />
         </div>
       </div>
     </div>
@@ -108,7 +108,7 @@
         <ng-template pTemplate="header">
           <tr>
             <th pSortableColumn="email">Usuario / Correo <p-sortIcon field="email" /></th>
-            <th style="width:180px">Rol Asignado</th>
+            <th style="width:180px">Tipo de cuenta</th>
             <th style="width:120px" class="text-center">Estado</th>
             <th style="width:100px" class="text-center">Empresas</th>
             <th style="width:120px" class="text-center">Acciones</th>
@@ -133,7 +133,7 @@
             </td>
 
             <td>
-              <p-dropdown [options]="rolesOpciones"
+              <p-dropdown [options]="tiposCuenta"
                         [ngModel]="u.rol"
                         (onChange)="cambiarRol(u, $event.value)"
                         optionLabel="label" optionValue="value"
@@ -206,8 +206,8 @@
         </div>
 
         <div>
-          <label class="text-xs font-bold text-700 uppercase mb-1 block">Rol Asignado</label>
-          <p-dropdown [options]="rolesOpciones" [ngModel]="u.rol"
+          <label class="text-xs font-bold text-700 uppercase mb-1 block">Tipo de cuenta</label>
+          <p-dropdown [options]="tiposCuenta" [ngModel]="u.rol"
                     (onChange)="cambiarRol(u, $event.value)"
                     optionLabel="label" optionValue="value"
                     appendTo="body" styleClass="w-full border-round-xl" />
@@ -262,8 +262,9 @@
     </div>
 
     <div class="flex flex-column gap-2">
-      <label class="font-semibold text-900 text-sm">Rol Asignado <span class="text-red-500">*</span></label>
-      <p-dropdown [options]="rolesOpciones" [(ngModel)]="nuevoRol" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full border-round-xl" />
+      <label class="font-semibold text-900 text-sm">Tipo de cuenta <span class="text-red-500">*</span></label>
+      <p-dropdown [options]="tiposCuenta" [(ngModel)]="nuevoRol" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full border-round-xl" />
+      <small class="text-500">El rol en cada empresa (Admin o Vendedor) se elige después, en "Empresas".</small>
     </div>
   </div>
 
@@ -292,7 +293,9 @@
 
   <div class="flex flex-column gap-2 py-2">
     <p class="text-sm text-500 font-medium m-0 mb-3">
-      Selecciona las empresas a las que este usuario tendrá autorización de acceso:
+      Marca las empresas de este usuario y elige su rol en cada una.
+      <strong>Admin</strong> además edita la ficha, las cuentas bancarias, los logos y los lugares de entrega;
+      <strong>Vendedor</strong> cotiza y gestiona clientes y productos.
     </p>
 
     <div *ngFor="let emp of todasLasEmpresas"
@@ -313,6 +316,13 @@
       <div class="flex-1 overflow-hidden">
         <p class="font-bold text-900 m-0">{{ emp.nombre_comercial }}</p>
         <p class="text-xs text-500 font-mono m-0">RUC: {{ emp.ruc }}</p>
+      </div>
+
+      <div *ngIf="estaAsignada(emp.id)" (click)="$event.stopPropagation()" style="width:8.5rem">
+        <p-dropdown [options]="rolesEmpresa" [ngModel]="rolEnEmpresa(emp.id)"
+                    (onChange)="cambiarRolEnEmpresa(emp.id, $event.value)"
+                    optionLabel="label" optionValue="value" appendTo="body"
+                    styleClass="w-full p-inputtext-sm border-round-lg" />
       </div>
 
       <i [class]="estaAsignada(emp.id)

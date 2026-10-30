@@ -26,6 +26,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { ChipsModule } from 'primeng/chips';
 
 import { SessionContextService } from '../../services/session-context.service';
 
@@ -37,7 +38,7 @@ import { SessionContextService } from '../../services/session-context.service';
     TableModule, ButtonModule, InputTextModule, InputNumberModule,
     DialogModule, ToggleButtonModule, ColorPickerModule,
     ToastModule, TagModule, TooltipModule, ConfirmDialogModule,
-    ProgressSpinnerModule, InputTextareaModule
+    ProgressSpinnerModule, InputTextareaModule, ChipsModule
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './empresas.html',
@@ -85,9 +86,8 @@ export class EmpresasComponent implements OnInit {
   ) {}
   
   ngOnInit() {
-    const rol = this.session.usuario()?.rol;
-    this.esAdminGeneral = rol === 'admin';
-    this.esAdminEmpresa = rol === 'admin_empresa';
+    this.esAdminGeneral = this.session.esSuperadmin();
+    this.esAdminEmpresa = !this.esAdminGeneral;
     this.inicializarFormularios();
     this.cargarEmpresas();
     // Versiones anteriores guardaban aquí el formulario (con cuentas
@@ -117,6 +117,7 @@ export class EmpresasComponent implements OnInit {
       activa: [true],
       mostrar_cuentas: [true],
       contacto_aprobacion: ['', Validators.maxLength(200)],
+      lugares_entrega: [[] as string[]],
       cuentas_bancarias: this.fb.array([])
     });
     
@@ -126,13 +127,13 @@ export class EmpresasComponent implements OnInit {
   async cargarEmpresas() {
     this.cargando = true;
     try {
-      const rol = this.session.usuario()?.rol;
-      let data: any[];
+      let data: IEmpresa[];
 
-      if (rol === 'admin_empresa') {
-        data = await this.supabase.getEmpresasDelUsuario();
-      } else {
+      if (this.esAdminGeneral) {
         data = await this.supabase.getEmpresasConCuentas();
+      } else {
+        // Un admin de empresa solo ve las empresas donde tiene rol admin.
+        data = (await this.supabase.getEmpresasDelUsuario()).filter(e => e.mi_rol === 'admin');
       }
 
       this.empresas = data;
@@ -197,7 +198,8 @@ export class EmpresasComponent implements OnInit {
       prefijo: '',
       activa: true,
       mostrar_cuentas: true,
-      contacto_aprobacion: ''
+      contacto_aprobacion: '',
+      lugares_entrega: []
     });
     this.cuentasFormArray.clear();
     
@@ -220,7 +222,8 @@ export class EmpresasComponent implements OnInit {
       prefijo: (empresa.prefijo || '').trim(),
       activa: empresa.activa,
       mostrar_cuentas: empresa.mostrar_cuentas ?? true,
-      contacto_aprobacion: (empresa.contacto_aprobacion || '').trim()
+      contacto_aprobacion: (empresa.contacto_aprobacion || '').trim(),
+      lugares_entrega: [...(empresa.lugares_entrega ?? [])]
     });
     
     
@@ -464,7 +467,8 @@ export class EmpresasComponent implements OnInit {
 
       const formData = {
         ...this.empresaForm.value,
-        id: idValue
+        id: idValue,
+        lugares_entrega: normalizarLugares(this.empresaForm.value.lugares_entrega)
       };
 
 
@@ -627,4 +631,12 @@ export class EmpresasComponent implements OnInit {
       control.setValue(control.value.toUpperCase(), { emitEvent: false });
     }
   }
+}
+
+/** Lugares de entrega sin espacios sobrantes, vacíos ni repetidos. */
+export function normalizarLugares(lugares: string[] | null | undefined): string[] {
+  const vistos = new Set<string>();
+  return (lugares ?? [])
+    .map(l => String(l ?? '').trim().replace(/\s+/g, ' ').slice(0, 100))
+    .filter(l => l && !vistos.has(l.toLowerCase()) && vistos.add(l.toLowerCase()));
 }

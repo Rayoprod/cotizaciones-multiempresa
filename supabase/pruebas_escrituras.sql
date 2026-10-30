@@ -2,7 +2,7 @@
 -- las políticas del bucket `empresas`. Simula usuarios reales sin iniciar
 -- sesión; todo se deshace al final.
 --
--- Requiere aplicada 20261029040000.
+-- Requiere aplicadas 20261029040000 y 20261030000000.
 -- Uso: supabase db query --linked -f supabase/pruebas_escrituras.sql
 
 begin;
@@ -23,17 +23,18 @@ begin
   -- ── Contexto (como postgres) ─────────────────────────────────────────────
   select id into v_super from public.profiles where rol = 'admin' and activo limit 1;
   select p.id, ue.empresa_id into v_admin, v_emp
-    from public.profiles p join public.usuario_empresa ue on ue.usuario_id = p.id and ue.activo
-   where p.rol = 'admin_empresa' and p.activo
+    from public.profiles p join public.usuario_empresa ue on ue.usuario_id = p.id and ue.activo and ue.rol = 'admin'
+   where p.rol = 'usuario' and p.activo
    order by p.id, ue.empresa_id limit 1;
   select id into v_ajena from public.empresas e
    where not exists (select 1 from public.usuario_empresa ue where ue.usuario_id = v_admin and ue.empresa_id = e.id)
    order by id limit 1;
   select p.id into v_vend
-    from public.profiles p join public.usuario_empresa ue on ue.usuario_id = p.id and ue.activo and ue.empresa_id = v_emp
-   where p.rol = 'vendedor' and p.activo limit 1;
+    from public.profiles p
+    join public.usuario_empresa ue on ue.usuario_id = p.id and ue.activo and ue.empresa_id = v_emp and ue.rol = 'vendedor'
+   where p.rol = 'usuario' and p.activo limit 1;
   if v_super is null or v_admin is null or v_ajena is null then
-    raise exception 'Faltan usuarios de prueba (superadmin, admin_empresa con una empresa ajena).';
+    raise exception 'Faltan usuarios de prueba (superadmin, admin de empresa con una empresa ajena).';
   end if;
 
   -- ── Cuentas bancarias como admin_empresa ─────────────────────────────────
@@ -64,10 +65,10 @@ begin
   end;
 
   begin
-    perform public.asignar_empresas_usuario(v_admin, array[v_ajena]);
-    r := r || jsonb_build_object('prueba', 'admin_empresa no puede asignarse empresas', 'ok', false, 'detalle', 'no falló');
+    perform public.asignar_empresas_usuario(v_admin, jsonb_build_array(jsonb_build_object('empresa_id', v_ajena, 'rol', 'admin')));
+    r := r || jsonb_build_object('prueba', 'un admin de empresa no puede asignarse empresas', 'ok', false, 'detalle', 'no falló');
   exception when others then
-    r := r || jsonb_build_object('prueba', 'admin_empresa no puede asignarse empresas', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
+    r := r || jsonb_build_object('prueba', 'un admin de empresa no puede asignarse empresas', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
   end;
 
   -- Storage: solo en la carpeta de sus empresas
@@ -114,20 +115,29 @@ begin
   select empresa_id into v_otra from public.usuario_empresa
    where usuario_id = v_admin and empresa_id <> v_emp and activo order by empresa_id limit 1;
   select id, rol into v_id_antes, v_rol from public.usuario_empresa where usuario_id = v_admin and empresa_id = v_emp;
-  update public.usuario_empresa set rol = 'admin' where id = v_id_antes;
 
   perform set_config('request.jwt.claims', json_build_object('sub', v_super, 'role', 'authenticated')::text, true);
   set local role authenticated;
-  perform public.asignar_empresas_usuario(v_admin, array[v_emp, v_ajena]);
+  perform public.asignar_empresas_usuario(v_admin, jsonb_build_array(
+    jsonb_build_object('empresa_id', v_emp, 'rol', 'vendedor'),
+    jsonb_build_object('empresa_id', v_ajena, 'rol', 'admin')
+  ));
 
-  select count(*) into v_n from public.usuario_empresa where id = v_id_antes and rol = 'admin';
-  r := r || jsonb_build_object('prueba', 'conserva la asignación que se mantiene (mismo id y rol)', 'ok', v_n = 1, 'detalle', '');
-  select count(*) into v_n from public.usuario_empresa where usuario_id = v_admin and empresa_id = v_ajena and activo;
-  r := r || jsonb_build_object('prueba', 'agrega la empresa nueva', 'ok', v_n = 1, 'detalle', v_ajena);
+  select count(*) into v_n from public.usuario_empresa where id = v_id_antes and rol = 'vendedor';
+  r := r || jsonb_build_object('prueba', 'conserva la fila que se mantiene (mismo id) y le aplica el rol nuevo', 'ok', v_n = 1, 'detalle', v_rol || ' → vendedor');
+  select count(*) into v_n from public.usuario_empresa where usuario_id = v_admin and empresa_id = v_ajena and activo and rol = 'admin';
+  r := r || jsonb_build_object('prueba', 'agrega la empresa nueva con su rol', 'ok', v_n = 1, 'detalle', v_ajena);
   select count(*) into v_n from public.usuario_empresa where usuario_id = v_admin and empresa_id = v_otra;
   r := r || jsonb_build_object('prueba', 'quita la empresa que ya no está', 'ok', v_otra is null or v_n = 0, 'detalle', coalesce(v_otra, 'sin otra'));
 
-  perform public.asignar_empresas_usuario(v_admin, array['NO_EXISTE']);
+  begin
+    perform public.asignar_empresas_usuario(v_admin, jsonb_build_array(jsonb_build_object('empresa_id', v_emp, 'rol', 'dueño')));
+    r := r || jsonb_build_object('prueba', 'rechaza un rol inválido', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'rechaza un rol inválido', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+
+  perform public.asignar_empresas_usuario(v_admin, jsonb_build_array(jsonb_build_object('empresa_id', 'NO_EXISTE', 'rol', 'vendedor')));
   select count(*) into v_n from public.usuario_empresa where usuario_id = v_admin;
   r := r || jsonb_build_object('prueba', 'ignora empresas inexistentes', 'ok', v_n = 0, 'detalle', v_n || ' asignaciones');
 

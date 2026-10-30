@@ -20,7 +20,7 @@ export class SelectorComponent implements OnInit {
   cargando: boolean = true;
 
   get esAdmin(): boolean {
-    return this.session.esAdmin();
+    return this.session.esSuperadmin();
   }
 
   constructor(

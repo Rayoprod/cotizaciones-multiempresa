@@ -1,7 +1,10 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
-import { IEmpresa, ICotizacion, ICuentaBancaria, IMaquinaria, ILecturaHorometro, INuevaCotizacion, IProfile } from '../models';
+import {
+  IEmpresa, ICotizacion, ICuentaBancaria, INuevaCotizacion, IProfile,
+  IAsignacionEmpresa, RolEmpresa, RolGlobal
+} from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
@@ -49,33 +52,37 @@ export class SupabaseService {
 
   // ─── EMPRESAS DEL USUARIO ─────────────────────────────────────────────────
 
+  /**
+   * Empresas activas del usuario actual, cada una con sus cuentas bancarias y
+   * `mi_rol` (su rol en esa empresa). El superadmin ve todas, como admin.
+   */
   async getEmpresasDelUsuario(): Promise<IEmpresa[]> {
     const usuario = await this.obtenerUsuarioActual();
     if (!usuario) return [];
 
-    const { data: asignaciones, error: errAsig } = await this.client
-      .from('usuario_empresa')
-      .select('empresa_id')
-      .eq('usuario_id', usuario.id)
-      .eq('activo', true);
+    const esSuperadmin = (await this.obtenerPerfil(usuario.id))?.rol === 'admin';
 
-    if (errAsig || !asignaciones?.length) return [];
+    const roles = new Map<string, RolEmpresa>();
+    if (!esSuperadmin) {
+      const { data: asignaciones, error: errAsig } = await this.client
+        .from('usuario_empresa')
+        .select('empresa_id, rol')
+        .eq('usuario_id', usuario.id)
+        .eq('activo', true);
 
-    const ids = asignaciones.map((a: any) => a.empresa_id);
+      if (errAsig || !asignaciones?.length) return [];
+      for (const a of asignaciones) roles.set(a.empresa_id, a.rol);
+    }
 
-    const [empresasRes, cuentasRes] = await Promise.all([
-      this.client
-        .from('empresas')
-        .select('*')
-        .in('id', ids)
-        .eq('activa', true)
-        .order('id'),
-      this.client
-        .from('cuentas_bancarias')
-        .select('*')
-        .in('empresa_id', ids)
-        .order('orden', { ascending: true })
-    ]);
+    const ids = [...roles.keys()];
+    let consultaEmpresas = this.client.from('empresas').select('*').eq('activa', true).order('id');
+    let consultaCuentas = this.client.from('cuentas_bancarias').select('*').order('orden', { ascending: true });
+    if (!esSuperadmin) {
+      consultaEmpresas = consultaEmpresas.in('id', ids);
+      consultaCuentas = consultaCuentas.in('empresa_id', ids);
+    }
+
+    const [empresasRes, cuentasRes] = await Promise.all([consultaEmpresas, consultaCuentas]);
 
     if (empresasRes.error) throw empresasRes.error;
     const empresas = (empresasRes.data || []) as IEmpresa[];
@@ -102,7 +109,8 @@ export class SupabaseService {
 
     return empresas.map(e => ({
       ...e,
-      cuentas_bancarias: cuentasMap.get(e.id) ?? []
+      cuentas_bancarias: cuentasMap.get(e.id) ?? [],
+      mi_rol: esSuperadmin ? 'admin' : roles.get(e.id)
     }));
   }
 
@@ -448,7 +456,8 @@ export class SupabaseService {
     return data || [];
   }
 
-  async crearUsuario(email: string, password: string, rol: string = 'vendedor'): Promise<any> {
+  /** rol: 'admin' (superadmin) o 'usuario'; el rol en cada empresa se asigna aparte. */
+  async crearUsuario(email: string, password: string, rol: RolGlobal = 'usuario'): Promise<any> {
     const { data, error } = await this.client.rpc('admin_crear_usuario', {
       p_email: email,
       p_password: password,
@@ -476,117 +485,23 @@ export class SupabaseService {
     if (error) throw error;
   }
 
-  async getEmpresasDeUsuario(usuarioId: string): Promise<string[]> {
+  async getEmpresasDeUsuario(usuarioId: string): Promise<IAsignacionEmpresa[]> {
     const { data, error } = await this.client
-      .from('usuario_empresa').select('empresa_id')
+      .from('usuario_empresa').select('empresa_id, rol')
       .eq('usuario_id', usuarioId).eq('activo', true);
     if (error) throw error;
-    return (data || []).map((r: any) => r.empresa_id);
+    return (data || []) as IAsignacionEmpresa[];
   }
 
-  /** Deja al usuario exactamente con estas empresas, conservando las que ya tenía (asignar_empresas_usuario). */
-  async guardarEmpresasDeUsuario(usuarioId: string, empresaIds: string[]): Promise<void> {
+  /**
+   * Deja al usuario exactamente con estas empresas y roles, conservando las
+   * asignaciones que ya tenía (asignar_empresas_usuario).
+   */
+  async guardarEmpresasDeUsuario(usuarioId: string, asignaciones: IAsignacionEmpresa[]): Promise<void> {
     const { error } = await this.client.rpc('asignar_empresas_usuario', {
       p_usuario_id: usuarioId,
-      p_empresa_ids: empresaIds
+      p_asignaciones: asignaciones
     });
-    if (error) throw error;
-  }
-
-  // ─── MAQUINARIA & HOROMETRO ───────────────────────────────────────────────
-
-  async getMaquinaria(empresaId: string, soloActivas = false): Promise<IMaquinaria[]> {
-    let query = this.client
-      .from('maquinaria')
-      .select('*')
-      .eq('empresa_id', empresaId)
-      .order('nombre');
-
-    if (soloActivas) {
-      query = query.eq('activa', true);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return (data || []) as IMaquinaria[];
-  }
-
-  async guardarMaquinaria(maquina: IMaquinaria): Promise<IMaquinaria> {
-    const {
-      horas_desde_mantenimiento,
-      horas_restantes,
-      porcentaje_progreso,
-      estado_mantenimiento,
-      ...payload
-    } = maquina as any;
-
-    if (!payload.id || payload.id === '') delete payload.id;
-    if (!payload.created_at || payload.created_at === '') delete payload.created_at;
-
-    if (maquina.id) {
-      const { data, error } = await this.client
-        .from('maquinaria')
-        .update(payload)
-        .eq('id', maquina.id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as IMaquinaria;
-    } else {
-      const { data, error } = await this.client
-        .from('maquinaria')
-        .insert([payload])
-        .select()
-        .single();
-      if (error) throw error;
-      return data as IMaquinaria;
-    }
-  }
-
-  async eliminarMaquinaria(id: string): Promise<void> {
-    const { error } = await this.client.from('maquinaria').delete().eq('id', id);
-    if (error) throw error;
-  }
-
-  async getLecturasHorometro(maquinaId: string, limit = 20): Promise<ILecturaHorometro[]> {
-    const { data, error } = await this.client
-      .from('lecturas_horometro')
-      .select('*')
-      .eq('maquina_id', maquinaId)
-      .order('fecha_lectura', { ascending: false })
-      .order('horometro', { ascending: false })
-      .limit(limit);
-    if (error) throw error;
-    return (data || []) as ILecturaHorometro[];
-  }
-
-  async guardarLecturaHorometro(lectura: ILecturaHorometro): Promise<ILecturaHorometro> {
-    const payload: any = { ...lectura };
-    if (!payload.id || payload.id === '') delete payload.id;
-    if (!payload.created_at || payload.created_at === '') delete payload.created_at;
-
-    if (lectura.id) {
-      const { data, error } = await this.client
-        .from('lecturas_horometro')
-        .update(payload)
-        .eq('id', lectura.id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as ILecturaHorometro;
-    } else {
-      const { data, error } = await this.client
-        .from('lecturas_horometro')
-        .insert([payload])
-        .select()
-        .single();
-      if (error) throw error;
-      return data as ILecturaHorometro;
-    }
-  }
-
-  async eliminarLecturaHorometro(id: string): Promise<void> {
-    const { error } = await this.client.from('lecturas_horometro').delete().eq('id', id);
     if (error) throw error;
   }
 }

@@ -150,18 +150,13 @@
               <div class="step-badge">2</div>
               <div>
                 <span class="font-bold text-900 text-lg block line-height-1">Detalle de Cotización</span>
-                <span class="text-xs text-500 font-medium">Agrega productos del catálogo o equipos de maquinaria</span>
+                <span class="text-xs text-500 font-medium">Agrega productos del catálogo o escribe líneas libres</span>
               </div>
             </div>
             <div class="flex gap-2 w-full sm:w-auto">
               <button pButton icon="pi pi-plus" label="Ítem producto"
                       class="p-button-outlined p-button-primary p-button-sm border-round-xl font-semibold flex-1 sm:flex-initial"
                       (click)="agregarFila()">
-              </button>
-              <button pButton icon="pi pi-wrench" label="Maquinaria"
-                      class="p-button-outlined p-button-warning p-button-sm border-round-xl font-semibold flex-1 sm:flex-initial"
-                      (click)="abrirSelectorMaquinaria()"
-                      [disabled]="maquinariaBD.length === 0">
               </button>
             </div>
           </div>
@@ -348,11 +343,12 @@
             <p-toggleButton [(ngModel)]="incluyeIgv" [onLabel]="'Con IGV'" [offLabel]="'Sin IGV'" (onChange)="recalcularTodo()"></p-toggleButton>
           </div>
 
-          <!-- Lugar de entrega -->
-          <div class="mb-3">
-            <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">Punto de Entrega</label>
-            <p-selectButton [options]="opcionesLugar" [(ngModel)]="lugarEntrega"
-                            optionLabel="label" optionValue="value" styleClass="w-full"
+          <!-- Lugar de entrega (solo si la empresa definió opciones) -->
+          <div class="mb-3" *ngIf="opcionesLugar().length">
+            <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">Lugar de entrega</label>
+            <p-selectButton [options]="opcionesLugar()" [ngModel]="lugarSeleccionado"
+                            (ngModelChange)="lugarEntrega = $event"
+                            optionLabel="label" optionValue="value" styleClass="w-full flex-wrap"
                             [allowEmpty]="false"></p-selectButton>
           </div>
 
@@ -465,44 +461,6 @@
       </div>
     </div>
 
-    <!-- MODAL MAQUINARIA -->
-    <p-dialog [(visible)]="modalMaquinariaVisible"
-              header="Agregar equipo de maquinaria"
-              [modal]="true"
-              [breakpoints]="{ '960px': '85vw', '640px': '96vw' }"
-              [style]="{ width: '90vw', maxWidth: '440px' }"
-              [draggable]="false"
-              [resizable]="false"
-              [dismissableMask]="true"
-              (onHide)="cerrarSelectorMaquinaria()"
-              appendTo="body">
-      <div class="flex flex-column gap-3 pt-2">
-        <div class="flex flex-column gap-1">
-          <label class="text-xs font-bold text-700 uppercase">Equipo / Maquinaria</label>
-          <p-dropdown [options]="maquinariaBD" [(ngModel)]="maquinaSeleccionada"
-            optionLabel="nombre" placeholder="Selecciona un equipo..." styleClass="w-full border-round-xl"></p-dropdown>
-        </div>
-        <div class="flex flex-column gap-1">
-          <label class="text-xs font-bold text-700 uppercase">Modalidad de Alquiler</label>
-          <p-selectButton [options]="opcionesModalidad" [(ngModel)]="modalidadMaquina"
-            optionLabel="label" optionValue="value" styleClass="w-full text-sm flex-wrap"></p-selectButton>
-        </div>
-        <div class="grid">
-          <div class="col-12 md:col-6 flex flex-column gap-1">
-            <label class="text-xs font-bold text-700 uppercase">Cantidad</label>
-            <p-inputNumber [(ngModel)]="cantidadMaquina" [min]="0.01" [minFractionDigits]="0" [maxFractionDigits]="2" inputStyleClass="w-full font-bold text-center"></p-inputNumber>
-          </div>
-          <div class="col-12 md:col-6 flex flex-column gap-1 justify-content-center">
-            <label class="text-xs font-bold text-700 uppercase">P. Unit. Estimado</label>
-            <span class="font-bold text-xl text-emerald-600">S/ {{ precioMaquinaSeleccionada | number:'1.2-2' }}</span>
-          </div>
-        </div>
-      </div>
-      <ng-template pTemplate="footer">
-        <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="cerrarSelectorMaquinaria()"></p-button>
-        <p-button label="Agregar al Detalle" icon="pi pi-check" severity="primary" class="border-round-xl" (onClick)="agregarMaquinariaAlCarrito()"></p-button>
-      </ng-template>
-    </p-dialog>
   </div>
 
 </ng-container>

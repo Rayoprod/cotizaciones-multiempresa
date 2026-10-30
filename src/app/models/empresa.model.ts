@@ -1,5 +1,5 @@
 // src/app/models/empresa.model.ts
-import { Moneda } from './types';
+import { Moneda, RolEmpresa } from './types';
 
 export interface IEmpresa {
   id: string;
@@ -24,8 +24,12 @@ export interface IEmpresa {
   fecha_actualizacion?: string;
   usuario_creacion?: string;
   usuario_actualizacion?: string;
+  /** Opciones de "lugar de entrega" de esta empresa; vacía = no se usa. */
+  lugares_entrega?: string[];
   // Relación cargada por separado desde tabla cuentas_bancarias
   cuentas_bancarias?: ICuentaBancaria[];
+  /** Rol del usuario actual en esta empresa (no es columna: viene de usuario_empresa). */
+  mi_rol?: RolEmpresa;
 }
 
 export interface ICuentaBancaria {

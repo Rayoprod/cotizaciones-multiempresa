@@ -80,12 +80,6 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/clientes/clientes')
             .then(m => m.ClientesComponent)
-      },
-      {
-        path: 'maquinaria',
-        loadComponent: () =>
-          import('./components/maquinaria/maquinaria')
-            .then(m => m.MaquinariaComponent)
       }
     ]
   },

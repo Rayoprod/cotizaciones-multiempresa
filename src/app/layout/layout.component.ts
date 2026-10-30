@@ -123,16 +123,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
     );
   }
 
-  get esAdmin(): boolean {
-    return this.session.esAdminEmpresa(); // admin o admin_empresa
-  }
-
   get esAdminGeneral(): boolean {
-    return this.session.esAdmin(); // solo admin
+    return this.session.esSuperadmin();
   }
 
+  /** Admin de la empresa activa (sin ser superadmin): ve "Configurar empresa". */
   get esAdminEmpresa(): boolean {
-    return this.session.usuario()?.rol === 'admin_empresa';
+    return !this.session.esSuperadmin() && this.session.esAdminEmpresaActiva();
   }
 
   async ngOnInit() {
@@ -243,16 +240,21 @@ export class LayoutComponent implements OnInit, OnDestroy {
     // El guard ya verificó el perfil; esto solo cubre recargas de página.
     await this.auth.asegurarPerfil();
 
-    // Si la empresa activa aún es null, intentar cargarla del usuario
-    if (!this.session.empresaActiva() && this.session.usuario()) {
+    // Refresca las empresas y la activa: la copia de sessionStorage puede tener
+    // un rol o unas opciones de la empresa que ya cambiaron.
+    if (this.session.usuario()) {
       try {
         const empresas = await this.supabaseSvc.getEmpresasDelUsuario();
-        if (empresas && empresas.length > 0) {
-          this.session.setEmpresas(empresas);
-          this.session.setEmpresaActiva(empresas[0]);
+        this.session.setEmpresas(empresas);
+        const activa = this.session.empresaActiva();
+        const actualizada = (activa && empresas.find(e => e.id === activa.id)) || empresas[0];
+        if (actualizada) {
+          this.session.setEmpresaActiva(actualizada);
+        } else {
+          this.session.clearEmpresaActiva();
         }
       } catch (e) {
-        console.error('Error al auto-seleccionar empresa activa:', e);
+        console.error('Error al refrescar las empresas del usuario:', e);
       }
     }
 

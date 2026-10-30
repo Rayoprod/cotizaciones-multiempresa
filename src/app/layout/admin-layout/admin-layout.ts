@@ -51,7 +51,7 @@ export class AdminLayoutComponent implements OnDestroy {
 
   // ✅ Solo admin general ve "Usuarios"
   get navItemsFiltrados(): NavItem[] {
-    return this.session.esAdmin()
+    return this.session.esSuperadmin()
       ? this.navItems
       : this.navItems.filter(i => i.path !== '/admin/usuarios');
   }
@@ -62,7 +62,7 @@ export class AdminLayoutComponent implements OnDestroy {
   }
 
   get esAdminGeneral(): boolean {
-    return this.session.esAdmin();
+    return this.session.esSuperadmin();
   }
 
   get tituloPagina(): string {

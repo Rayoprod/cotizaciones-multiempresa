@@ -218,3 +218,58 @@ describe('CotizadorComponent - Customer Name Logic', () => {
   });
 });
 
+
+describe('CotizadorComponent - Lugar de entrega por empresa', () => {
+  function crear(lugares: string[]) {
+    const empresa = { id: 'VDC', nombre_comercial: 'VDC', mostrar_cuentas: true, lugares_entrega: lugares };
+    const supabase = {
+      crearCotizacion: vi.fn(async (datos: any) => ({ id: 'nueva', folio: 'VDC-00000072', ...datos })),
+      getClientes: vi.fn(async () => [])
+    };
+    const comp: any = new CotizadorComponent(
+      { markForCheck: () => {} } as any,
+      supabase as any, { generarYDescargarCotizacion: vi.fn(async () => {}) } as any, {} as any,
+      { add: vi.fn() } as any, {} as any, {} as any,
+      { empresaActiva: () => empresa } as any
+    );
+    comp.empresaActiva = empresa;
+    comp.clienteNombre = 'CLIENTE SAC';
+    comp.clienteDocumento = '20123456789';
+    comp.carrito = [{ sku: null, descripcion: 'Arena', unidad: 'm3', cantidad: 1, precio_unitario: 16, subtotal: 16 }];
+    return { comp, supabase };
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal('sessionStorage', almacenamientoEnMemoria());
+    vi.stubGlobal('navigator', { onLine: true });
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('si la empresa no usa lugares, no hay opciones y no se envía lugar', async () => {
+    const { comp, supabase } = crear([]);
+    expect(comp.opcionesLugar()).toEqual([]);
+    await comp.generarPDF();
+    expect(supabase.crearCotizacion.mock.calls[0][0].lugarEntrega).toBeNull();
+  });
+
+  it('preselecciona la primera opción de la empresa', async () => {
+    const { comp, supabase } = crear(['PUESTO EN CANTERA', 'PUESTO EN OBRA (CON FLETE)']);
+    expect(comp.lugarSeleccionado).toBe('PUESTO EN CANTERA');
+    await comp.generarPDF();
+    expect(supabase.crearCotizacion.mock.calls[0][0].lugarEntrega).toBe('PUESTO EN CANTERA');
+  });
+
+  it('envía la opción que eligió el vendedor', async () => {
+    const { comp, supabase } = crear(['PUESTO EN CANTERA', 'PUESTO EN OBRA (CON FLETE)']);
+    comp.lugarEntrega = 'PUESTO EN OBRA (CON FLETE)';
+    await comp.generarPDF();
+    expect(supabase.crearCotizacion.mock.calls[0][0].lugarEntrega).toBe('PUESTO EN OBRA (CON FLETE)');
+  });
+
+  it('un lugar heredado que ya no es opción de la empresa cae en la primera', () => {
+    const { comp } = crear(['PUESTO EN CANTERA', 'PUESTO EN OBRA (CON FLETE)']);
+    comp.lugarEntrega = 'CANTERA';
+    expect(comp.lugarSeleccionado).toBe('PUESTO EN CANTERA');
+  });
+});

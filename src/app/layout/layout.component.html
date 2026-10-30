@@ -99,25 +99,14 @@
           <span>Directorio clientes</span>
         </a>
 
-        <a routerLink="/maquinaria"
-           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-purple-400"
-           [routerLinkActiveOptions]="{ exact: false }"
-           style="min-height: 48px; touch-action: manipulation;"
-           (click)="cerrarMenu()"
-           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
-          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-purple-500-alpha-20 text-purple-400">
-            <i class="pi pi-wrench text-base"></i>
-          </div>
-          <span>Maquinaria</span>
-        </a>
-
+        <ng-container *ngIf="esAdminEmpresa || esAdminGeneral">
         <p-divider styleClass="border-white-alpha-10 my-2"></p-divider>
 
         <div class="mb-2 px-2" style="color: rgba(255,255,255,0.45); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;">
           Administración
         </div>
 
-        <!-- Solo admin_empresa: configurar su empresa -->
+        <!-- Admin de la empresa activa: configurar su empresa -->
         <button *ngIf="esAdminEmpresa" pButton type="button"
                 icon="pi pi-cog" label="Configurar empresa"
                 severity="secondary" class="w-full justify-content-start border-round-xl py-3 px-3 text-white bg-white-alpha-05 hover:bg-white-alpha-15 border-none cursor-pointer"
@@ -132,6 +121,7 @@
                 style="min-height: 48px; touch-action: manipulation;"
                 (click)="volverAlAdmin()">
         </button>
+        </ng-container>
 
       </div>
     </div>

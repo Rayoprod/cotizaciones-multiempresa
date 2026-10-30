@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
@@ -15,8 +15,6 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { AutoCompleteModule } from 'primeng/autocomplete';
-import { DialogModule } from 'primeng/dialog';
-import { DropdownModule } from 'primeng/dropdown';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { InputTextareaModule } from 'primeng/inputtextarea';
@@ -38,7 +36,7 @@ import {
     TableModule, ButtonModule, CardModule,
     InputNumberModule, InputTextModule,
     ToggleButtonModule, SelectButtonModule, AutoCompleteModule,
-    DialogModule, DropdownModule, TooltipModule, ToastModule, InputTextareaModule,
+    TooltipModule, ToastModule, InputTextareaModule,
     ProgressSpinnerModule, ConfirmDialogModule, CheckboxModule
   ],
   templateUrl: './cotizador.html',
@@ -62,7 +60,6 @@ export class CotizadorComponent implements OnInit {
 
   // ── Datos BD ──────────────────────────────────────────────────────────────
   productosBD: any[] = [];
-  maquinariaBD: any[] = [];
   clientesBD: any[] = [];
   nombresClientesFiltrados: any[] = [];
   nombresProductosFiltrados: string[] = [];
@@ -81,12 +78,21 @@ export class CotizadorComponent implements OnInit {
 
   // ── Opciones ──────────────────────────────────────────────────────────────
   incluyeIgv: boolean = true;
-  lugarEntrega: string = 'CANTERA';
 
-  opcionesLugar = [
-    { label: 'En Cantera', value: 'CANTERA' },
-    { label: 'En Obra', value: 'OBRA' }
-  ];
+  // Lugar de entrega: las opciones son de cada empresa (Empresas → Lugares de
+  // entrega). Se leen del signal para tomar la versión que refresca el layout.
+  readonly opcionesLugar = computed(() =>
+    (this.session.empresaActiva()?.lugares_entrega ?? []).map(lugar => ({ label: lugar, value: lugar }))
+  );
+  /** Lo que eligió el usuario o trajo el borrador; puede no ser una opción vigente. */
+  lugarEntrega: string | null = null;
+
+  /** El lugar que se guardará: el elegido si sigue siendo una opción; si no, la primera. */
+  get lugarSeleccionado(): string | null {
+    const opciones = this.opcionesLugar().map(o => o.value);
+    if (this.lugarEntrega && opciones.includes(this.lugarEntrega)) return this.lugarEntrega;
+    return opciones[0] ?? null;
+  }
 
   // ── Totales ───────────────────────────────────────────────────────────────
   subtotalGeneral: number = 0;
@@ -98,21 +104,10 @@ export class CotizadorComponent implements OnInit {
   borradorOrigenId: string | null = null;
   borradorFolioPadre: string | null = null;
 
-  // ── Selector maquinaria ───────────────────────────────────────────────────
-  modalMaquinariaVisible = false;
+  // ── Estado de la vista ────────────────────────────────────────────────────
   cargando = true;
   generandoPDF = false;
   buscandoDocumento = false;
-  maquinaSeleccionada: any = null;
-  modalidadMaquina: string = 'alquiler_dia';
-  cantidadMaquina: number = 1;
-
-  opcionesModalidad = [
-    { label: 'Alquiler por hora', value: 'alquiler_hora' },
-    { label: 'Alquiler por día', value: 'alquiler_dia' },
-    { label: 'Alquiler por mes', value: 'alquiler_mes' },
-    { label: 'Venta', value: 'venta' }
-  ];
 
   constructor(
     private cdr: ChangeDetectorRef,
@@ -184,15 +179,13 @@ export class CotizadorComponent implements OnInit {
       const empresaId = this.empresaActiva?.id;
       if (!empresaId) return;
 
-      const [prods, clis, maqs] = await Promise.all([
+      const [prods, clis] = await Promise.all([
         this.supabaseSvc.getProductos(empresaId),
-        this.supabaseSvc.getClientes(empresaId),
-        this.supabaseSvc.getMaquinaria(empresaId, true)
+        this.supabaseSvc.getClientes(empresaId)
       ]);
 
       this.productosBD = prods || [];
       this.clientesBD = clis || [];
-      this.maquinariaBD = maqs || [];
     } catch (e) {
       console.error('Error cargando datos:', e);
       this.messageService.add({
@@ -329,7 +322,7 @@ export class CotizadorComponent implements OnInit {
 
   // ── Carrito ───────────────────────────────────────────────────────────────
   // `sku` solo se llena cuando la línea corresponde a un producto del
-  // catálogo o a un equipo con código; las líneas libres no llevan código.
+  // catálogo; las líneas libres no llevan código.
 
   agregarFila() {
     this.carrito = [...this.carrito, {
@@ -465,7 +458,7 @@ export class CotizadorComponent implements OnInit {
           precio_unitario: Number(item.precio_unitario)
         })),
       incluyeIgv: this.incluyeIgv,
-      lugarEntrega: this.lugarEntrega,
+      lugarEntrega: this.lugarSeleccionado,
       observaciones: this.condiciones.mostrarObservaciones ? (this.clienteObservaciones?.trim() || null) : null,
       condiciones: {
         mostrarValidez: this.condiciones.mostrarValidez,
@@ -535,7 +528,7 @@ export class CotizadorComponent implements OnInit {
     this.clienteCorreo           = '';
     this.clienteObservaciones    = '';
     this.guardarClienteEnCartera = true;
-    this.lugarEntrega            = 'CANTERA';
+    this.lugarEntrega            = null;
     this.incluyeIgv              = true;
     this.carrito                 = [];
     this.borradorModo            = null;
@@ -543,71 +536,6 @@ export class CotizadorComponent implements OnInit {
     this.borradorFolioPadre      = null;
     this.agregarFila();
     this.recalcularTodo();
-  }
-
-  // ── Maquinaria ────────────────────────────────────────────────────────────
-
-  abrirSelectorMaquinaria() {
-    this.maquinaSeleccionada = null;
-    this.modalidadMaquina = 'alquiler_dia';
-    this.cantidadMaquina = 1;
-    this.modalMaquinariaVisible = true;
-    this.cdr.markForCheck();
-  }
-
-  cerrarSelectorMaquinaria() {
-    this.modalMaquinariaVisible = false;
-    this.maquinaSeleccionada = null;
-    this.modalidadMaquina = 'alquiler_dia';
-    this.cantidadMaquina = 1;
-    this.cdr.markForCheck();
-  }
-
-  get precioMaquinaSeleccionada(): number {
-    if (!this.maquinaSeleccionada) return 0;
-    switch (this.modalidadMaquina) {
-      case 'alquiler_hora': return this.maquinaSeleccionada.precio_hora || 0;
-      case 'alquiler_dia': return this.maquinaSeleccionada.precio_dia || 0;
-      case 'alquiler_mes': return this.maquinaSeleccionada.precio_mes || 0;
-      case 'venta': return this.maquinaSeleccionada.precio_venta || 0;
-      default: return 0;
-    }
-  }
-
-  get labelModalidadSeleccionada(): string {
-    const opt = this.opcionesModalidad.find(o => o.value === this.modalidadMaquina);
-    return opt?.label || '';
-  }
-
-  agregarMaquinariaAlCarrito() {
-    if (!this.maquinaSeleccionada || this.precioMaquinaSeleccionada <= 0) {
-      this.messageService.add({ severity: 'warn', summary: 'Selecciona una máquina', detail: 'Elige un equipo con precio definido' });
-      return;
-    }
-    const m = this.maquinaSeleccionada;
-    const descripcion = `${this.labelModalidadSeleccionada}: ${m.nombre}${m.marca ? ' ' + m.marca : ''}${m.modelo ? ' ' + m.modelo : ''}`.substring(0, 100);
-    const itemMaquinaria = {
-      sku: m.codigo || null,
-      descripcion,
-      unidad: 'und',
-      cantidad: this.cantidadMaquina,
-      precio_unitario: this.precioMaquinaSeleccionada,
-      subtotal: redondear2(this.cantidadMaquina * this.precioMaquinaSeleccionada)
-    };
-
-    const esUnicoItemVacio = this.carrito.length === 1 &&
-      !this.carrito[0].descripcion?.trim() &&
-      !this.carrito[0].cantidad &&
-      !this.carrito[0].precio_unitario;
-
-    if (esUnicoItemVacio) {
-      this.carrito = [itemMaquinaria];
-    } else {
-      this.carrito = [...this.carrito, itemMaquinaria];
-    }
-    this.modalMaquinariaVisible = false;
-    this.recalcularTodo();
-    this.messageService.add({ severity: 'success', summary: 'Agregado', detail: descripcion });
   }
 
   // ── Borrador desde el historial ───────────────────────────────────────────
@@ -629,7 +557,7 @@ export class CotizadorComponent implements OnInit {
       // Las cotizaciones viejas guardaban "[Revisión de X]" en observaciones.
       this.clienteObservaciones = (b.observaciones || '').replace(/^\[(Revisión|Duplicado) de [^\]]+\]\s*/, '');
       this.condiciones.mostrarObservaciones = !!this.clienteObservaciones;
-      this.lugarEntrega         = b.lugar_entrega     || 'CANTERA';
+      this.lugarEntrega         = b.lugar_entrega     || null;
       if (b.incluye_igv !== undefined) {
         this.incluyeIgv         = b.incluye_igv;
       }

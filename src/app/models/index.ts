@@ -5,4 +5,3 @@ export * from './auth.model';
 export * from './cliente.model';
 export * from './producto.model';
 export * from './cotizacion.model';
-export * from './maquinaria.model';

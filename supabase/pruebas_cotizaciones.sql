@@ -2,7 +2,7 @@
 -- Simula a un vendedor real (con una sola empresa) sin iniciar sesión.
 -- Todo corre en una transacción que se deshace al final: no modifica nada.
 --
--- Requiere aplicadas 20261029020000 y 20261029030000.
+-- Requiere aplicadas 20261029020000, 20261029030000, 20261030000000 y 20261030010000.
 -- Uso: supabase db query --linked -f supabase/pruebas_cotizaciones.sql
 
 begin;
@@ -28,14 +28,17 @@ begin
   -- ── Contexto (como postgres) ─────────────────────────────────────────────
   select p.id, ue.empresa_id into v_vend, v_emp
     from public.profiles p
-    join public.usuario_empresa ue on ue.usuario_id = p.id and ue.activo
-   where p.rol = 'vendedor' and p.activo
+    join public.usuario_empresa ue on ue.usuario_id = p.id and ue.activo and ue.rol = 'vendedor'
+   where p.rol = 'usuario' and p.activo
      and (select count(*) from public.usuario_empresa u where u.usuario_id = p.id and u.activo) = 1
    limit 1;
   if v_vend is null then
     raise exception 'No hay un vendedor activo con exactamente una empresa para probar.';
   end if;
   select id into v_ajena from public.empresas where id <> v_emp order by id limit 1;
+  update public.empresas
+     set lugares_entrega = array['PUESTO EN OBRA (CON FLETE)', 'PUESTO EN CANTERA']
+   where id = v_emp;
 
   -- Migración: datos existentes
   select count(*) into v_n from public.cotizaciones where incluye_igv is distinct from (igv > 0);
@@ -52,7 +55,7 @@ begin
     v_emp, v_cliente,
     '[{"descripcion":"  Arena gruesa ","unidad":"m3","cantidad":2.5,"precio_unitario":16,"subtotal":1},
       {"descripcion":"Piedra chancada","cantidad":3,"precio_unitario":33.333,"subtotal":0}]',
-    true, 'OBRA', '  nota  ', '{"diasValidez":"30","mostrarCuentas":false,"basura":"x"}');
+    true, 'PUESTO EN OBRA (CON FLETE)', '  nota  ', '{"diasValidez":"30","mostrarCuentas":false,"basura":"x"}');
 
   r := r || jsonb_build_object('prueba', 'totales calculados por el servidor (140 + 25.20 = 165.20)',
          'ok', c1.subtotal = 140.00 and c1.igv = 25.20 and c1.total = 165.20,
@@ -68,7 +71,7 @@ begin
   r := r || jsonb_build_object('prueba', 'condiciones saneadas (solo claves conocidas)',
          'ok', c1.condiciones = '{"diasValidez":30,"mostrarCuentas":false,"mostrarValidez":true,"mostrarContacto":false}'::jsonb,
          'detalle', c1.condiciones::text);
-  r := r || jsonb_build_object('prueba', 'observaciones y lugar recortados', 'ok', c1.observaciones = 'nota' and c1.lugar_entrega = 'OBRA', 'detalle', c1.observaciones);
+  r := r || jsonb_build_object('prueba', 'observaciones recortadas y lugar de la lista', 'ok', c1.observaciones = 'nota' and c1.lugar_entrega = 'PUESTO EN OBRA (CON FLETE)', 'detalle', coalesce(c1.lugar_entrega, 'sin lugar'));
   select count(*) into v_n from public.clientes where id = c1.cliente_id and empresa_id = v_emp and telefono = '999 888 777';
   r := r || jsonb_build_object('prueba', 'cliente nuevo guardado en la cartera', 'ok', v_n = 1, 'detalle', coalesce(c1.cliente_id::text, 'sin cliente'));
 
@@ -126,6 +129,12 @@ begin
     r := r || jsonb_build_object('prueba', 'rechaza total mayor al máximo', 'ok', false, 'detalle', 'no falló');
   exception when others then
     r := r || jsonb_build_object('prueba', 'rechaza total mayor al máximo', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.crear_cotizacion(v_emp, v_cliente, v_item, true, 'EN LA LUNA');
+    r := r || jsonb_build_object('prueba', 'rechaza un lugar que no es de la empresa', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'rechaza un lugar que no es de la empresa', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
   end;
   begin
     perform public.crear_cotizacion(v_ajena, v_cliente, v_item);
@@ -220,9 +229,11 @@ begin
   v_folio := split_part(c5.folio, '-', 1) || '-' || lpad((v_sec + 1)::text, 8, '0');
   insert into public.cotizaciones (folio, empresa_id, cliente_nombre, cliente_documento, subtotal, igv, total, items)
   values (v_folio, v_emp, 'x', 'x', 0, 0, 0, '[]');
+  update public.empresas set lugares_entrega = '{}' where id = v_emp;
   set local role authenticated;
-  c1 := public.crear_cotizacion(v_emp, v_cliente, v_item);
+  c1 := public.crear_cotizacion(v_emp, v_cliente, v_item, true, 'PUESTO EN CANTERA');
   r := r || jsonb_build_object('prueba', 'salta un folio que ya existe', 'ok', split_part(c1.folio, '-', 2)::int = v_sec + 2, 'detalle', v_folio || ' ocupado → ' || c1.folio);
+  r := r || jsonb_build_object('prueba', 'empresa sin lugares guarda la cotización sin lugar', 'ok', c1.lugar_entrega is null, 'detalle', coalesce(c1.lugar_entrega, 'sin lugar'));
 
   -- ── Sin sesión, anónimo y usuario desactivado ────────────────────────────
   perform set_config('request.jwt.claims', '{"role":"authenticated"}', true);

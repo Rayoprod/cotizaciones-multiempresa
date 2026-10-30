@@ -2,7 +2,8 @@
 
 Aplicación web para emitir cotizaciones en PDF desde varias empresas con un
 mismo usuario. Cada empresa tiene su catálogo, cartera de clientes,
-maquinaria, cuentas bancarias, logo, firma y numeración de folios propios.
+cuentas bancarias, logo, firma, lugares de entrega y numeración de folios
+propios.
 Es el prototipo multiempresa de SIGO-WM.
 
 ## Stack
@@ -22,7 +23,7 @@ Es el prototipo multiempresa de SIGO-WM.
 ```
 api/                      Función de Vercel: consulta DNI/RUC con sesión y límite por usuario
 src/app/
-  components/             Pantallas (cotizador, historial, clientes, productos, maquinaria, empresas, usuarios…)
+  components/             Pantallas (cotizador, historial, clientes, productos, empresas, usuarios…)
   guards/                 Acceso por sesión y rol; verifican que la cuenta siga activa
   layout/                 Marco de la app (vendedor) y del panel de administración
   models/                 Tipos y lógica pura (p. ej. cálculo de totales)
@@ -70,10 +71,19 @@ Las variables solo se aplican en un despliegue nuevo.
 Las reglas viven en Postgres (RLS); el frontend solo esconde lo que el usuario
 no puede usar.
 
-- **Superadmin** (`profiles.rol = 'admin'`): ve y gestiona todo, crea empresas y usuarios.
-- **admin_empresa**: edita la ficha, las cuentas bancarias y los logos de *sus* empresas.
-- **vendedor**: cotiza y gestiona clientes, productos y maquinaria de sus empresas.
-- Las empresas de cada usuario están en `usuario_empresa`. Un usuario con
+Cada persona tiene **una cuenta**. Esa cuenta se asigna a una o varias
+empresas, y en **cada una** tiene un rol (`usuario_empresa.rol`): alguien
+puede ser admin en VDC y vendedor en WM.
+
+| Acción | Superadmin | Admin de la empresa | Vendedor de la empresa |
+| --- | --- | --- | --- |
+| Cotizar, revisar, cambiar estado, ocultar | ✓ | ✓ | ✓ |
+| Clientes y productos (incluidos precios base) | ✓ | ✓ | ✓ |
+| Ficha, cuentas bancarias, logos y lugares de entrega | ✓ | ✓ | ✗ |
+| Crear empresas y cuentas, asignar empresas y roles | ✓ | ✗ | ✗ |
+
+- `profiles.rol` solo distingue al superadmin (`'admin'`) del resto (`'usuario'`).
+- Un usuario con
   `profiles.activo = false` no ve nada. La app lo saca al iniciar sesión, al
   abrir una pestaña nueva o al navegar, porque el perfil se vuelve a
   confirmar cada 5 minutos.
@@ -98,6 +108,10 @@ Funciones auxiliares de las políticas: `es_superadmin()`,
 - **Duplicado**: copia los datos; la original no cambia.
 - Las condiciones del PDF (validez, cuentas, contacto) se guardan con la
   cotización, así que el PDF del historial sale igual al original.
+- El lugar de entrega se elige entre las opciones de la empresa
+  (`empresas.lugares_entrega`), y el servidor rechaza cualquier otro. Se
+  guarda el texto tal como sale en el PDF. Si la empresa no tiene opciones, el
+  campo no aparece.
 - El cotizador muestra los totales con el mismo cálculo que el servidor
   (`calcularTotales` en `models/cotizacion.model.ts`).
 

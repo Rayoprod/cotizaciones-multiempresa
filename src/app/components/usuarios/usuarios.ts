@@ -18,10 +18,12 @@ import { ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { RolEmpresa, RolGlobal } from '../../models';
+
 interface Usuario {
   id: string;
   email?: string;
-  rol: 'admin' | 'admin_empresa' | 'vendedor';
+  rol: RolGlobal;
   activo: boolean;
 }
 
@@ -59,7 +61,7 @@ export class UsuariosComponent implements OnInit {
   modalVisible  = false;
   nuevoEmail    = '';
   nuevoPassword = '';
-  nuevoRol      = 'vendedor';
+  nuevoRol: RolGlobal = 'usuario';
   guardando     = false;
   errorModal    = '';
 
@@ -67,13 +69,19 @@ export class UsuariosComponent implements OnInit {
   drawerVisible       = false;
   usuarioSeleccionado: Usuario | null = null;
   todasLasEmpresas:   any[] = [];
-  empresasAsignadas:  string[] = [];   // IDs seleccionados
+  /** empresa_id → rol del usuario seleccionado en esa empresa. */
+  empresasAsignadas = new Map<string, RolEmpresa>();
   guardandoEmpresas   = false;
 
-  rolesOpciones = [
+  /** profiles.rol: el superadmin ve y gestiona todo; el resto depende de su rol en cada empresa. */
+  tiposCuenta: { label: string; value: RolGlobal }[] = [
+    { label: 'Usuario', value: 'usuario' },
+    { label: 'Superadmin', value: 'admin' }
+  ];
+
+  rolesEmpresa: { label: string; value: RolEmpresa }[] = [
     { label: 'Vendedor', value: 'vendedor' },
-    { label: 'Admin Empresa', value: 'admin_empresa' },
-    { label: 'Admin General', value: 'admin' }
+    { label: 'Admin', value: 'admin' }
   ];
 
   get usuariosActivos(): number {
@@ -84,12 +92,8 @@ export class UsuariosComponent implements OnInit {
     return this.usuarios.filter(u => u.rol === 'admin').length;
   }
 
-  get usuariosAdminEmpresa(): number {
-    return this.usuarios.filter(u => u.rol === 'admin_empresa').length;
-  }
-
-  get usuariosVendedor(): number {
-    return this.usuarios.filter(u => u.rol === 'vendedor').length;
+  get usuariosNormales(): number {
+    return this.usuarios.filter(u => u.rol === 'usuario').length;
   }
 
   constructor(
@@ -121,7 +125,7 @@ export class UsuariosComponent implements OnInit {
   abrirModal() {
     this.nuevoEmail    = '';
     this.nuevoPassword = '';
-    this.nuevoRol      = 'vendedor';
+    this.nuevoRol      = 'usuario';
     this.errorModal    = '';
     this.modalVisible  = true;
   }
@@ -130,7 +134,7 @@ export class UsuariosComponent implements OnInit {
     this.modalVisible  = false;
     this.nuevoEmail    = '';
     this.nuevoPassword = '';
-    this.nuevoRol      = 'vendedor';
+    this.nuevoRol      = 'usuario';
     this.errorModal    = '';
     this.guardando     = false;
   }
@@ -162,7 +166,7 @@ export class UsuariosComponent implements OnInit {
       this.modalVisible  = false;
       this.nuevoEmail    = '';
       this.nuevoPassword = '';
-      this.nuevoRol      = 'vendedor';
+      this.nuevoRol      = 'usuario';
       this.errorModal    = '';
       await this.cargarUsuarios();
     } catch (err: any) {
@@ -175,17 +179,18 @@ export class UsuariosComponent implements OnInit {
   }
 
   // ── ROL / ACTIVO ─────────────────────────────────
-  async cambiarRol(usuario: Usuario, nuevoRol: string) {
+  async cambiarRol(usuario: Usuario, nuevoRol: RolGlobal) {
     if (!nuevoRol || nuevoRol === usuario.rol) return;
 
     const rolAnterior = usuario.rol;
     try {
       await this.supabase.actualizarRolUsuario(usuario.id, nuevoRol);
-      usuario.rol = nuevoRol as 'admin' | 'admin_empresa' | 'vendedor';
-      this.msg.add({ severity: 'success', summary: 'Rol actualizado', detail: nuevoRol });
-    } catch {
+      usuario.rol = nuevoRol;
+      this.msg.add({ severity: 'success', summary: 'Tipo de cuenta actualizado',
+        detail: `${usuario.email || usuario.id}: ${nuevoRol === 'admin' ? 'Superadmin' : 'Usuario'}` });
+    } catch (e: any) {
       usuario.rol = rolAnterior;
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cambiar el rol' });
+      this.msg.add({ severity: 'error', summary: 'No se cambió', detail: e?.message || 'No se pudo cambiar el tipo de cuenta' });
     } finally {
       this.cdr.markForCheck();
     }
@@ -243,12 +248,13 @@ export class UsuariosComponent implements OnInit {
     }
     
     this.usuarioSeleccionado = usuario;
-    this.empresasAsignadas   = [];        // limpiar antes
+    this.empresasAsignadas   = new Map();
     this.drawerVisible       = true;      // abrir drawer primero
     this.cdr.markForCheck();             // forzar render del drawer
 
     try {
-      this.empresasAsignadas = await this.supabase.getEmpresasDeUsuario(usuario.id);
+      const asignaciones = await this.supabase.getEmpresasDeUsuario(usuario.id);
+      this.empresasAsignadas = new Map(asignaciones.map(a => [a.empresa_id, a.rol]));
     } catch {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas' });
     }
@@ -257,16 +263,23 @@ export class UsuariosComponent implements OnInit {
   }
 
   toggleEmpresa(empresaId: string) {
-    const idx = this.empresasAsignadas.indexOf(empresaId);
-    if (idx >= 0) {
-      this.empresasAsignadas.splice(idx, 1);
+    if (this.empresasAsignadas.has(empresaId)) {
+      this.empresasAsignadas.delete(empresaId);
     } else {
-      this.empresasAsignadas.push(empresaId);
+      this.empresasAsignadas.set(empresaId, 'vendedor');
     }
   }
 
   estaAsignada(empresaId: string): boolean {
-    return this.empresasAsignadas.includes(empresaId);
+    return this.empresasAsignadas.has(empresaId);
+  }
+
+  rolEnEmpresa(empresaId: string): RolEmpresa | null {
+    return this.empresasAsignadas.get(empresaId) ?? null;
+  }
+
+  cambiarRolEnEmpresa(empresaId: string, rol: RolEmpresa) {
+    if (this.empresasAsignadas.has(empresaId)) this.empresasAsignadas.set(empresaId, rol);
   }
 
   async guardarEmpresas() {
@@ -275,7 +288,7 @@ export class UsuariosComponent implements OnInit {
     try {
       await this.supabase.guardarEmpresasDeUsuario(
         this.usuarioSeleccionado.id,
-        this.empresasAsignadas
+        [...this.empresasAsignadas].map(([empresa_id, rol]) => ({ empresa_id, rol }))
       );
       this.msg.add({ severity: 'success', summary: '¡Guardado!',
         detail: `Empresas actualizadas para ${this.usuarioSeleccionado.email}` });
