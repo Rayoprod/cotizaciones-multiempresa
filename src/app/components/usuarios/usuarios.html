@@ -75,7 +75,7 @@
         <div class="relative flex align-items-center w-full sm:w-20rem">
           <i class="pi pi-search absolute pl-3 text-400"></i>
           <input pInputText type="text" [(ngModel)]="terminoBusqueda" class="w-full border-round-xl pl-6 text-sm"
-                 placeholder="Buscar por correo o empresa..." />
+                 placeholder="Buscar por nombre, correo o empresa" />
         </div>
       </div>
     </div>
@@ -104,9 +104,11 @@
                 </div>
                 <div class="min-w-0 flex-1 overflow-hidden">
                   <p class="font-bold text-900 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="u.email || u.id">
-                    {{ u.email || u.id }}
+                    {{ u.nombre || u.email || u.id }}
+                    <span *ngIf="esUnoMismo(u)" class="text-xs text-sky-700 font-semibold ml-1">Tú</span>
                   </p>
-                  <p *ngIf="esUnoMismo(u)" class="text-xs text-sky-600 font-semibold m-0">Tú</p>
+                  <p *ngIf="u.nombre" class="text-xs text-600 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ u.email }}</p>
+                  <p *ngIf="!u.nombre" class="text-xs text-amber-800 m-0">Sin nombre: el PDF no mostrará vendedor</p>
                 </div>
               </div>
             </td>
@@ -126,7 +128,7 @@
             <td class="text-center">
               <div class="flex gap-1 justify-content-center">
                 <p-button icon="pi pi-key" [text]="true" [rounded]="true" severity="info" size="small"
-                          pTooltip="Editar acceso" (onClick)="abrirAcceso(u)" />
+                          pTooltip="Nombre y acceso" (onClick)="abrirAcceso(u)" />
                 <p-button [icon]="u.activo ? 'pi pi-ban' : 'pi pi-check-circle'"
                           [severity]="u.activo ? 'warning' : 'success'"
                           [text]="true" [rounded]="true" size="small"
@@ -167,8 +169,10 @@
           </div>
           <div class="flex-1 min-w-0 overflow-hidden">
             <p class="font-bold text-900 m-0 text-base line-height-2 overflow-hidden text-overflow-ellipsis word-break-break-word">
-              {{ u.email || u.id }}
+              {{ u.nombre || u.email || u.id }}
             </p>
+            <p *ngIf="u.nombre" class="text-xs text-600 m-0 overflow-hidden text-overflow-ellipsis">{{ u.email }}</p>
+            <p *ngIf="!u.nombre" class="text-xs text-amber-800 m-0">Sin nombre: el PDF no mostrará vendedor</p>
             <p-tag [value]="u.activo ? 'Activo' : 'Inactivo'" [severity]="u.activo ? 'success' : 'warning'"
                    styleClass="font-bold border-round-md text-xs mt-1" />
           </div>
@@ -212,6 +216,12 @@
     </div>
 
     <div class="flex flex-column gap-2">
+      <label for="nuevoNombre" class="font-semibold text-900 text-sm">Nombre</label>
+      <input pInputText id="nuevoNombre" type="text" [(ngModel)]="nuevoNombre" placeholder="Ana Quispe" maxlength="100" class="w-full border-round-xl" />
+      <small class="text-600">Es lo que verá el cliente como vendedor en el PDF.</small>
+    </div>
+
+    <div class="flex flex-column gap-2">
       <label class="font-semibold text-900 text-sm">Correo electrónico <span class="text-red-500">*</span></label>
       <input pInputText type="email" [(ngModel)]="nuevoEmail" placeholder="usuario@empresa.com" class="w-full border-round-xl" />
     </div>
@@ -248,7 +258,7 @@
 
   <ng-template pTemplate="header">
     <div class="flex flex-column gap-1 min-w-0">
-      <span class="font-bold text-900 text-lg">Acceso</span>
+      <span class="font-bold text-900 text-lg">Nombre y acceso</span>
       <span class="text-sm text-sky-600 font-medium text-overflow-ellipsis overflow-hidden white-space-nowrap">
         {{ usuarioSeleccionado?.email }}
       </span>
@@ -256,6 +266,12 @@
   </ng-template>
 
   <div class="flex flex-column gap-3 py-2">
+
+    <div class="flex flex-column gap-2">
+      <label for="borradorNombre" class="font-semibold text-900 text-sm">Nombre</label>
+      <input pInputText id="borradorNombre" type="text" [(ngModel)]="borradorNombre" placeholder="Ana Quispe" maxlength="100" class="w-full" />
+      <small class="text-600">Sale como vendedor en el PDF de sus cotizaciones nuevas. Sin nombre, no se imprime esa línea.</small>
+    </div>
 
     <div class="flex align-items-start gap-3 p-3 border-round-xl border-1"
          [class.border-red-300]="borradorSuperadmin" [class.bg-red-50]="borradorSuperadmin"
@@ -299,7 +315,7 @@
             <p class="text-xs text-500 m-0">{{ emp.activa === false ? 'Empresa inactiva' : 'RUC ' + emp.ruc }}</p>
           </div>
 
-          <div *ngIf="estaAsignada(emp.id)" (click)="$event.stopPropagation()" style="width:8rem">
+          <div *ngIf="estaAsignada(emp.id)" (click)="$event.stopPropagation()" style="width:9.5rem">
             <p-dropdown [options]="rolesEmpresa" [ngModel]="rolEnEmpresa(emp.id)"
                         (onChange)="cambiarRolEnEmpresa(emp.id, $event.value)"
                         optionLabel="label" optionValue="value" appendTo="body"
@@ -313,7 +329,7 @@
   <ng-template pTemplate="footer">
     <div class="flex gap-2 pt-3">
       <p-button label="Cancelar" severity="secondary" [text]="true" class="flex-1" (onClick)="drawerVisible = false" />
-      <p-button label="Guardar acceso" icon="pi pi-check" [loading]="guardandoAcceso"
+      <p-button label="Guardar" icon="pi pi-check" [loading]="guardandoAcceso"
                 class="flex-1 border-round-xl font-bold" (onClick)="guardarAcceso()" />
     </div>
   </ng-template>

@@ -2,7 +2,7 @@
 -- Simula a un vendedor real (con una sola empresa) sin iniciar sesión.
 -- Todo corre en una transacción que se deshace al final: no modifica nada.
 --
--- Requiere aplicadas 20261029020000, 20261029030000, 20261030000000 y 20261030010000.
+-- Requiere aplicadas 20261029020000, 20261029030000, 20261030000000, 20261030010000 y 20261030050000.
 -- Uso: supabase db query --linked -f supabase/pruebas_cotizaciones.sql
 
 begin;
@@ -20,10 +20,13 @@ declare
   c3 public.cotizaciones;
   c4 public.cotizaciones;
   c5 public.cotizaciones;
+  c6 public.cotizaciones;
+  c7 public.cotizaciones;
   v_n        int;
   v_estado   text;
   v_folio    text;
   v_sec      int;
+  v_super    uuid;
 begin
   -- ── Contexto (como postgres) ─────────────────────────────────────────────
   select p.id, ue.empresa_id into v_vend, v_emp
@@ -177,6 +180,121 @@ begin
          'ok', v_estado = 'PENDIENTE' and c4.tipo_origen = 'duplicado' and c5.cotizacion_origen_id = c2.id,
          'detalle', c2.folio || ' sigue ' || v_estado);
 
+  -- ── IGV en tres modos y descuento ────────────────────────────────────────
+  c6 := public.crear_cotizacion(v_emp, v_cliente, '[{"descripcion":"Ítem","cantidad":10,"precio_unitario":100}]',
+          p_incluye_igv => true, p_precios_con_igv => true);
+  r := r || jsonb_build_object('prueba', 'precios con IGV: el total es la suma y el IGV va dentro',
+         'ok', c6.subtotal = 1000 and c6.total = 1000 and c6.igv = 152.54 and c6.incluye_igv and c6.precios_con_igv,
+         'detalle', format('%s, igv %s, total %s', c6.subtotal, c6.igv, c6.total));
+  c6 := public.crear_cotizacion(v_emp, v_cliente, '[{"descripcion":"Ítem","cantidad":10,"precio_unitario":100}]',
+          p_incluye_igv => true, p_precios_con_igv => true, p_descuento => 100);
+  r := r || jsonb_build_object('prueba', 'precios con IGV y descuento',
+         'ok', c6.subtotal = 1000 and c6.descuento_global = 100 and c6.total = 900 and c6.igv = 137.29,
+         'detalle', format('%s - %s = %s, igv %s', c6.subtotal, c6.descuento_global, c6.total, c6.igv));
+  c6 := public.crear_cotizacion(v_emp, v_cliente, '[{"descripcion":"Ítem","cantidad":10,"precio_unitario":100}]',
+          p_incluye_igv => true, p_descuento => 100);
+  r := r || jsonb_build_object('prueba', 'sumar IGV: el descuento se resta antes del IGV',
+         'ok', c6.subtotal = 1000 and c6.descuento_global = 100 and c6.igv = 162 and c6.total = 1062 and not c6.precios_con_igv,
+         'detalle', format('(%s - %s) + %s = %s', c6.subtotal, c6.descuento_global, c6.igv, c6.total));
+  c6 := public.crear_cotizacion(v_emp, v_cliente, '[{"descripcion":"Ítem","cantidad":10,"precio_unitario":100}]',
+          p_incluye_igv => false, p_descuento => 100);
+  r := r || jsonb_build_object('prueba', 'sin IGV con descuento',
+         'ok', c6.igv = 0 and c6.total = 900 and not c6.incluye_igv,
+         'detalle', format('igv %s, total %s', c6.igv, c6.total));
+  c6 := public.crear_cotizacion(v_emp, v_cliente, '[{"descripcion":"Ítem","cantidad":1,"precio_unitario":10}]',
+          p_incluye_igv => true, p_descuento => 10);
+  r := r || jsonb_build_object('prueba', 'descuento igual al subtotal deja el total en 0',
+         'ok', c6.total = 0 and c6.igv = 0, 'detalle', format('total %s', c6.total));
+  begin
+    perform public.crear_cotizacion(v_emp, v_cliente, v_item, p_descuento => 10.01);
+    r := r || jsonb_build_object('prueba', 'rechaza descuento mayor al subtotal', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'rechaza descuento mayor al subtotal', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.crear_cotizacion(v_emp, v_cliente, v_item, p_descuento => -1);
+    r := r || jsonb_build_object('prueba', 'rechaza descuento negativo', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'rechaza descuento negativo', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.crear_cotizacion(v_emp, v_cliente, v_item, p_incluye_igv => false, p_precios_con_igv => true);
+    r := r || jsonb_build_object('prueba', 'rechaza precios con IGV en una cotización sin IGV', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'rechaza precios con IGV en una cotización sin IGV', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+
+  -- ── Estados y qué se puede revisar ───────────────────────────────────────
+  -- c6 está Pendiente; c7 se aprueba, vuelve a Pendiente y se aprueba de nuevo.
+  c7 := public.crear_cotizacion(v_emp, v_cliente, v_item);
+  update public.cotizaciones set estado = 'APROBADA' where id = c7.id;
+  select * into c7 from public.cotizaciones where id = c7.id;
+  r := r || jsonb_build_object('prueba', 'al aprobar queda quién y cuándo',
+         'ok', c7.estado = 'APROBADA' and c7.estado_cambiado_por = v_vend and c7.estado_cambiado_en is not null
+               and c7.estado_cambiado_por_nombre is not null,
+         'detalle', coalesce(c7.estado_cambiado_por_nombre, 'sin nombre'));
+  begin
+    perform public.crear_cotizacion(v_emp, v_cliente, v_item, p_origen_id => c7.id, p_tipo_origen => 'revision');
+    r := r || jsonb_build_object('prueba', 'una Aprobada no se revisa', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'una Aprobada no se revisa', 'ok', sqlstate = 'P0001', 'detalle', sqlerrm);
+  end;
+  c4 := public.crear_cotizacion(v_emp, v_cliente, v_item, p_origen_id => c7.id, p_tipo_origen => 'duplicado');
+  select estado into v_estado from public.cotizaciones where id = c7.id;
+  r := r || jsonb_build_object('prueba', 'una Aprobada sí se duplica y sigue Aprobada',
+         'ok', c4.tipo_origen = 'duplicado' and v_estado = 'APROBADA', 'detalle', v_estado);
+  update public.cotizaciones set estado = 'PENDIENTE' where id = c7.id;
+  c4 := public.crear_cotizacion(v_emp, v_cliente, v_item, p_origen_id => c7.id, p_tipo_origen => 'revision');
+  select estado into v_estado from public.cotizaciones where id = c7.id;
+  r := r || jsonb_build_object('prueba', 'una Aprobada reabierta a Pendiente sí se revisa',
+         'ok', c4.tipo_origen = 'revision' and v_estado = 'ANULADA', 'detalle', v_estado);
+
+  c7 := public.crear_cotizacion(v_emp, v_cliente, v_item);
+  update public.cotizaciones set estado = 'APROBADA' where id = c7.id;
+  update public.cotizaciones set estado = 'ANULADA' where id = c7.id;
+  select estado into v_estado from public.cotizaciones where id = c7.id;
+  r := r || jsonb_build_object('prueba', 'una Aprobada se puede anular', 'ok', v_estado = 'ANULADA', 'detalle', v_estado);
+  begin
+    update public.cotizaciones set estado = 'PENDIENTE' where id = c7.id;
+    r := r || jsonb_build_object('prueba', 'una Anulada a mano no se reactiva', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'una Anulada a mano no se reactiva', 'ok', sqlstate = 'P0001', 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.crear_cotizacion(v_emp, v_cliente, v_item, p_origen_id => c7.id, p_tipo_origen => 'revision');
+    r := r || jsonb_build_object('prueba', 'una Anulada no se revisa', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'una Anulada no se revisa', 'ok', sqlstate = 'P0001', 'detalle', sqlerrm);
+  end;
+  c4 := public.crear_cotizacion(v_emp, v_cliente, v_item, p_origen_id => c7.id, p_tipo_origen => 'duplicado');
+  r := r || jsonb_build_object('prueba', 'una Anulada sí se duplica', 'ok', c4.tipo_origen = 'duplicado', 'detalle', c4.folio);
+  begin
+    update public.cotizaciones set estado = 'RECHAZADA' where id = c6.id;
+    r := r || jsonb_build_object('prueba', 'rechaza un estado fuera de las reglas', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'rechaza un estado fuera de las reglas', 'ok', sqlstate = 'P0001', 'detalle', sqlerrm);
+  end;
+
+  -- Permisos de las columnas nuevas
+  begin
+    update public.cotizaciones set descuento_global = 0, precios_con_igv = true where id = c6.id;
+    r := r || jsonb_build_object('prueba', 'no se puede cambiar el descuento ni el modo', 'ok', false, 'detalle', 'se pudo');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'no se puede cambiar el descuento ni el modo', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
+  end;
+  begin
+    update public.cotizaciones set estado_cambiado_por = null where id = c6.id;
+    r := r || jsonb_build_object('prueba', 'no se puede alterar el registro de estados', 'ok', false, 'detalle', 'se pudo');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'no se puede alterar el registro de estados', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
+  end;
+  update public.empresas set modo_igv = 'incluido' where id = v_emp;
+  get diagnostics v_n = row_count;
+  r := r || jsonb_build_object('prueba', 'un vendedor no cambia el modo de IGV de la empresa', 'ok', v_n = 0, 'detalle', v_n || ' filas');
+  update public.profiles set nombre = 'Otro nombre' where id = v_vend;
+  get diagnostics v_n = row_count;
+  r := r || jsonb_build_object('prueba', 'un vendedor no cambia su nombre', 'ok', v_n = 0, 'detalle', v_n || ' filas');
+
   -- Escritura directa (tras 20261029030000)
   begin
     insert into public.cotizaciones (folio, empresa_id, cliente_nombre, cliente_documento, subtotal, igv, total, items)
@@ -234,6 +352,69 @@ begin
   c1 := public.crear_cotizacion(v_emp, v_cliente, v_item, true, 'PUESTO EN CANTERA');
   r := r || jsonb_build_object('prueba', 'salta un folio que ya existe', 'ok', split_part(c1.folio, '-', 2)::int = v_sec + 2, 'detalle', v_folio || ' ocupado → ' || c1.folio);
   r := r || jsonb_build_object('prueba', 'empresa sin lugares guarda la cotización sin lugar', 'ok', c1.lugar_entrega is null, 'detalle', coalesce(c1.lugar_entrega, 'sin lugar'));
+
+  -- ── Modo por empresa, nombre del vendedor y otra empresa ──────────────────
+  reset role;
+  select count(*) into v_n from public.empresas where id in ('VDC', 'WM') and modo_igv = 'sin_igv';
+  r := r || jsonb_build_object('prueba', 'VDC y WM abren sin IGV', 'ok', v_n = 2, 'detalle', v_n || ' de 2');
+  select count(*) into v_n from public.empresas where id not in ('VDC', 'WM') and modo_igv <> 'sumar';
+  r := r || jsonb_build_object('prueba', 'el resto abre sumando IGV', 'ok', v_n = 0, 'detalle', v_n || ' distintas');
+  select count(*) into v_n from public.cotizaciones
+   where (precios_con_igv or descuento_global <> 0 or vendedor_nombre is not null)
+     and fecha < now() - interval '1 minute';
+  r := r || jsonb_build_object('prueba', 'las cotizaciones existentes no cambian', 'ok', v_n = 0, 'detalle', v_n || ' alteradas');
+
+  update public.usuario_empresa set rol = 'admin' where usuario_id = v_vend and empresa_id = v_emp;
+  set local role authenticated;
+  update public.empresas set modo_igv = 'incluido' where id = v_emp;
+  get diagnostics v_n = row_count;
+  r := r || jsonb_build_object('prueba', 'el admin de la empresa sí cambia el modo de IGV', 'ok', v_n = 1, 'detalle', v_n || ' fila');
+  reset role;
+  update public.usuario_empresa set rol = 'vendedor' where usuario_id = v_vend and empresa_id = v_emp;
+
+  select id into v_super from public.profiles where rol = 'admin' and activo limit 1;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_super, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.profiles set nombre = 'Nombre del superadmin' where id = v_vend;
+  get diagnostics v_n = row_count;
+  r := r || jsonb_build_object('prueba', 'el superadmin sí cambia el nombre de una cuenta', 'ok', v_n = 1, 'detalle', v_n || ' fila');
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_vend, 'role', 'authenticated')::text, true);
+
+  update public.profiles set nombre = '  Ana Prueba ' where id = v_vend;
+  set local role authenticated;
+  c6 := public.crear_cotizacion(v_emp, v_cliente, v_item);
+  r := r || jsonb_build_object('prueba', 'la cotización copia el nombre del vendedor',
+         'ok', c6.vendedor_nombre = 'Ana Prueba' and c6.vendedor like '%@%', 'detalle', coalesce(c6.vendedor_nombre, 'sin nombre'));
+  update public.cotizaciones set estado = 'ANULADA' where id = c6.id;
+  select * into c6 from public.cotizaciones where id = c6.id;
+  r := r || jsonb_build_object('prueba', 'el registro de estados usa el nombre',
+         'ok', c6.estado_cambiado_por_nombre = 'Ana Prueba', 'detalle', coalesce(c6.estado_cambiado_por_nombre, 'sin nombre'));
+  reset role;
+  update public.profiles set nombre = null where id = v_vend;
+  set local role authenticated;
+  c6 := public.crear_cotizacion(v_emp, v_cliente, v_item);
+  r := r || jsonb_build_object('prueba', 'sin nombre, no guarda el correo como nombre',
+         'ok', c6.vendedor_nombre is null, 'detalle', coalesce(c6.vendedor_nombre, 'sin nombre'));
+
+  reset role;
+  insert into public.usuario_empresa (usuario_id, empresa_id, rol, activo) values (v_vend, v_ajena, 'vendedor', true);
+  set local role authenticated;
+  begin
+    perform public.crear_cotizacion(v_ajena, v_cliente, v_item, p_origen_id => c6.id, p_tipo_origen => 'duplicado');
+    r := r || jsonb_build_object('prueba', 'no se duplica en otra empresa', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'no se duplica en otra empresa', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.crear_cotizacion(v_ajena, v_cliente, v_item, p_origen_id => c6.id, p_tipo_origen => 'revision');
+    r := r || jsonb_build_object('prueba', 'no se revisa en otra empresa', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'no se revisa en otra empresa', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+  reset role;
+  delete from public.usuario_empresa where usuario_id = v_vend and empresa_id = v_ajena;
+  set local role authenticated;
 
   -- ── Sin sesión, anónimo y usuario desactivado ────────────────────────────
   perform set_config('request.jwt.claims', '{"role":"authenticated"}', true);

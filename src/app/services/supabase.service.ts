@@ -222,7 +222,7 @@ export class SupabaseService {
 
     let query = this.client
       .from('cotizaciones')
-      .select('id, folio, fecha, empresa_id, cliente_id, cliente_nombre, cliente_documento, cliente_telefono, cliente_direccion, cliente_correo, subtotal, igv, total, incluye_igv, estado, items, vendedor, lugar_entrega, observaciones, condiciones, oculta, cotizacion_origen_id, tipo_origen, folio_origen')
+      .select('id, folio, fecha, empresa_id, cliente_id, cliente_nombre, cliente_documento, cliente_telefono, cliente_direccion, cliente_correo, subtotal, descuento_global, igv, total, incluye_igv, precios_con_igv, estado, estado_cambiado_en, estado_cambiado_por_nombre, items, vendedor, vendedor_nombre, lugar_entrega, observaciones, condiciones, oculta, cotizacion_origen_id, tipo_origen, folio_origen')
       .eq('empresa_id', empresaId)
       .order('fecha', { ascending: false });
 
@@ -246,7 +246,9 @@ export class SupabaseService {
       p_empresa_id: datos.empresaId,
       p_cliente: datos.cliente,
       p_items: datos.items,
-      p_incluye_igv: datos.incluyeIgv,
+      p_incluye_igv: datos.modoIgv !== 'sin_igv',
+      p_precios_con_igv: datos.modoIgv === 'incluido',
+      p_descuento: datos.descuento,
       p_lugar_entrega: datos.lugarEntrega ?? null,
       p_observaciones: datos.observaciones ?? null,
       p_condiciones: datos.condiciones,
@@ -343,7 +345,7 @@ export class SupabaseService {
 
   async getUsuarios(): Promise<any[]> {
     const { data, error } = await this.client
-      .from('profiles').select('id, email, rol, activo').order('rol');
+      .from('profiles').select('id, email, nombre, rol, activo').order('rol');
     if (error) throw error;
     return data || [];
   }
@@ -357,6 +359,13 @@ export class SupabaseService {
     });
     if (error) throw error;
     return data;
+  }
+
+  /** El nombre que imprime el PDF en las cotizaciones que esta cuenta cree desde ahora. */
+  async actualizarNombreUsuario(id: string, nombre: string | null): Promise<void> {
+    const { error } = await this.client
+      .from('profiles').update({ nombre }).eq('id', id);
+    if (error) throw error;
   }
 
   async actualizarRolUsuario(id: string, rol: string): Promise<void> {

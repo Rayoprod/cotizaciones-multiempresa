@@ -91,12 +91,6 @@ export class PwaUpdateService {
     window.addEventListener('appinstalled', () => {
       this.canInstallPwa.set(false);
       this.deferredPrompt = null;
-      this.messageService?.add({
-        severity: 'success',
-        summary: '🎉 Aplicación Instalada',
-        detail: 'El Sistema de Cotizaciones ahora está instalado en tu dispositivo.',
-        life: 4000
-      });
     });
   }
 

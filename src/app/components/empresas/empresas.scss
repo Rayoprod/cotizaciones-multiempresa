@@ -9,3 +9,41 @@
   }
 }
 
+/* Mismo alto en todas las pestañas: el diálogo no salta al cambiar */
+.panel-empresa {
+  min-height: 24rem;
+}
+
+.fila-opcion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.75rem;
+}
+
+.imagen-vista {
+  width: 4rem;
+  height: 4rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.75rem;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+}
+
+/* El diálogo se monta en el body: :host no alcanzaría este elemento */
+.panel-empresa ::ng-deep .p-chips-multiple-container {
+  width: 100%;
+}

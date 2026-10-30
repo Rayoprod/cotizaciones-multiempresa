@@ -4,3 +4,10 @@ export type RolGlobal = 'admin' | 'usuario';
 export type RolEmpresa = 'admin' | 'vendedor';
 export type EstadoCotizacion = 'BORRADOR' | 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'ANULADA';
 export type Moneda = 'PEN' | 'USD' | 'EUR';
+/**
+ * Cómo se tratan los precios de una cotización:
+ * - sumar: se escriben sin IGV y se suma el 18% al total.
+ * - incluido: ya traen el IGV; el total es la suma de los ítems.
+ * - sin_igv: no se cobra IGV.
+ */
+export type ModoIgv = 'sumar' | 'incluido' | 'sin_igv';

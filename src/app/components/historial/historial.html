@@ -1,485 +1,219 @@
-<p-confirmDialog appendTo="body" />
+<p-confirmDialog appendTo="body" styleClass="max-w-28rem border-round-2xl" />
+<p-menu #menuAcciones [popup]="true" [model]="accionesMenu" appendTo="body" [style]="{ width: '14rem' }" />
 
 <div class="p-3 md:p-4">
 
-  <!-- Header Superior -->
+  <!-- Encabezado -->
   <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
     <div>
-      <h1 class="text-2xl md:text-3xl font-bold text-900 m-0 tracking-tight flex align-items-center gap-2">
-        <i class="pi pi-history text-sky-600"></i>Historial de Cotizaciones
-      </h1>
-      <p class="text-500 text-sm mt-1 mb-0 font-medium">
-        Registro general de ventas para {{ empresaActiva?.nombre_comercial || 'Empresa seleccionada' }}
-      </p>
+      <h1 class="text-2xl font-bold text-900 m-0">Historial</h1>
+      <p class="text-600 text-sm mt-1 mb-0">{{ empresaActiva?.nombre_comercial }}</p>
     </div>
 
-    <div class="flex align-items-center gap-3 flex-wrap w-full md:w-auto">
-      <p-button
-        [label]="mostrarOcultas ? 'Ocultar Archivadas' : ('Ver Ocultas (' + cantidadOcultas + ')')"
-        [icon]="mostrarOcultas ? 'pi pi-eye-slash' : 'pi pi-eye'"
-        [severity]="mostrarOcultas ? 'warning' : 'secondary'"
-        styleClass="border-round-xl font-bold"
-        [outlined]="!mostrarOcultas"
-        (onClick)="onToggleOcultas()">
-      </p-button>
-
-      <p-button label="Exportar CSV" icon="pi pi-download"
-                severity="secondary" styleClass="border-round-xl font-bold p-button-outlined"
-                (onClick)="exportarCSV()">
-      </p-button>
+    <div class="flex align-items-center gap-2 flex-wrap">
+      <button *ngIf="cantidadOcultas > 0 || mostrarOcultas" pButton type="button"
+              class="p-button-text p-button-secondary p-button-sm"
+              [icon]="mostrarOcultas ? 'pi pi-eye-slash' : 'pi pi-eye'"
+              [label]="mostrarOcultas ? 'Quitar ocultas' : 'Ver ocultas (' + cantidadOcultas + ')'"
+              (click)="onToggleOcultas()"></button>
+      <button pButton type="button" icon="pi pi-download" label="Exportar CSV"
+              class="p-button-outlined p-button-secondary p-button-sm"
+              (click)="exportarCSV()"></button>
     </div>
   </div>
 
-  <!-- KPIs -->
+  <!-- Carga inicial: el esqueleto de la página, no un spinner -->
+  <div *ngIf="cargando" aria-busy="true">
+    <div class="grid mb-3">
+      <div class="col-6 lg:col-3" *ngFor="let _ of [1, 2, 3, 4]"><div class="esqueleto" style="height: 6rem"></div></div>
+    </div>
+    <div class="esqueleto" style="height: 22rem"></div>
+  </div>
+
   <ng-container *ngIf="!cargando">
-    <div class="grid mb-4">
+    <!-- KPIs -->
+    <div class="grid mb-3">
       <div class="col-6 lg:col-3">
-        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border h-full card-hover-effect border-left-4 border-emerald-500">
-          <div class="flex align-items-center justify-content-between mb-2">
-            <span class="text-xs text-500 uppercase font-bold tracking-wider">Vendido / Aprobado</span>
-            <div class="w-2rem h-2rem border-circle bg-emerald-100 text-emerald-600 flex align-items-center justify-content-center">
-              <i class="pi pi-check-circle text-sm"></i>
-            </div>
-          </div>
-          <p class="text-2xl font-bold text-emerald-600 m-0">
-            S/ {{ totalVendido | number:'1.2-2' }}
-          </p>
-          <p class="text-xs text-500 font-medium m-0 mt-1">{{ cotizacionesAprobadas }} cotizaciones aprobadas</p>
+        <div class="kpi">
+          <span class="kpi-titulo">Vendido</span>
+          <p class="kpi-valor text-emerald-700">S/ {{ totalVendido | number:'1.2-2' }}</p>
+          <p class="kpi-nota">{{ conteos.APROBADA }} aprobada{{ conteos.APROBADA === 1 ? '' : 's' }}</p>
         </div>
       </div>
-
       <div class="col-6 lg:col-3">
-        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border h-full card-hover-effect border-left-4 border-amber-500">
-          <div class="flex align-items-center justify-content-between mb-2">
-            <span class="text-xs text-500 uppercase font-bold tracking-wider">Por cobrar / Pendientes</span>
-            <div class="w-2rem h-2rem border-circle bg-amber-100 text-amber-600 flex align-items-center justify-content-center">
-              <i class="pi pi-clock text-sm"></i>
-            </div>
-          </div>
-          <p class="text-2xl font-bold text-amber-600 m-0">
-            S/ {{ totalPendiente | number:'1.2-2' }}
-          </p>
-          <p class="text-xs text-500 font-medium m-0 mt-1">{{ cotizacionesPendientes }} por confirmar</p>
+        <div class="kpi">
+          <span class="kpi-titulo">Por cobrar</span>
+          <p class="kpi-valor text-amber-700">S/ {{ totalPorCobrar | number:'1.2-2' }}</p>
+          <p class="kpi-nota">{{ conteos.PENDIENTE }} vigente{{ conteos.PENDIENTE === 1 ? '' : 's' }} · {{ conteos.VENCIDA }} vencida{{ conteos.VENCIDA === 1 ? '' : 's' }}</p>
         </div>
       </div>
-
       <div class="col-6 lg:col-3">
-        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border h-full card-hover-effect border-left-4 border-sky-500">
-          <div class="flex align-items-center justify-content-between mb-2">
-            <span class="text-xs text-500 uppercase font-bold tracking-wider">Tasa de Conversión</span>
-            <div class="w-2rem h-2rem border-circle bg-sky-100 text-sky-600 flex align-items-center justify-content-center">
-              <i class="pi pi-percentage text-sm"></i>
-            </div>
-          </div>
-          <p class="text-2xl font-bold text-sky-600 m-0">
-            {{ tasaConversion | number:'1.0-0' }}%
-          </p>
-          <p class="text-xs text-500 font-medium m-0 mt-1">Efectividad de cierre de ventas</p>
+        <div class="kpi">
+          <span class="kpi-titulo">Conversión</span>
+          <p class="kpi-valor text-sky-700">{{ tasaConversion | number:'1.0-0' }}%</p>
+          <p class="kpi-nota">aprobadas sobre emitidas</p>
         </div>
       </div>
-
       <div class="col-6 lg:col-3">
-        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border h-full card-hover-effect border-left-4 border-slate-400">
-          <div class="flex align-items-center justify-content-between mb-2">
-            <span class="text-xs text-500 uppercase font-bold tracking-wider">Anuladas</span>
-            <div class="w-2rem h-2rem border-circle bg-slate-100 text-slate-600 flex align-items-center justify-content-center">
-              <i class="pi pi-times-circle text-sm"></i>
-            </div>
-          </div>
-          <p class="text-2xl font-bold text-slate-700 m-0">{{ cotizacionesAnuladas }}</p>
-          <p class="text-xs text-500 font-medium m-0 mt-1">De {{ cotizacionesFiltradas.length }} cotizaciones emitidas</p>
+        <div class="kpi">
+          <span class="kpi-titulo">Anuladas</span>
+          <p class="kpi-valor text-slate-700">{{ conteos.ANULADA }}</p>
+          <p class="kpi-nota">de {{ conteos.TODAS }} emitida{{ conteos.TODAS === 1 ? '' : 's' }}</p>
         </div>
       </div>
     </div>
 
-    <!-- Filtros Toolbar -->
-    <div class="bg-white border-round-2xl p-4 mb-4 shadow-1 border-1 surface-border">
-      <div class="grid align-items-end">
-        <div class="col-12 md:col-5 flex flex-column gap-1">
-          <label class="text-xs font-bold text-700 uppercase">Buscar Cotización</label>
-          <div class="relative flex align-items-center">
-            <i class="pi pi-search absolute pl-3 text-400"></i>
-            <input pInputText
-                   [(ngModel)]="terminoBusqueda"
-                   (ngModelChange)="filtrarCotizaciones($event)"
-                   placeholder="Folio, cliente, RUC/DNI..."
-                   class="w-full border-round-xl pl-6" />
-          </div>
+    <!-- Filtros -->
+    <div class="tarjeta-filtros">
+      <div class="filtros-estado" role="group" aria-label="Filtrar por estado">
+        <button *ngFor="let f of filtros" type="button" class="filtro"
+                [class.filtro-activo]="filtroEstado === f.value"
+                [attr.aria-pressed]="filtroEstado === f.value"
+                (click)="elegirFiltroEstado(f.value)">
+          {{ f.label }} <span class="filtro-cuenta">{{ conteos[f.value] }}</span>
+        </button>
+      </div>
+
+      <div class="grid align-items-end mt-2">
+        <div class="col-12 md:col-6">
+          <label for="buscarCotizacion" class="etiqueta-filtro">Buscar</label>
+          <input pInputText id="buscarCotizacion"
+                 [(ngModel)]="terminoBusqueda"
+                 (ngModelChange)="filtrarCotizaciones($event)"
+                 placeholder="Folio, cliente, RUC o DNI"
+                 class="w-full" />
         </div>
-        <div class="col-6 md:col-2 flex flex-column gap-1">
-          <label class="text-xs font-bold text-700 uppercase">Fecha Desde</label>
-          <input pInputText type="date"
-                 [(ngModel)]="fechaDesde"
-                 (change)="aplicarFiltroFecha()"
-                 class="w-full border-round-xl" />
+        <div class="col-6 md:col-3">
+          <label for="fechaDesde" class="etiqueta-filtro">Desde</label>
+          <input pInputText id="fechaDesde" type="date" [(ngModel)]="fechaDesde" (change)="aplicarFiltroFecha()" class="w-full" />
         </div>
-        <div class="col-6 md:col-2 flex flex-column gap-1">
-          <label class="text-xs font-bold text-700 uppercase">Fecha Hasta</label>
-          <input pInputText type="date"
-                 [(ngModel)]="fechaHasta"
-                 (change)="aplicarFiltroFecha()"
-                 class="w-full border-round-xl" />
+        <div class="col-6 md:col-3">
+          <label for="fechaHasta" class="etiqueta-filtro">Hasta</label>
+          <input pInputText id="fechaHasta" type="date" [(ngModel)]="fechaHasta" (change)="aplicarFiltroFecha()" class="w-full" />
         </div>
-        <div class="col-12 md:col-3 flex gap-2">
-          <p-button label="Limpiar Filtros" icon="pi pi-filter-slash"
-                    severity="secondary" class="w-full p-button-outlined border-round-xl font-semibold"
-                    (onClick)="limpiarFiltros()">
-          </p-button>
+        <div class="col-12 flex justify-content-end py-0" *ngIf="hayFiltros">
+          <button pButton type="button" icon="pi pi-filter-slash" label="Limpiar"
+                  class="p-button-text p-button-secondary p-button-sm" (click)="limpiarFiltros()"></button>
         </div>
       </div>
     </div>
 
-    <!-- Vista Mobile Cards (< 768px) -->
-    <div class="block md:hidden flex flex-column gap-3 mb-4">
-      <div *ngFor="let cot of cotizacionesFiltradas"
-           class="bg-white border-round-2xl p-3 shadow-1 border-1 surface-border flex flex-column gap-3 transition-all"
-           [class.opacity-60]="cot.oculta">
+    <!-- Celular y tablet -->
+    <div class="lista-tarjetas lg:hidden mb-4">
+      <div *ngFor="let cot of cotizacionesFiltradas" class="tarjeta-cotizacion" [class.fila-apagada]="cot.oculta">
+        <div class="flex align-items-center justify-content-between gap-2">
+          <span class="folio">{{ cot.folio }}</span>
+          <span class="text-xs text-600 flex-shrink-0">{{ formatearFecha(cot.fecha) }}</span>
+        </div>
 
-        <div class="flex align-items-center justify-content-between gap-2 min-w-0">
-          <div class="flex align-items-center gap-2 min-w-0">
-            <span class="font-mono font-bold text-xs text-sky-700 bg-sky-50 px-2 py-1 border-round-md flex-shrink-0">
-              {{ cot.folio }}
-            </span>
-            <p-tag *ngIf="cot.oculta" value="Oculta" severity="secondary" styleClass="font-bold text-xs px-2 py-0 border-round-md flex-shrink-0"></p-tag>
+        <ng-container *ngTemplateOutlet="vinculos; context: { $implicit: cot }"></ng-container>
+
+        <p class="font-bold text-900 m-0 mt-2 cliente-nombre">{{ obtenerNombreCliente(cot) }}</p>
+        <p class="text-xs text-600 m-0" *ngIf="obtenerDocumentoCliente(cot)">{{ obtenerDocumentoCliente(cot) }}</p>
+
+        <div class="flex align-items-end justify-content-between gap-2 mt-2">
+          <div class="min-w-0">
+            <p-tag [value]="getEstadoLabel(cot)" [severity]="getSeverity(cot)" />
+            <p-tag *ngIf="cot.oculta" value="Oculta" severity="secondary" styleClass="ml-1" />
+            <p class="text-xs text-600 m-0 mt-1" *ngIf="detalleEstado(cot) as detalle">{{ detalle }}</p>
           </div>
-          <span class="text-xs font-semibold text-500 flex-shrink-0">
-            {{ formatearFecha(cot.fecha) }}
-          </span>
-        </div>
-
-        <div *ngIf="(cot.tipo_origen === 'revision' && cot.folio_origen) || reemplazadaPor(cot)" class="flex flex-wrap gap-2 -mt-2">
-          <span *ngIf="cot.tipo_origen === 'revision' && cot.folio_origen" class="text-xs text-500">
-            Rev. de {{ cot.folio_origen }}
-          </span>
-          <span *ngIf="reemplazadaPor(cot) as revision" class="text-xs text-orange-700 font-semibold">
-            Reemplazada por {{ revision }}
-          </span>
-        </div>
-
-        <div class="min-w-0">
-          <p class="font-bold text-900 text-base m-0 line-height-2 overflow-hidden text-overflow-ellipsis word-break-break-word">
-            {{ obtenerNombreCliente(cot) }}
-          </p>
-          <p class="text-xs text-500 m-0 mt-1 font-mono" *ngIf="obtenerDocumentoCliente(cot)">
-            {{ obtenerDocumentoCliente(cot) }}
-          </p>
-        </div>
-
-        <div class="flex align-items-center justify-content-between pt-2 border-top-1 surface-border">
-          <div class="flex flex-column">
-            <span class="text-xs text-500 font-bold uppercase tracking-wider">Monto Total</span>
-            <span class="font-extrabold text-emerald-600 text-xl">S/ {{ cot.total | number:'1.2-2' }}</span>
-          </div>
-          <div class="w-10rem">
-            <p-dropdown
-              [options]="opcionesEstado"
-              [(ngModel)]="cot.estado"
-              (onChange)="cambiarEstado(cot, $event.value)"
-              [disabled]="!!reemplazadaPor(cot)"
-              optionLabel="label"
-              optionValue="value"
-              styleClass="p-inputtext-sm w-full border-round-xl"
-              appendTo="body">
-            </p-dropdown>
+          <div class="text-right flex-shrink-0">
+            <p class="font-bold text-900 m-0">S/ {{ cot.total | number:'1.2-2' }}</p>
+            <p class="text-xs text-600 m-0">{{ etiquetaIgv(cot) }}</p>
           </div>
         </div>
 
-        <div class="flex align-items-center justify-content-end gap-2 pt-2 border-top-1 surface-border">
-          <button pButton type="button" icon="pi pi-file-pdf" label="PDF" severity="danger" size="small"
-                  class="border-round-xl font-bold text-xs px-3" style="min-height: 44px; touch-action: manipulation;"
-                  [loading]="descargando === cot.id" (click)="descargarPDF(cot)">
-          </button>
-          <button pButton type="button" icon="pi pi-pencil" label="Editar" severity="info" size="small"
-                  class="border-round-xl font-bold text-xs px-3" style="min-height: 44px; touch-action: manipulation;"
-                  [loading]="cotizacionCargandoModal === cot.id" (click)="abrirModalEditar(cot)">
-          </button>
-          <button pButton type="button" [icon]="cot.oculta ? 'pi pi-eye' : 'pi pi-eye-slash'"
-                  [severity]="cot.oculta ? 'info' : 'secondary'" size="small"
-                  class="border-round-xl p-button-outlined font-bold text-xs" style="min-width: 44px; min-height: 44px; touch-action: manipulation;"
-                  [pTooltip]="cot.oculta ? 'Restaurar' : 'Ocultar'" (click)="ocultarCotizacion(cot)">
-          </button>
+        <div class="flex justify-content-end gap-2 mt-2 pt-2 border-top-1 surface-border">
+          <button pButton type="button" icon="pi pi-file-pdf" label="PDF"
+                  class="p-button-outlined p-button-sm boton-tactil"
+                  [loading]="descargando === cot.id" (click)="descargarPDF(cot)"></button>
+          <button pButton type="button" icon="pi pi-ellipsis-v" label="Acciones"
+                  class="p-button-outlined p-button-secondary p-button-sm boton-tactil"
+                  aria-haspopup="true" (click)="abrirAcciones($event, cot, menuAcciones)"></button>
         </div>
       </div>
 
-      <div *ngIf="cotizacionesFiltradas.length === 0" class="bg-white border-round-2xl p-5 text-center text-500 shadow-1 surface-border border-1">
-        <i class="pi pi-inbox text-5xl mb-3 opacity-30"></i>
-        <p class="font-bold text-900 m-0">No se encontraron cotizaciones</p>
-        <p class="text-sm m-0 mt-1">Ajusta los filtros de búsqueda o fecha para ver otros registros</p>
-      </div>
+      <ng-container *ngIf="cotizacionesFiltradas.length === 0">
+        <ng-container *ngTemplateOutlet="vacio"></ng-container>
+      </ng-container>
     </div>
 
-    <!-- Desktop Table View (>= 768px) -->
-    <div class="hidden md:block bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
+    <!-- Escritorio -->
+    <div class="hidden lg:block bg-white border-round-2xl overflow-hidden border-1 surface-border">
       <p-table
         [value]="cotizacionesFiltradas"
-        [paginator]="true"
+        [paginator]="cotizacionesFiltradas.length > 15"
         [rows]="15"
-        [rowsPerPageOptions]="[10, 15, 30, 50]"
+        [rowsPerPageOptions]="[15, 30, 50]"
+        [tableStyle]="{ 'table-layout': 'fixed' }"
         styleClass="p-datatable-sm">
 
         <ng-template pTemplate="header">
           <tr>
-            <th pSortableColumn="folio">Folio <p-sortIcon field="folio"></p-sortIcon></th>
-            <th pSortableColumn="fecha">Fecha <p-sortIcon field="fecha"></p-sortIcon></th>
-            <th pSortableColumn="cliente_nombre">Cliente <p-sortIcon field="cliente_nombre"></p-sortIcon></th>
-            <th class="text-right">Total Emitido</th>
-            <th>Estado</th>
-            <th class="text-center" style="width:160px">Acciones</th>
+            <th pSortableColumn="folio" style="width: 9.5rem">Folio <p-sortIcon field="folio" /></th>
+            <th pSortableColumn="fecha" style="width: 6.5rem">Fecha <p-sortIcon field="fecha" /></th>
+            <th pSortableColumn="cliente_nombre">Cliente <p-sortIcon field="cliente_nombre" /></th>
+            <th pSortableColumn="total" class="text-right" style="width: 8rem">Total <p-sortIcon field="total" /></th>
+            <th style="width: 9.5rem">Estado</th>
+            <th style="width: 6.75rem" aria-label="Acciones"></th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-cot>
-          <tr [class.opacity-50]="cot.oculta">
+          <tr [class.fila-apagada]="cot.oculta">
             <td>
-              <div class="flex align-items-center gap-2">
-                <span class="font-mono font-bold text-sm text-sky-700 bg-sky-50 px-2 py-1 border-round-md">{{ cot.folio }}</span>
-                <p-tag *ngIf="cot.oculta" value="Oculta" severity="secondary" styleClass="font-bold text-xs px-2 py-0 border-round-md"></p-tag>
-              </div>
-              <p *ngIf="cot.tipo_origen === 'revision' && cot.folio_origen" class="text-xs text-500 m-0 mt-1">
-                Rev. de {{ cot.folio_origen }}
-              </p>
-              <p *ngIf="reemplazadaPor(cot) as revision" class="text-xs text-orange-700 font-semibold m-0 mt-1">
-                Reemplazada por {{ revision }}
-              </p>
+              <span class="folio">{{ cot.folio }}</span>
+              <p-tag *ngIf="cot.oculta" value="Oculta" severity="secondary" styleClass="ml-2" />
+              <ng-container *ngTemplateOutlet="vinculos; context: { $implicit: cot }"></ng-container>
             </td>
+            <td class="text-sm text-700 white-space-nowrap">{{ formatearFecha(cot.fecha) }}</td>
             <td>
-              <span class="text-sm font-medium text-700">
-                {{ formatearFecha(cot.fecha) }}
-              </span>
-            </td>
-            <td>
-              <div class="flex flex-column max-w-18rem overflow-hidden">
-                <p class="font-bold text-900 text-sm m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="obtenerNombreCliente(cot)">
+              <div class="overflow-hidden">
+                <p class="font-semibold text-900 text-sm m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="obtenerNombreCliente(cot)">
                   {{ obtenerNombreCliente(cot) }}
                 </p>
-                <p class="text-xs text-500 m-0 mt-1 font-mono text-overflow-ellipsis overflow-hidden white-space-nowrap">
-                  {{ obtenerDocumentoCliente(cot) }}
-                </p>
+                <p class="text-xs text-600 m-0">{{ obtenerDocumentoCliente(cot) }}</p>
               </div>
             </td>
-            <td class="text-right font-bold text-emerald-600 text-base">
-              S/ {{ cot.total | number:'1.2-2' }}
+            <td class="text-right white-space-nowrap">
+              <p class="font-bold text-900 m-0">S/ {{ cot.total | number:'1.2-2' }}</p>
+              <p class="text-xs text-600 m-0">{{ etiquetaIgv(cot) }}</p>
             </td>
             <td>
-              <p-dropdown
-                [options]="opcionesEstado"
-                [(ngModel)]="cot.estado"
-                (onChange)="cambiarEstado(cot, cot.estado)"
-                [disabled]="!!reemplazadaPor(cot)"
-                [pTooltip]="reemplazadaPor(cot) ? 'Reemplazada por ' + reemplazadaPor(cot) : ''"
-                optionLabel="label"
-                optionValue="value"
-                styleClass="p-inputtext-sm w-full border-round-xl"
-                appendTo="body">
-              </p-dropdown>
+              <p-tag [value]="getEstadoLabel(cot)" [severity]="getSeverity(cot)" />
+              <p class="text-xs text-600 m-0 mt-1" *ngIf="detalleEstado(cot) as detalle">{{ detalle }}</p>
             </td>
-            <td class="text-center">
-              <div class="flex justify-content-center gap-1">
-                <p-button icon="pi pi-file-pdf" severity="danger"
-                          styleClass="p-button-text p-button-sm border-circle"
-                          pTooltip="Descargar PDF"
-                          [loading]="descargando === cot.id"
-                          (onClick)="descargarPDF(cot)">
-                </p-button>
-                <p-button icon="pi pi-pencil"
-                          styleClass="p-button-text p-button-sm border-circle"
-                          pTooltip="Editar / Revisar"
-                          [loading]="cotizacionCargandoModal === cot.id"
-                          (onClick)="abrirModalEditar(cot)">
-                </p-button>
-                <p-button [icon]="cot.oculta ? 'pi pi-eye' : 'pi pi-eye-slash'"
-                          [severity]="cot.oculta ? 'info' : 'secondary'"
-                          styleClass="p-button-text p-button-sm border-circle"
-                          [pTooltip]="cot.oculta ? 'Restaurar y mostrar cotización' : 'Ocultar cotización'"
-                          (onClick)="ocultarCotizacion(cot)">
-                </p-button>
-              </div>
+            <td class="text-center white-space-nowrap">
+              <button pButton type="button" icon="pi pi-file-pdf" class="p-button-text p-button-sm p-button-rounded"
+                      pTooltip="Descargar PDF" tooltipPosition="left" [attr.aria-label]="'Descargar PDF de ' + cot.folio"
+                      [loading]="descargando === cot.id" (click)="descargarPDF(cot)"></button>
+              <button pButton type="button" icon="pi pi-ellipsis-v" class="p-button-text p-button-secondary p-button-sm p-button-rounded"
+                      pTooltip="Más acciones" tooltipPosition="left" [attr.aria-label]="'Más acciones de ' + cot.folio" aria-haspopup="true"
+                      (click)="abrirAcciones($event, cot, menuAcciones)"></button>
             </td>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="6" class="text-center py-6 text-500">
-              <i class="pi pi-inbox text-5xl mb-2 block opacity-30"></i>
-              <span class="font-medium">No se encontraron cotizaciones registradas.</span>
-            </td>
+            <td colspan="6"><ng-container *ngTemplateOutlet="vacio"></ng-container></td>
           </tr>
         </ng-template>
       </p-table>
     </div>
   </ng-container>
-
-  <!-- Spinner -->
-  <div *ngIf="cargando"
-       class="flex justify-content-center align-items-center"
-       style="min-height:300px">
-    <p-progressSpinner strokeWidth="3"></p-progressSpinner>
-  </div>
-
 </div>
 
+<!-- De dónde viene o qué la reemplazó -->
+<ng-template #vinculos let-cot>
+  <p *ngIf="cot.tipo_origen === 'revision' && cot.folio_origen" class="text-xs text-600 m-0 mt-1">Rev. de {{ cot.folio_origen }}</p>
+  <p *ngIf="cot.tipo_origen === 'duplicado' && cot.folio_origen" class="text-xs text-600 m-0 mt-1">Copia de {{ cot.folio_origen }}</p>
+  <p *ngIf="reemplazadaPor(cot) as revision" class="text-xs text-amber-800 font-semibold m-0 mt-1">Reemplazada por {{ revision }}</p>
+</ng-template>
 
-<!-- MODAL EDITAR -->
-<p-dialog
-  [(visible)]="modalEditarVisible"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [dismissableMask]="true"
-  [breakpoints]="{ '960px': '85vw', '640px': '96vw' }"
-  [style]="{ width: '90vw', maxWidth: '520px' }"
-  (onHide)="cerrarModalEditar()"
-  appendTo="body">
-
-  <ng-template pTemplate="header">
-    <div>
-      <p class="font-bold text-900 text-lg m-0 flex align-items-center gap-2">
-        <i class="pi pi-file-edit text-sky-600"></i>Editar / Duplicar Cotización
-      </p>
-      <p class="text-xs text-500 m-0 mt-1 font-medium">
-        Folio: {{ cotizacionParaEditar?.folio }} · {{ cotizacionParaEditar?.cliente_nombre }}
-      </p>
-    </div>
-  </ng-template>
-
-  <div class="flex flex-column gap-4 pt-2 pb-1" *ngIf="cotizacionParaEditar">
-
-    <!-- Empresa -->
-    <div>
-      <p class="text-xs font-bold text-700 uppercase mb-2 m-0 flex align-items-center gap-2">
-        <i class="pi pi-building text-sky-600"></i>
-        Empresa Emisora Destino
-      </p>
-      <div class="flex flex-column gap-2">
-
-        <!-- Misma empresa -->
-        <div class="flex align-items-center gap-3 p-3 border-round-xl cursor-pointer transition-all surface-ground border-1 surface-border"
-             [class.border-sky-500]="opcionEditar.empresaOrigen === 'misma'"
-             (click)="opcionEditar.empresaOrigen = 'misma'; onEmpresaOrigenChange()">
-          <p-radioButton name="empresaOrigen" value="misma"
-                         [(ngModel)]="opcionEditar.empresaOrigen"
-                         (onClick)="onEmpresaOrigenChange()"
-                         inputId="opMisma">
-          </p-radioButton>
-          <div>
-            <label for="opMisma" class="font-bold text-sm cursor-pointer text-900">
-              Misma Empresa
-            </label>
-            <p class="text-xs text-500 m-0 mt-1">{{ empresaActiva?.nombre_comercial }}</p>
-          </div>
-        </div>
-
-        <!-- Otra empresa -->
-        <div class="flex flex-column gap-2 p-3 border-round-xl cursor-pointer transition-all surface-ground border-1 surface-border"
-             [class.border-sky-500]="opcionEditar.empresaOrigen === 'otra'">
-
-          <div class="flex align-items-center gap-3"
-               (click)="opcionEditar.empresaOrigen = 'otra'; onEmpresaOrigenChange()">
-            <p-radioButton name="empresaOrigen" value="otra"
-                           [(ngModel)]="opcionEditar.empresaOrigen"
-                           (onClick)="onEmpresaOrigenChange()"
-                           inputId="opOtra">
-            </p-radioButton>
-            <label for="opOtra" class="font-bold text-sm cursor-pointer text-900">
-              Transferir a otra Empresa
-            </label>
-          </div>
-
-          <div *ngIf="opcionEditar.empresaOrigen === 'otra'" class="pl-5 flex flex-column gap-2 mt-2">
-            <p-progressSpinner *ngIf="cargandoEmpresas"
-                               styleClass="w-2rem h-2rem" strokeWidth="4">
-            </p-progressSpinner>
-            <ng-container *ngIf="!cargandoEmpresas">
-              <div *ngFor="let emp of empresasDisponibles"
-                   class="flex align-items-center gap-2 p-2 border-round-lg cursor-pointer hover:surface-100 transition-colors"
-                   [class.surface-100]="opcionEditar.empresaSeleccionadaId === emp.id"
-                   (click)="opcionEditar.empresaSeleccionadaId = emp.id; $event.stopPropagation()">
-                <p-radioButton name="empresaSeleccionada" [value]="emp.id"
-                               [(ngModel)]="opcionEditar.empresaSeleccionadaId"
-                               [inputId]="'emp_' + emp.id">
-                </p-radioButton>
-                <label [for]="'emp_' + emp.id" class="text-sm cursor-pointer font-medium">
-                  {{ emp.nombre_comercial }}
-                </label>
-              </div>
-              <p *ngIf="empresasDisponibles.length === 0"
-                 class="text-xs text-500 m-0">
-                No dispones de empresas adicionales asignadas.
-              </p>
-            </ng-container>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <p-divider styleClass="m-0"></p-divider>
-
-    <!-- Acción sobre original -->
-    <div>
-      <p class="text-xs font-bold text-700 uppercase mb-2 m-0 flex align-items-center gap-2">
-        <i class="pi pi-question-circle text-amber-500"></i>
-        Estado del Registro Original
-      </p>
-      <div class="flex flex-column gap-2">
-
-        <div class="flex align-items-start gap-3 p-3 border-round-xl surface-ground border-1 surface-border"
-             [class.cursor-pointer]="!reemplazadaPor(cotizacionParaEditar!)"
-             [class.opacity-50]="!!reemplazadaPor(cotizacionParaEditar!)"
-             [class.border-amber-500]="opcionEditar.accionOriginal === 'anular'"
-             (click)="!reemplazadaPor(cotizacionParaEditar!) && (opcionEditar.accionOriginal = 'anular')">
-          <p-radioButton name="accionOriginal" value="anular"
-                         [(ngModel)]="opcionEditar.accionOriginal"
-                         [disabled]="!!reemplazadaPor(cotizacionParaEditar!)"
-                         inputId="opAnular">
-          </p-radioButton>
-          <div>
-            <label for="opAnular" class="font-bold text-sm cursor-pointer text-900 flex align-items-center gap-2">
-              Crear una revisión que la reemplace
-              <span *ngIf="!reemplazadaPor(cotizacionParaEditar!)" class="text-xs bg-amber-100 text-amber-800 font-semibold px-2 py-1 border-round">Recomendado</span>
-            </label>
-            <p class="text-xs text-500 m-0 mt-1" *ngIf="!reemplazadaPor(cotizacionParaEditar!)">
-              La original pasa a Anulada recién cuando guardes la revisión. Si no la guardas, sigue vigente.
-            </p>
-            <p class="text-xs text-orange-700 font-semibold m-0 mt-1" *ngIf="reemplazadaPor(cotizacionParaEditar!) as revision">
-              Ya fue reemplazada por {{ revision }}. Para cambiarla, revisa {{ revision }}.
-            </p>
-          </div>
-        </div>
-
-        <div class="flex align-items-start gap-3 p-3 border-round-xl cursor-pointer surface-ground border-1 surface-border"
-             [class.border-sky-500]="opcionEditar.accionOriginal === 'mantener'"
-             (click)="opcionEditar.accionOriginal = 'mantener'">
-          <p-radioButton name="accionOriginal" value="mantener"
-                         [(ngModel)]="opcionEditar.accionOriginal"
-                         inputId="opMantener">
-          </p-radioButton>
-          <div>
-            <label for="opMantener" class="font-bold text-sm cursor-pointer text-900">
-              Duplicar y mantener la original
-            </label>
-            <p class="text-xs text-500 m-0 mt-1">
-              Crea una cotización nueva con los mismos datos; la original no cambia.
-            </p>
-          </div>
-        </div>
-
-      </div>
-    </div>
+<ng-template #vacio>
+  <div class="text-center py-5 px-3">
+    <p class="font-semibold text-900 m-0">{{ cotizaciones.length ? 'Ninguna cotización con estos filtros' : 'Todavía no hay cotizaciones' }}</p>
+    <button *ngIf="hayFiltros" pButton type="button" label="Limpiar filtros" class="p-button-text p-button-sm mt-2" (click)="limpiarFiltros()"></button>
   </div>
-
-  <ng-template pTemplate="footer">
-    <div class="flex gap-2 justify-content-end">
-      <p-button label="Cancelar" severity="secondary" pButtonText
-                (onClick)="modalEditarVisible = false"
-                [disabled]="procesandoEdicion">
-      </p-button>
-      <p-button label="Continuar al Cotizador"
-                icon="pi pi-arrow-right" iconPos="right"
-                class="border-round-xl font-bold"
-                [loading]="procesandoEdicion"
-                (onClick)="confirmarEdicion()">
-      </p-button>
-    </div>
-  </ng-template>
-</p-dialog>
+</ng-template>

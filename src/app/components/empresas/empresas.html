@@ -5,12 +5,8 @@
   <!-- Header Superior -->
   <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
     <div>
-      <h1 class="text-2xl md:text-3xl font-bold text-900 m-0 tracking-tight flex align-items-center gap-2">
-        <i class="pi pi-building text-sky-600"></i>Gestión de Empresas
-      </h1>
-      <p class="text-500 text-sm mt-1 mb-0 font-medium">
-        Administra la información corporativa, identidad visual y cuentas bancarias asociadas
-      </p>
+      <h1 class="text-2xl font-bold text-900 m-0">{{ esAdminGeneral ? 'Empresas' : 'Mi empresa' }}</h1>
+      <p class="text-600 text-sm mt-1 mb-0">Datos, opciones de cotización, imagen y cuentas bancarias.</p>
     </div>
     <div>
       <p-button *ngIf="esAdminGeneral" label="Nueva Empresa" icon="pi pi-plus"
@@ -18,16 +14,15 @@
     </div>
   </div>
 
-  <!-- Spinner de Carga -->
-  <div *ngIf="cargando" class="flex flex-column align-items-center justify-content-center gap-4 py-8">
-    <p-progressSpinner strokeWidth="4" animationDuration=".8s" [style]="{ width: '60px', height: '60px' }" />
-    <p class="text-500 text-sm m-0 font-medium">Cargando empresas...</p>
+  <!-- Carga inicial -->
+  <div *ngIf="cargando" aria-busy="true">
+    <div class="esqueleto" style="height: 20rem"></div>
   </div>
 
   <div *ngIf="!cargando">
 
-    <!-- KPI Cards -->
-    <div class="grid mb-4">
+    <!-- KPI Cards: solo tienen sentido con varias empresas -->
+    <div class="grid mb-4" *ngIf="esAdminGeneral">
       <div class="col-12 md:col-4">
         <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-sky-500 h-full card-hover-effect">
           <div class="flex align-items-center justify-content-between mb-2">
@@ -69,7 +64,7 @@
     </div>
 
     <!-- Buscador Global y Contador -->
-    <div class="bg-white border-round-2xl shadow-1 p-3 md:p-4 mb-4 border-1 surface-border">
+    <div *ngIf="empresas.length > 3" class="bg-white border-round-2xl shadow-1 p-3 md:p-4 mb-4 border-1 surface-border">
       <div class="flex flex-column sm:flex-row align-items-stretch sm:align-items-center justify-content-between gap-3">
         <span class="font-bold text-900 text-base">
           Empresas Registradas (<span class="text-sky-600 font-extrabold">{{ empresasFiltradas.length }}</span>)
@@ -83,7 +78,7 @@
     </div>
 
     <!-- Vista Mobile Cards (< 768px) -->
-    <div class="block md:hidden flex flex-column gap-3 mb-4">
+    <div class="flex md:hidden flex-column gap-3 mb-4">
       <div *ngFor="let emp of empresasFiltradas" class="bg-white border-round-2xl p-3 shadow-1 border-1 surface-border flex flex-column gap-3">
         <div class="flex align-items-center justify-content-between gap-2 min-w-0">
           <div class="flex align-items-center gap-2 min-w-0">
@@ -135,7 +130,7 @@
 
     <!-- Desktop Table View (>= 768px) -->
     <div class="hidden md:block bg-white border-round-2xl shadow-1 overflow-hidden border-1 surface-border">
-      <p-table [value]="empresasFiltradas" [rows]="15" [paginator]="true" [rowsPerPageOptions]="[10, 15, 25, 50]"
+      <p-table [value]="empresasFiltradas" [rows]="15" [paginator]="empresasFiltradas.length > 15" [rowsPerPageOptions]="[15, 25, 50]"
         [rowHover]="true" styleClass="p-datatable-sm">
 
         <ng-template pTemplate="header">
@@ -219,221 +214,210 @@
 </div>
 
 <!-- Modal Formulario Empresa -->
-<p-dialog header="{{ esEdicion ? 'Editar Empresa' : 'Nueva Empresa' }}" [(visible)]="empresaDialog" [modal]="true"
+<p-dialog header="{{ esEdicion ? 'Editar empresa' : 'Nueva empresa' }}" [(visible)]="empresaDialog" [modal]="true"
   [breakpoints]="{ '960px': '85vw', '640px': '96vw' }"
-  [resizable]="false" [draggable]="false" [dismissableMask]="true"
-  [style]="{'width':'95vw','max-width':'800px'}" (onHide)="cerrarModal()" appendTo="body">
+  [resizable]="false" [draggable]="false" [dismissableMask]="false"
+  [style]="{'width':'95vw','max-width':'760px'}" (onHide)="cerrarModal()" appendTo="body">
 
-  <form [formGroup]="empresaForm" class="flex flex-column gap-4 pt-2">
+  <form [formGroup]="empresaForm">
+    <p-tabView [(activeIndex)]="pestanaActiva">
 
-    <!-- Sección: Información Principal -->
-    <div class="surface-card border-round-xl p-4 border-1 surface-border">
-      <div class="flex align-items-center gap-2 mb-3 text-sky-600 font-bold text-lg border-bottom-1 surface-border pb-2">
-        <i class="pi pi-info-circle"></i>
-        <span>Información Principal</span>
-      </div>
-
-      <div class="grid">
-        <div class="col-12 md:col-6 flex flex-column gap-2">
-          <label class="font-semibold text-900 text-sm">ID de Empresa <span class="text-red-500">*</span></label>
-          <input pInputText type="text" formControlName="id" class="w-full border-round-xl font-mono" placeholder="Ej: EMP001" maxlength="10"
-            style="text-transform:uppercase" (input)="forzarMayusculas('id')">
-          <small class="text-red-500 text-xs" *ngIf="empresaForm.get('id')?.invalid && empresaForm.get('id')?.dirty">
-            {{ getErrorMensaje('id', 'required') || getErrorMensaje('id', 'pattern') || getErrorMensaje('id', 'idDuplicado') }}
-          </small>
-        </div>
-
-        <div class="col-12 md:col-6 flex flex-column gap-2">
-          <label class="font-semibold text-900 text-sm">Nombre Comercial <span class="text-red-500">*</span></label>
-          <input pInputText type="text" formControlName="nombre_comercial" class="w-full border-round-xl"
-            placeholder="Nombre visible para clientes">
-          <small class="text-red-500 text-xs" *ngIf="empresaForm.get('nombre_comercial')?.invalid && empresaForm.get('nombre_comercial')?.dirty">
-            {{ getErrorMensaje('nombre_comercial', 'required') || getErrorMensaje('nombre_comercial', 'minlength') }}
-          </small>
-        </div>
-
-        <div class="col-12 flex flex-column gap-2">
-          <label class="font-semibold text-900 text-sm">Razón Social</label>
-          <input pInputText type="text" formControlName="razon_social" class="w-full border-round-xl"
-            placeholder="Nombre legal completo de la empresa">
-        </div>
-
-        <div class="col-12 md:col-6 flex flex-column gap-2">
-          <label class="font-semibold text-900 text-sm">RUC <span class="text-red-500">*</span></label>
-          <div class="flex gap-2">
-            <input pInputText type="text" formControlName="ruc" class="w-full border-round-xl font-mono" placeholder="11 dígitos" maxlength="11">
-            <p-button icon="pi pi-search" [disabled]="empresaForm.get('ruc')?.invalid" (click)="consultarRUC()" />
+      <!-- Datos -->
+      <p-tabPanel header="Datos">
+        <div class="grid panel-empresa">
+          <div class="col-12 md:col-6 flex flex-column gap-2">
+            <label for="empresaRuc" class="font-semibold text-900 text-sm">RUC <span class="text-red-500">*</span></label>
+            <div class="flex gap-2">
+              <input pInputText id="empresaRuc" type="text" formControlName="ruc" class="w-full" placeholder="11 dígitos" maxlength="11" inputmode="numeric">
+              <p-button icon="pi pi-search" ariaLabel="Buscar en SUNAT" pTooltip="Buscar en SUNAT" [loading]="consultandoRuc"
+                        [disabled]="empresaForm.get('ruc')?.invalid" (click)="consultarRUC()" />
+            </div>
+            <small class="text-red-600" *ngIf="empresaForm.get('ruc')?.invalid && empresaForm.get('ruc')?.touched">
+              {{ getErrorMensaje('ruc', 'required') || getErrorMensaje('ruc', 'pattern') || getErrorMensaje('ruc', 'rucDuplicado') }}
+            </small>
           </div>
-          <small class="text-red-500 text-xs" *ngIf="empresaForm.get('ruc')?.invalid && empresaForm.get('ruc')?.dirty">
-            {{ getErrorMensaje('ruc', 'required') || getErrorMensaje('ruc', 'pattern') || getErrorMensaje('ruc', 'rucDuplicado') }}
-          </small>
-        </div>
 
-        <div class="col-12 md:col-6 flex flex-column gap-2">
-          <label class="font-semibold text-900 text-sm">Prefijo de Cotización <span class="text-red-500">*</span></label>
-          <input pInputText type="text" formControlName="prefijo" class="w-full border-round-xl font-mono"
-            placeholder="Autogenerado o personalizable" maxlength="5" style="text-transform:uppercase"
-            (input)="forzarMayusculas('prefijo')">
-          <small class="text-500 text-xs" *ngIf="!empresaForm.get('prefijo')?.errors">Ejemplo correlativo: {{ prefijoEjemplo }}</small>
-          <small class="text-red-500 text-xs" *ngIf="empresaForm.get('prefijo')?.hasError('prefijoDuplicado')">
-            {{ empresaForm.get('prefijo')?.getError('prefijoDuplicado') }}
-          </small>
-        </div>
-      </div>
-    </div>
-
-    <!-- Sección: Contacto -->
-    <div class="surface-card border-round-xl p-4 border-1 surface-border">
-      <div class="flex align-items-center gap-2 mb-3 text-sky-600 font-bold text-lg border-bottom-1 surface-border pb-2">
-        <i class="pi pi-phone"></i>
-        <span>Contacto y Ubicación</span>
-      </div>
-
-      <div class="grid">
-        <div class="col-12 md:col-6 flex flex-column gap-2">
-          <label class="font-semibold text-900 text-sm">Dirección Fiscal</label>
-          <input pInputText type="text" formControlName="direccion" class="w-full border-round-xl" placeholder="Dirección legals">
-        </div>
-
-        <div class="col-12 md:col-6 flex flex-column gap-2">
-          <label class="font-semibold text-900 text-sm">Teléfonos de Contacto</label>
-          <input pInputText type="text" formControlName="telefonos" class="w-full border-round-xl" placeholder="Ej: 01-2345678, 987654321">
-        </div>
-
-        <div class="col-12 md:col-6 flex flex-column gap-2">
-          <label class="font-semibold text-900 text-sm">Correo Electrónico</label>
-          <input pInputText type="email" formControlName="correo" class="w-full border-round-xl" placeholder="contacto@empresa.com">
-        </div>
-
-        <div class="col-12 md:col-6 flex flex-column gap-2">
-          <label class="font-semibold text-900 text-sm">Contacto de Aprobación</label>
-          <input pInputText type="text" formControlName="contacto_aprobacion" class="w-full border-round-xl" placeholder="Persona autorizada">
-        </div>
-
-        <div class="col-12 flex flex-column gap-2">
-          <label class="font-semibold text-900 text-sm">Lugares de entrega</label>
-          <p-chips formControlName="lugares_entrega" [allowDuplicate]="false" [addOnBlur]="true" [max]="10"
-                   styleClass="w-full" inputStyleClass="w-full"
-                   placeholder="Escribe una opción y presiona Enter (p. ej. PUESTO EN OBRA)"></p-chips>
-          <small class="text-500">
-            Aparecen en el cotizador y en el PDF tal como se escriben. Déjalo vacío si la empresa no los usa.
-          </small>
-        </div>
-      </div>
-    </div>
-
-    <!-- Sección: Identidad Visual -->
-    <div class="surface-card border-round-xl p-4 border-1 surface-border">
-      <div class="flex align-items-center gap-2 mb-3 text-sky-600 font-bold text-lg border-bottom-1 surface-border pb-2">
-        <i class="pi pi-palette"></i>
-        <span>Identidad Visual</span>
-      </div>
-
-      <div class="grid align-items-center">
-        <div class="col-12 md:col-4 flex flex-column gap-2">
-          <label class="font-semibold text-900 text-sm">Color Corporativo</label>
-          <div class="flex align-items-center gap-3">
-            <p-colorPicker formControlName="color"></p-colorPicker>
-            <div class="w-2rem h-2rem border-round-md border-1 surface-border shadow-1" [style.background]="colorEmpresa"></div>
-            <span class="font-mono text-sm text-700 font-semibold">{{ colorEmpresa }}</span>
+          <div class="col-12 md:col-6 flex flex-column gap-2">
+            <label for="empresaNombre" class="font-semibold text-900 text-sm">Nombre comercial <span class="text-red-500">*</span></label>
+            <input pInputText id="empresaNombre" type="text" formControlName="nombre_comercial" class="w-full" placeholder="El nombre que ven tus clientes">
+            <small class="text-red-600" *ngIf="empresaForm.get('nombre_comercial')?.invalid && empresaForm.get('nombre_comercial')?.touched">
+              {{ getErrorMensaje('nombre_comercial', 'required') || getErrorMensaje('nombre_comercial', 'minlength') }}
+            </small>
           </div>
-        </div>
 
-        <div class="col-12 md:col-4 flex flex-column gap-2">
-          <label class="font-semibold text-900 text-sm">Logo Corporativo</label>
-          <div class="flex align-items-center gap-3">
-            <input type="file" #logoInput (change)="subirLogo($event)" accept="image/*" style="display:none">
-            <p-button label="Subir Logo" icon="pi pi-upload" [outlined]="true" size="small" (click)="logoInput.click()" />
-            <div class="w-3rem h-3rem border-round-lg overflow-hidden border-1 surface-border flex align-items-center justify-content-center bg-white" *ngIf="empresaForm.get('ruta_logo')?.value">
-              <img [src]="empresaForm.get('ruta_logo')?.value" alt="Logo" style="max-width:100%;max-height:100%;object-fit:contain">
+          <div class="col-12 flex flex-column gap-2">
+            <label for="empresaRazon" class="font-semibold text-900 text-sm">Razón social</label>
+            <input pInputText id="empresaRazon" type="text" formControlName="razon_social" class="w-full" placeholder="Nombre legal completo">
+          </div>
+
+          <div class="col-12 md:col-6 flex flex-column gap-2">
+            <label for="empresaId" class="font-semibold text-900 text-sm">Código interno <span class="text-red-500">*</span></label>
+            <input pInputText id="empresaId" type="text" formControlName="id" class="w-full" placeholder="Ej: EMP001" maxlength="10"
+              style="text-transform:uppercase" (input)="forzarMayusculas('id')">
+            <small class="text-red-600" *ngIf="empresaForm.get('id')?.invalid && empresaForm.get('id')?.touched">
+              {{ getErrorMensaje('id', 'required') || getErrorMensaje('id', 'pattern') || getErrorMensaje('id', 'idDuplicado') }}
+            </small>
+            <small class="text-600" *ngIf="esEdicion">No se puede cambiar.</small>
+          </div>
+
+          <div class="col-12 md:col-6 flex flex-column gap-2">
+            <label for="empresaPrefijo" class="font-semibold text-900 text-sm">Prefijo de los folios <span class="text-red-500">*</span></label>
+            <input pInputText id="empresaPrefijo" type="text" formControlName="prefijo" class="w-full"
+              placeholder="Hasta 5 letras o números" maxlength="5" style="text-transform:uppercase"
+              (input)="forzarMayusculas('prefijo')">
+            <small class="text-600" *ngIf="!empresaForm.get('prefijo')?.errors">Ejemplo: {{ prefijoEjemplo }}</small>
+            <small class="text-red-600" *ngIf="empresaForm.get('prefijo')?.invalid && empresaForm.get('prefijo')?.touched">
+              {{ empresaForm.get('prefijo')?.getError('prefijoDuplicado') || getErrorMensaje('prefijo', 'required') || getErrorMensaje('prefijo', 'pattern') }}
+            </small>
+          </div>
+
+          <div class="col-12 flex flex-column gap-2">
+            <label for="empresaDireccion" class="font-semibold text-900 text-sm">Dirección fiscal</label>
+            <input pInputText id="empresaDireccion" type="text" formControlName="direccion" class="w-full" placeholder="Av. Principal 123, Lima">
+          </div>
+
+          <div class="col-12 md:col-6 flex flex-column gap-2">
+            <label for="empresaTelefonos" class="font-semibold text-900 text-sm">Teléfonos</label>
+            <input pInputText id="empresaTelefonos" type="text" formControlName="telefonos" class="w-full" placeholder="01-2345678, 987654321">
+          </div>
+
+          <div class="col-12 md:col-6 flex flex-column gap-2">
+            <label for="empresaCorreo" class="font-semibold text-900 text-sm">Correo</label>
+            <input pInputText id="empresaCorreo" type="email" formControlName="correo" class="w-full" placeholder="contacto@empresa.com">
+          </div>
+
+          <div class="col-12">
+            <div class="fila-opcion">
+              <div>
+                <label for="empresaActiva" class="font-semibold text-900 text-sm block">Empresa activa</label>
+                <small class="text-600">Si la apagas, nadie podrá cotizar con esta empresa.</small>
+              </div>
+              <p-inputSwitch inputId="empresaActiva" formControlName="activa"></p-inputSwitch>
             </div>
           </div>
         </div>
+      </p-tabPanel>
 
-        <div class="col-12 md:col-4 flex flex-column gap-2">
-          <label class="font-semibold text-900 text-sm">Firma Digital</label>
-          <div class="flex align-items-center gap-3">
-            <input type="file" #firmaInput (change)="subirFirma($event)" accept="image/*" style="display:none">
-            <p-button label="Subir Firma" icon="pi pi-upload" [outlined]="true" size="small" (click)="firmaInput.click()" />
-            <div class="w-3rem h-3rem border-round-lg overflow-hidden border-1 surface-border flex align-items-center justify-content-center bg-white" *ngIf="empresaForm.get('ruta_firma')?.value">
-              <img [src]="empresaForm.get('ruta_firma')?.value" alt="Firma" style="max-width:100%;max-height:100%;object-fit:contain">
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Sección: Cuentas Bancarias -->
-    <div class="surface-card border-round-xl p-4 border-1 surface-border">
-      <div class="flex align-items-center justify-content-between mb-3 border-bottom-1 surface-border pb-2">
-        <div class="flex align-items-center gap-2 text-sky-600 font-bold text-lg">
-          <i class="pi pi-credit-card"></i>
-          <span>Cuentas Bancarias</span>
-        </div>
-        <p-button icon="pi pi-plus" label="Agregar Cuenta" [outlined]="true" size="small" (click)="agregarCuenta()" />
-      </div>
-
-      <div formArrayName="cuentas_bancarias" class="flex flex-column gap-3">
-        <ng-container *ngIf="tieneCuentas">
-          <div *ngFor="let cuenta of cuentasBancarias.controls; let i = index" [formGroupName]="i" class="p-3 border-round-xl border-1 surface-border surface-50">
-            <div class="flex justify-content-between align-items-center mb-3">
-              <span class="font-bold text-900 text-sm">Cuenta Bancaria #{{ i + 1 }}</span>
-              <p-button icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true" size="small" (click)="eliminarCuenta(i)" />
-            </div>
-
-            <div class="grid">
-              <div class="col-12 md:col-3 flex flex-column gap-1">
-                <label class="text-xs font-semibold text-700">Banco *</label>
-                <input pInputText type="text" formControlName="banco" class="w-full border-round-lg p-inputtext-sm" placeholder="Ej: BCP">
-              </div>
-              <div class="col-12 md:col-3 flex flex-column gap-1">
-                <label class="text-xs font-semibold text-700">Tipo *</label>
-                <input pInputText type="text" formControlName="tipo_cuenta" class="w-full border-round-lg p-inputtext-sm" placeholder="Corriente/Ahorros">
-              </div>
-              <div class="col-12 md:col-3 flex flex-column gap-1">
-                <label class="text-xs font-semibold text-700">Número *</label>
-                <input pInputText type="text" formControlName="numero" class="w-full border-round-lg p-inputtext-sm font-mono" placeholder="N° de Cuenta">
-              </div>
-              <div class="col-12 md:col-3 flex flex-column gap-1">
-                <label class="text-xs font-semibold text-700">CCI</label>
-                <input pInputText type="text" formControlName="cci" class="w-full border-round-lg p-inputtext-sm font-mono" placeholder="20 dígitos CCI">
-              </div>
-            </div>
-          </div>
-        </ng-container>
-
-        <div *ngIf="!tieneCuentas" class="text-center py-4 text-500">
-          <i class="pi pi-credit-card text-3xl mb-2 opacity-30"></i>
-          <p class="text-sm m-0">No se han registrado cuentas bancarias para esta empresa</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Sección: Estado y Visibilidad -->
-    <div class="surface-card border-round-xl p-4 border-1 surface-border">
-      <div class="grid">
-        <div class="col-12 md:col-6 flex align-items-center gap-3">
-          <p-toggleButton formControlName="activa"></p-toggleButton>
+      <!-- Cotización -->
+      <p-tabPanel header="Cotización">
+        <div class="flex flex-column gap-4 panel-empresa pt-2">
           <div>
-            <label class="font-bold text-900 text-sm block">Empresa Activa</label>
-            <small class="text-500">Habilita esta empresa para emitir cotizaciones</small>
+            <span id="etiquetaModoIgv" class="font-semibold text-900 text-sm block mb-2">IGV de una cotización nueva</span>
+            <p-selectButton [options]="modosIgv" formControlName="modo_igv" optionLabel="label" optionValue="value"
+                            [allowEmpty]="false" ariaLabelledBy="etiquetaModoIgv"></p-selectButton>
+            <small class="text-600 block mt-2">Con esta opción abre el cotizador. Quien cotiza la puede cambiar en cada cotización.</small>
+          </div>
+
+          <div class="flex flex-column gap-2">
+            <label for="empresaLugares" class="font-semibold text-900 text-sm">Lugares de entrega</label>
+            <p-chips inputId="empresaLugares" formControlName="lugares_entrega" [allowDuplicate]="false" [addOnBlur]="true" [max]="10"
+                     class="w-full" styleClass="w-full" inputStyleClass="w-full"
+                     placeholder="Escribe una opción y presiona Enter (p. ej. PUESTO EN OBRA)"></p-chips>
+            <small class="text-600">Salen en el cotizador y en el PDF tal como se escriben. Déjalo vacío si la empresa no los usa.</small>
+          </div>
+
+          <div class="flex flex-column gap-2">
+            <label for="empresaContacto" class="font-semibold text-900 text-sm">Contacto de aprobación</label>
+            <input pInputText id="empresaContacto" type="text" formControlName="contacto_aprobacion" class="w-full" placeholder="Jefe comercial · 987 654 321">
+            <small class="text-600">A quién debe avisar el cliente para aprobar la cotización. Se imprime si se activa en el cotizador.</small>
           </div>
         </div>
+      </p-tabPanel>
 
-        <div class="col-12 md:col-6 flex align-items-center gap-3">
-          <p-toggleButton formControlName="mostrar_cuentas"></p-toggleButton>
+      <!-- Imagen -->
+      <p-tabPanel header="Imagen">
+        <div class="flex flex-column gap-4 panel-empresa pt-2">
+          <div class="flex flex-column gap-2">
+            <span class="font-semibold text-900 text-sm">Color de la empresa</span>
+            <div class="flex align-items-center gap-3">
+              <p-colorPicker formControlName="color"></p-colorPicker>
+              <span class="text-sm text-700">{{ colorEmpresa }}</span>
+            </div>
+            <small class="text-600">Se usa en la app y en los títulos del PDF.</small>
+          </div>
+
+          <div class="flex flex-column gap-2">
+            <span class="font-semibold text-900 text-sm">Logo</span>
+            <div class="flex align-items-center gap-3">
+              <div class="imagen-vista">
+                <img *ngIf="empresaForm.get('ruta_logo')?.value" [src]="empresaForm.get('ruta_logo')?.value" alt="Logo actual">
+                <i *ngIf="!empresaForm.get('ruta_logo')?.value" class="pi pi-image text-400 text-xl"></i>
+              </div>
+              <input type="file" #logoInput (change)="subirLogo($event)" accept="image/*" style="display:none">
+              <p-button [label]="empresaForm.get('ruta_logo')?.value ? 'Cambiar logo' : 'Subir logo'" icon="pi pi-upload" [outlined]="true" size="small" (click)="logoInput.click()" />
+            </div>
+          </div>
+
+          <div class="flex flex-column gap-2">
+            <span class="font-semibold text-900 text-sm">Firma</span>
+            <div class="flex align-items-center gap-3">
+              <div class="imagen-vista">
+                <img *ngIf="empresaForm.get('ruta_firma')?.value" [src]="empresaForm.get('ruta_firma')?.value" alt="Firma actual">
+                <i *ngIf="!empresaForm.get('ruta_firma')?.value" class="pi pi-pencil text-400 text-xl"></i>
+              </div>
+              <input type="file" #firmaInput (change)="subirFirma($event)" accept="image/*" style="display:none">
+              <p-button [label]="empresaForm.get('ruta_firma')?.value ? 'Cambiar firma' : 'Subir firma'" icon="pi pi-upload" [outlined]="true" size="small" (click)="firmaInput.click()" />
+            </div>
+          </div>
+          <small class="text-600">Las imágenes se suben cuando guardas la empresa.</small>
+        </div>
+      </p-tabPanel>
+
+      <!-- Cuentas -->
+      <p-tabPanel header="Cuentas">
+        <div class="flex flex-column gap-3 panel-empresa pt-2">
+          <div class="fila-opcion">
+            <div>
+              <label for="empresaMostrarCuentas" class="font-semibold text-900 text-sm block">Mostrar cuentas en el PDF</label>
+              <small class="text-600">Si lo apagas, el PDF imprime el contacto de aprobación.</small>
+            </div>
+            <p-inputSwitch inputId="empresaMostrarCuentas" formControlName="mostrar_cuentas"></p-inputSwitch>
+          </div>
+
+          <div formArrayName="cuentas_bancarias" class="flex flex-column gap-3">
+            <div *ngFor="let cuenta of cuentasBancarias.controls; let i = index" [formGroupName]="i" class="p-3 border-round-xl border-1 surface-border surface-50">
+              <div class="flex justify-content-between align-items-center mb-2">
+                <span class="font-semibold text-900 text-sm">Cuenta {{ i + 1 }}</span>
+                <p-button icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true" size="small"
+                          [ariaLabel]="'Quitar cuenta ' + (i + 1)" (click)="eliminarCuenta(i)" />
+              </div>
+
+              <div class="grid">
+                <div class="col-12 md:col-3 flex flex-column gap-1">
+                  <label class="text-xs font-semibold text-700" [for]="'banco' + i">Banco *</label>
+                  <input pInputText [id]="'banco' + i" type="text" formControlName="banco" class="w-full p-inputtext-sm" placeholder="BCP">
+                </div>
+                <div class="col-12 md:col-3 flex flex-column gap-1">
+                  <label class="text-xs font-semibold text-700" [for]="'tipo' + i">Tipo *</label>
+                  <input pInputText [id]="'tipo' + i" type="text" formControlName="tipo_cuenta" class="w-full p-inputtext-sm" placeholder="Corriente">
+                </div>
+                <div class="col-12 md:col-3 flex flex-column gap-1">
+                  <label class="text-xs font-semibold text-700" [for]="'numero' + i">Número *</label>
+                  <input pInputText [id]="'numero' + i" type="text" formControlName="numero" class="w-full p-inputtext-sm" placeholder="191-1234567-0-01">
+                </div>
+                <div class="col-12 md:col-3 flex flex-column gap-1">
+                  <label class="text-xs font-semibold text-700" [for]="'cci' + i">CCI</label>
+                  <input pInputText [id]="'cci' + i" type="text" formControlName="cci" class="w-full p-inputtext-sm" placeholder="20 dígitos">
+                </div>
+              </div>
+              <small class="text-red-600" *ngIf="cuenta.invalid && cuenta.touched">
+                Completa banco, tipo y número (6 a 30 caracteres). El CCI, si lo pones, lleva 20 dígitos.
+              </small>
+            </div>
+
+            <p *ngIf="!tieneCuentas" class="text-sm text-600 m-0">Esta empresa todavía no tiene cuentas bancarias.</p>
+          </div>
+
           <div>
-            <label class="font-bold text-900 text-sm block">Mostrar Cuentas Bancarias</label>
-            <small class="text-500">Incluye los datos bancarios en el PDF imprimible</small>
+            <p-button icon="pi pi-plus" label="Agregar cuenta" [outlined]="true" size="small" (click)="agregarCuenta()" />
           </div>
         </div>
-      </div>
-    </div>
-
+      </p-tabPanel>
+    </p-tabView>
   </form>
 
   <ng-template pTemplate="footer">
-    <div class="flex gap-2 pt-2">
+    <div class="flex justify-content-end gap-2 pt-2">
       <p-button label="Cancelar" severity="secondary" [text]="true" (click)="cerrarModal()" [disabled]="enviando" />
       <p-button [label]="getBotonLabel()" icon="pi pi-check" class="border-round-xl font-bold" [loading]="enviando" (click)="guardarEmpresa()" />
     </div>

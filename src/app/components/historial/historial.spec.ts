@@ -6,7 +6,7 @@ describe('HistorialComponent - Customer Name and Document Extraction', () => {
   let comp: any;
 
   beforeEach(() => {
-    comp = new HistorialComponent({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    comp = new HistorialComponent({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
   });
 
   it('should extract client name from all quotation variations', () => {
@@ -24,71 +24,130 @@ describe('HistorialComponent - Customer Name and Document Extraction', () => {
   });
 });
 
-describe('HistorialComponent - Revisiones', () => {
+describe('HistorialComponent - Revisiones y estados', () => {
+  const hace = (dias: number) => new Date(Date.now() - dias * 86400000).toISOString();
   const original = {
-    id: 'orig-1', folio: 'VDC-00000045', empresa_id: 'VDC', estado: 'PENDIENTE',
+    id: 'orig-1', folio: 'VDC-00000045', empresa_id: 'VDC', estado: 'ANULADA', fecha: hace(3),
     cliente_nombre: 'CLIENTE SAC', cliente_documento: '20123456789',
     subtotal: 100, igv: 18, total: 118, incluye_igv: true,
     condiciones: { diasValidez: 30 }, items: [{ descripcion: 'Arena', cantidad: 1, precio_unitario: 100, subtotal: 100 }]
   };
-  const revision = { ...original, id: 'rev-1', folio: 'VDC-00000046', cotizacion_origen_id: 'orig-1', tipo_origen: 'revision', folio_origen: 'VDC-00000045' };
+  const revision = { ...original, id: 'rev-1', folio: 'VDC-00000046', estado: 'PENDIENTE', cotizacion_origen_id: 'orig-1', tipo_origen: 'revision', folio_origen: 'VDC-00000045' };
+  const vencida = { ...original, id: 'ven-1', folio: 'VDC-00000030', estado: 'PENDIENTE', fecha: hace(40), total: 50 };
+  const aprobada = { ...original, id: 'apr-1', folio: 'VDC-00000020', estado: 'APROBADA', total: 200 };
+  const oculta = { ...original, id: 'ocu-1', folio: 'VDC-00000010', estado: 'PENDIENTE', total: 900, oculta: true };
   let supabase: any;
   let router: any;
+  let confirmar: any;
+  let mensajes: any;
   let comp: any;
   let almacen: Map<string, string>;
+  const etiquetas = (cot: any) => comp.accionesDe(cot).filter((a: any) => !a.separator).map((a: any) => a.label);
 
-  beforeEach(() => {
+  beforeEach(async () => {
     almacen = new Map();
     vi.stubGlobal('sessionStorage', {
       getItem: (k: string) => almacen.get(k) ?? null,
       setItem: (k: string, v: string) => { almacen.set(k, v); },
       removeItem: (k: string) => { almacen.delete(k); }
     });
-    vi.useFakeTimers();
     supabase = {
-      getHistorial: vi.fn(async () => [original, revision]),
-      actualizarEstado: vi.fn()
+      getHistorial: vi.fn(async () => [original, revision, vencida, aprobada, oculta]),
+      actualizarEstado: vi.fn(async (id: string, estado: string) => ({ id, estado, estado_cambiado_por_nombre: 'Ana Quispe', estado_cambiado_en: hace(0) })),
+      actualizarVisibilidadCotizacion: vi.fn(async () => {})
     };
     router = { navigate: vi.fn() };
+    confirmar = { confirm: vi.fn() };
+    mensajes = { add: vi.fn() };
     comp = new HistorialComponent(
-      supabase, { add: vi.fn() } as any, {} as any, { markForCheck: () => {} } as any,
-      { run: (fn: () => void) => fn() } as any, {} as any, router,
-      { empresaActiva: () => ({ id: 'VDC' }), setEmpresaActiva: vi.fn() } as any,
-      { obtener: vi.fn(async () => []) } as any
+      supabase, mensajes, { generarYDescargarCotizacion: vi.fn(async () => {}) } as any, { markForCheck: () => {} } as any,
+      confirmar, router, { empresaActiva: () => ({ id: 'VDC' }) } as any
     );
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
-  });
-
-  it('sabe qué cotización fue reemplazada y por cuál', async () => {
     await comp.cargarDatos();
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('sabe qué cotización fue reemplazada y por cuál', () => {
     expect(comp.reemplazadaPor(original)).toBe('VDC-00000046');
     expect(comp.reemplazadaPor(revision)).toBeNull();
   });
 
-  it('abrir una revisión NO anula la original: solo prepara el borrador', async () => {
-    await comp.cargarDatos();
-    comp.cotizacionParaEditar = revision;
-    comp.opcionEditar = { empresaOrigen: 'misma', empresaSeleccionadaId: 'VDC', accionOriginal: 'anular' };
+  it('solo se revisa lo Pendiente; Aprobada y Anulada solo se duplican', () => {
+    expect(etiquetas(revision)).toEqual(['Revisar', 'Duplicar', 'Marcar como Aprobada', 'Anular', 'Ocultar']);
+    expect(etiquetas(aprobada)).toEqual(['Duplicar', 'Volver a Pendiente', 'Anular', 'Ocultar']);
+    expect(etiquetas(original)).toEqual(['Duplicar', 'Ocultar']);
+  });
 
-    await comp.confirmarEdicion();
+  it('una vencida sigue siendo Pendiente: se puede aprobar o revisar', () => {
+    expect(comp.getEstadoLabel(vencida)).toBe('Vencida');
+    expect(etiquetas(vencida)).toContain('Revisar');
+    expect(etiquetas(vencida)).toContain('Marcar como Aprobada');
+    expect(comp.detalleEstado(vencida)).toMatch(/^Venció el /);
+    expect(comp.detalleEstado(revision)).toMatch(/^Vence el /);
+  });
+
+  it('revisar NO anula la original: solo prepara el borrador y abre el cotizador', () => {
+    comp.abrirEnCotizador(revision, 'revision');
 
     expect(supabase.actualizarEstado).not.toHaveBeenCalled();
-    const borrador = JSON.parse(almacen.get(CLAVE_BORRADOR_COTIZADOR)!);
-    expect(borrador).toMatchObject({
+    expect(JSON.parse(almacen.get(CLAVE_BORRADOR_COTIZADOR)!)).toMatchObject({
       modo: 'revision', origen_id: 'rev-1', folio_origen: 'VDC-00000046',
-      incluye_igv: true, condiciones: { diasValidez: 30 }
+      modo_igv: 'sumar', descuento: 0, condiciones: { diasValidez: 30 }
     });
-    vi.runAllTimers();
     expect(router.navigate).toHaveBeenCalledWith(['/cotizador']);
   });
 
-  it('una cotización ya reemplazada abre el modal en modo duplicar', async () => {
-    await comp.cargarDatos();
-    await comp.abrirModalEditar(original);
-    expect(comp.opcionEditar.accionOriginal).toBe('mantener');
+  it('el borrador conserva el modo de IGV y el descuento', () => {
+    comp.abrirEnCotizador({ ...revision, precios_con_igv: true, descuento_global: 25 }, 'duplicar');
+    expect(JSON.parse(almacen.get(CLAVE_BORRADOR_COTIZADOR)!)).toMatchObject({ modo: 'duplicar', modo_igv: 'incluido', descuento: 25 });
+  });
+
+  it('los cambios de estado piden confirmación antes de guardarse', async () => {
+    comp.confirmarCambioEstado(revision, 'ANULADA');
+    expect(supabase.actualizarEstado).not.toHaveBeenCalled();
+    expect(confirmar.confirm.mock.calls[0][0].message).toContain('no se puede deshacer');
+
+    await confirmar.confirm.mock.calls[0][0].accept();
+    expect(supabase.actualizarEstado).toHaveBeenCalledWith('rev-1', 'ANULADA');
+    const fila = comp.cotizaciones.find((c: any) => c.id === 'rev-1');
+    expect(fila.estado).toBe('ANULADA');
+    expect(comp.detalleEstado(fila)).toMatch(/^Ana Quispe · /);
+  });
+
+  it('muestra el motivo si el servidor rechaza el cambio de estado', async () => {
+    supabase.actualizarEstado.mockRejectedValueOnce({ code: 'P0001', message: 'La cotización VDC-1 está anulada y no se puede reactivar.' });
+    await comp.cambiarEstado(revision, 'APROBADA');
+    expect(mensajes.add).toHaveBeenCalledWith(expect.objectContaining({ detail: 'La cotización VDC-1 está anulada y no se puede reactivar.' }));
+    expect(supabase.getHistorial).toHaveBeenCalledTimes(2);
+  });
+
+  it('por cobrar no cuenta vencidas ni ocultas, y el filtro de estado no cambia los KPI', () => {
+    expect(comp.conteos).toEqual({ TODAS: 4, PENDIENTE: 1, VENCIDA: 1, APROBADA: 1, ANULADA: 1 });
+    expect(comp.totalPorCobrar).toBe(118);
+    expect(comp.totalVendido).toBe(200);
+
+    comp.elegirFiltroEstado('VENCIDA');
+
+    expect(comp.cotizacionesFiltradas.map((c: any) => c.id)).toEqual(['ven-1']);
+    expect(comp.totalPorCobrar).toBe(118);
+    expect(comp.conteos.TODAS).toBe(4);
+  });
+
+  it('ocultar no pide confirmación y se puede ver después', async () => {
+    await comp.alternarOculta(revision);
+    expect(confirmar.confirm).not.toHaveBeenCalled();
+    expect(supabase.actualizarVisibilidadCotizacion).toHaveBeenCalledWith('rev-1', true);
+    expect(comp.cantidadOcultas).toBe(2);
+    expect(comp.cotizacionesFiltradas.map((c: any) => c.id)).not.toContain('rev-1');
+
+    comp.onToggleOcultas();
+    expect(comp.cotizacionesFiltradas.map((c: any) => c.id)).toContain('rev-1');
+  });
+
+  it('al descargar, el PDF sabe qué revisión reemplazó a la anulada', async () => {
+    await comp.descargarPDF(original);
+    const llamada = comp['pdfSvc'].generarYDescargarCotizacion.mock.calls[0];
+    expect(llamada[3]).toBe('VDC-00000046');
   });
 });

@@ -36,6 +36,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   @ViewChild('opCompany') opCompany?: OverlayPanel;
 
   menuAbierto = false;
+  /** Desde que alguien usa el menú se anima; antes no, para que no se vea al cargar. */
+  menuTocado = false;
   estaOnline = true;
 
   constructor(
@@ -152,7 +154,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   @HostListener('window:resize')
   onResize() {
-    if (window.innerWidth >= 768 && this.menuAbierto) {
+    if (window.innerWidth >= 1200 && this.menuAbierto) {
       this.cerrarMenu();
     }
   }
@@ -173,6 +175,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     if (this.opCompany) {
       this.opCompany.hide();
     }
+    this.menuTocado = true;
     this.menuAbierto = !this.menuAbierto;
     this.actualizarBodyLock();
     this.cdr.markForCheck();

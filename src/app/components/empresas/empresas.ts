@@ -5,6 +5,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 
 import { IEmpresa, ICuentaBancaria } from '../../models/empresa.model';
+import { MODOS_IGV } from '../../models/cotizacion.model';
 import { SupabaseService } from '../../services/supabase.service';
 import { ApiPeruService } from '../../services/api-peru.service';
 import {
@@ -16,7 +17,9 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
-import { ToggleButtonModule } from 'primeng/togglebutton';
+import { InputSwitchModule } from 'primeng/inputswitch';
+import { SelectButtonModule } from 'primeng/selectbutton';
+import { TabViewModule } from 'primeng/tabview';
 import { ColorPickerModule } from 'primeng/colorpicker';
 import { ToastModule } from 'primeng/toast';
 import { TagModule } from 'primeng/tag';
@@ -37,7 +40,7 @@ import { EmpresasUsuarioService } from '../../services/empresas-usuario.service'
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule,
     TableModule, ButtonModule, InputTextModule, InputNumberModule,
-    DialogModule, ToggleButtonModule, ColorPickerModule,
+    DialogModule, InputSwitchModule, SelectButtonModule, TabViewModule, ColorPickerModule,
     ToastModule, TagModule, TooltipModule, ConfirmDialogModule,
     ProgressSpinnerModule, InputTextareaModule, ChipsModule
   ],
@@ -52,6 +55,10 @@ export class EmpresasComponent implements OnInit {
   empresaDialog = false;
   esEdicion = false;
   enviando = false;
+  consultandoRuc = false;
+  /** Pestaña del formulario: 0 Datos, 1 Cotización, 2 Imagen, 3 Cuentas. */
+  pestanaActiva = 0;
+  readonly modosIgv = MODOS_IGV;
   esAdminGeneral = false;
   esAdminEmpresa = false;
   terminoBusqueda: string = '';
@@ -120,6 +127,7 @@ export class EmpresasComponent implements OnInit {
       mostrar_cuentas: [true],
       contacto_aprobacion: ['', Validators.maxLength(200)],
       lugares_entrega: [[] as string[]],
+      modo_igv: ['sumar'],
       cuentas_bancarias: this.fb.array([])
     });
     
@@ -151,9 +159,11 @@ export class EmpresasComponent implements OnInit {
   
   abrirNuevo() {
     this.esEdicion = false;
-    this.empresaDialog = true;
     this.empresaActual = null;
+    this.inicializarFormularios();
     this.resetearFormulario();
+    this.pestanaActiva = 0;
+    this.empresaDialog = true;
   }
   
   editarEmpresa(empresa: IEmpresa) {
@@ -165,6 +175,7 @@ export class EmpresasComponent implements OnInit {
       this.inicializarFormularios();
       this.cargarDatosEnFormulario(empresa);
       this.empresaForm.get('id')?.disable();
+      this.pestanaActiva = 0;
       this.empresaDialog = true;
     } catch (error) {
       console.error('❌ Error al preparar edición:', error);
@@ -201,7 +212,8 @@ export class EmpresasComponent implements OnInit {
       activa: true,
       mostrar_cuentas: true,
       contacto_aprobacion: '',
-      lugares_entrega: []
+      lugares_entrega: [],
+      modo_igv: 'sumar'
     });
     this.cuentasFormArray.clear();
     
@@ -225,7 +237,8 @@ export class EmpresasComponent implements OnInit {
       activa: empresa.activa,
       mostrar_cuentas: empresa.mostrar_cuentas ?? true,
       contacto_aprobacion: (empresa.contacto_aprobacion || '').trim(),
-      lugares_entrega: [...(empresa.lugares_entrega ?? [])]
+      lugares_entrega: [...(empresa.lugares_entrega ?? [])],
+      modo_igv: empresa.modo_igv ?? 'sumar'
     });
     
     
@@ -319,13 +332,9 @@ export class EmpresasComponent implements OnInit {
       return;
     }
     
+    this.consultandoRuc = true;
+    this.cdr.markForCheck();
     try {
-      this.msg.add({
-        severity: 'info',
-        summary: 'Consultando RUC',
-        detail: 'Obteniendo información de SUNAT...'
-      });
-      
       const data = await this.apiPeru.buscarDocumento(rucControl.value);
       const razon = data.nombre;
       const patchData: any = {
@@ -342,18 +351,15 @@ export class EmpresasComponent implements OnInit {
       }
 
       this.empresaForm.patchValue(patchData);
-
-      this.msg.add({
-        severity: 'success',
-        summary: 'RUC encontrado',
-        detail: `Datos de ${razon} cargados`
-      });
     } catch (error: any) {
       this.msg.add({
         severity: 'warn',
         summary: 'RUC no encontrado',
         detail: error?.message || 'No se pudo consultar el RUC.'
       });
+    } finally {
+      this.consultandoRuc = false;
+      this.cdr.markForCheck();
     }
   }
   
@@ -382,7 +388,6 @@ export class EmpresasComponent implements OnInit {
         return;
       }
       this.empresaForm.patchValue({ [campo]: await blobADataUrl(imagen) });
-      this.msg.add({ severity: 'info', summary: `${nombre} listo`, detail: 'Se subirá al guardar la empresa.' });
     } catch (error: any) {
       console.error(`Error preparando ${nombre}:`, error);
       this.msg.add({ severity: 'error', summary: 'Error', detail: `No se pudo procesar la imagen: ${error?.message ?? ''}` });
@@ -435,32 +440,27 @@ export class EmpresasComponent implements OnInit {
 
     this.empresaForm.markAllAsTouched();
 
-    const camposPrincipales = ['nombre_comercial', 'ruc', 'color', 'prefijo'];
+    // Si falta algo, se abre la pestaña donde está: el mensaje queda junto al campo.
+    const camposPrincipales = ['id', 'nombre_comercial', 'ruc', 'prefijo'];
     const hayErrorEnPrincipales = camposPrincipales.some(campo => {
       const ctrl = this.empresaForm.get(campo);
       return ctrl?.invalid && ctrl?.errors;
     });
 
-
     if (hayErrorEnPrincipales) {
-      this.msg.add({
-        severity: 'warn',
-        summary: 'Formulario inválido',
-        detail: 'Por favor completa todos los campos requeridos'
-      });
+      this.pestanaActiva = 0;
+      this.cdr.markForCheck();
       return;
     }
 
     if (this.cuentasFormArray.length > 0 && this.cuentasFormArray.invalid) {
-      this.msg.add({
-        severity: 'warn',
-        summary: 'Cuentas incompletas',
-        detail: 'Completa o elimina las cuentas bancarias con datos faltantes'
-      });
+      this.pestanaActiva = 3;
+      this.cdr.markForCheck();
       return;
     }
 
     this.enviando = true;
+    this.cdr.markForCheck();
 
     try {
       const idControl = this.empresaForm.get('id');
@@ -533,11 +533,7 @@ export class EmpresasComponent implements OnInit {
         (formData.cuentas_bancarias || []).filter((c: any) => c.banco?.trim() && c.numero?.trim())
       );
 
-      this.msg.add({
-        severity: 'success',
-        summary: 'Empresa guardada',
-        detail: this.esEdicion ? 'Empresa actualizada correctamente' : 'Empresa creada correctamente'
-      });
+      this.msg.add({ severity: 'success', summary: 'Empresa guardada' });
 
       this.cerrarModal();
       // Logo, lugares o cuentas nuevas: que el resto de la app tome la versión guardada.
@@ -553,11 +549,12 @@ export class EmpresasComponent implements OnInit {
       });
     } finally {
       this.enviando = false;
+      this.cdr.markForCheck();
     }
   }
 
   getBotonLabel(): string {
-    return this.esEdicion ? 'Actualizar' : 'Guardar';
+    return this.esEdicion ? 'Guardar cambios' : 'Crear empresa';
   }
 
   // ── ELIMINACIÓN ───────────────────────────────────────────────────────
@@ -571,12 +568,7 @@ export class EmpresasComponent implements OnInit {
         try {
           await this.supabase.eliminarEmpresa(id);
           this.empresas = this.empresas.filter(e => e.id !== id);
-          
-          this.msg.add({
-            severity: 'success',
-            summary: 'Empresa eliminada',
-            detail: 'La empresa fue eliminada correctamente'
-          });
+          this.cdr.markForCheck();
         } catch (error: any) {
           console.error('Error eliminando empresa:', error);
           this.msg.add({
@@ -601,7 +593,7 @@ export class EmpresasComponent implements OnInit {
   
   get prefijoEjemplo(): string {
     const prefijo = this.empresaForm.get('prefijo')?.value || 'A';
-    return `${prefijo}-001`;
+    return `${prefijo}-00000001`;
   }
 
   get empresasActivasCount(): number {

@@ -4,20 +4,22 @@
 
   <!-- Backdrop para móvil -->
   <div *ngIf="menuAbierto"
-       class="md:hidden fixed inset-0 bg-black-alpha-60 z-layout-backdrop backdrop-blur"
+       class="xl:hidden fixed inset-0 bg-black-alpha-60 z-layout-backdrop backdrop-blur"
        (click)="cerrarMenu()"
        aria-hidden="true">
   </div>
 
   <!-- Sidebar principal -->
-  <aside class="mobile-sidebar-drawer fixed md:static top-0 left-0 bottom-0 z-layout-sidebar h-full shadow-4 flex flex-column select-none"
+  <aside class="mobile-sidebar-drawer fixed xl:static top-0 left-0 bottom-0 z-layout-sidebar h-full shadow-4 flex flex-column select-none"
          style="width: 18.5rem; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color: #f8fafc;"
          [class.open]="menuAbierto"
-         [class.closed]="!menuAbierto">
+         [class.closed]="!menuAbierto"
+         [class.animado]="menuTocado">
 
-    <!-- Encabezado de la Empresa -->
-    <div class="sidebar-top-header flex align-items-center justify-content-between gap-3 flex-shrink-0">
-      <div class="flex align-items-center gap-3 overflow-hidden flex-1">
+    <!-- Empresa activa: al hacer clic se cambia de empresa -->
+    <div class="sidebar-top-header flex align-items-center justify-content-between gap-2 flex-shrink-0">
+      <button type="button" class="boton-empresa flex align-items-center gap-3 overflow-hidden flex-1"
+              aria-label="Cambiar de empresa" (click)="opCompany.toggle($event)">
         <div class="flex align-items-center justify-content-center border-round-xl flex-shrink-0 shadow-2 overflow-hidden"
              [style.background]="empresaActiva?.color || 'var(--p-primary-color)'"
              style="width: 44px; height: 44px; color: #ffffff;">
@@ -28,18 +30,18 @@
             <i class="pi pi-briefcase text-xl"></i>
           </ng-template>
         </div>
-        <div class="flex flex-column overflow-hidden">
+        <div class="flex flex-column overflow-hidden flex-1">
           <span class="font-bold text-base text-white text-overflow-ellipsis overflow-hidden white-space-nowrap">
-            {{ empresaActiva?.nombre_comercial || 'Sistema Cotizaciones' }}
+            {{ empresaActiva?.nombre_comercial || 'Elige una empresa' }}
           </span>
-          <span class="text-xs text-white-alpha-70 text-overflow-ellipsis overflow-hidden white-space-nowrap mt-1 flex align-items-center gap-1">
-            <i class="pi pi-id-card text-xs"></i>
-            {{ empresaActiva?.ruc ? 'RUC: ' + empresaActiva?.ruc : 'Empresa no elegida' }}
+          <span class="text-xs text-white-alpha-70 text-overflow-ellipsis overflow-hidden white-space-nowrap mt-1">
+            {{ empresaActiva?.ruc ? 'RUC ' + empresaActiva?.ruc : 'Sin empresa activa' }}
           </span>
         </div>
-      </div>
+        <i class="pi pi-chevron-down text-xs text-white-alpha-70 flex-shrink-0"></i>
+      </button>
       <button pButton type="button" icon="pi pi-times" [text]="true" [rounded]="true"
-              class="p-button-text p-button-rounded text-white-alpha-70 hover:text-white hover:bg-white-alpha-10 flex-shrink-0 cursor-pointer"
+              class="xl:hidden p-button-text p-button-rounded text-white-alpha-70 hover:text-white hover:bg-white-alpha-10 flex-shrink-0 cursor-pointer"
               style="min-width: 44px; min-height: 44px; touch-action: manipulation;"
               (click)="cerrarMenu()" aria-label="Cerrar menú"></button>
     </div>
@@ -137,7 +139,10 @@
 
     <!-- Perfil de usuario y Logout -->
     <div class="p-3 mt-auto flex-shrink-0" style="border-top: 1px solid rgba(255,255,255,0.08); padding-bottom: max(0.75rem, calc(0.75rem + var(--sab)));">
-      <div class="flex align-items-center gap-3 mb-3 p-3 border-round-xl" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.05);">
+      <button *ngIf="pwaUpdate.canInstallPwa()" pButton type="button" icon="pi pi-download" label="Instalar la app"
+              severity="success" size="small" class="hidden xl:flex w-full mb-2 border-round-xl font-semibold"
+              (click)="instalarPwa()"></button>
+      <div class="flex align-items-center gap-3 mb-2 p-2 border-round-xl">
         <p-avatar icon="pi pi-user" shape="circle" [style]="{ background: 'var(--p-primary-color)', color: '#ffffff' }"></p-avatar>
         <div class="flex flex-column overflow-hidden flex-1">
           <span class="font-bold text-sm text-white flex align-items-center gap-2">
@@ -148,10 +153,8 @@
           </span>
         </div>
       </div>
-      <button pButton type="button" icon="pi pi-sign-out" label="Cerrar sesión"
-              severity="danger" class="w-full border-round-xl cursor-pointer"
-              style="min-height: 44px; touch-action: manipulation;"
-              (click)="cerrarSesion()">
+      <button type="button" class="boton-salir" (click)="cerrarSesion()">
+        <i class="pi pi-sign-out"></i> Cerrar sesión
       </button>
     </div>
 
@@ -160,11 +163,11 @@
   <!-- Contenedor Principal (Header superior + Main Content) -->
   <div class="flex-1 flex flex-column min-w-0 min-h-0 overflow-hidden z-1 h-full">
 
-    <!-- Top Header Bar (Desktop & Mobile) -->
-    <header class="pwa-top-header flex align-items-center justify-content-between px-2 md:px-4 z-2 flex-shrink-0">
+    <!-- Barra superior: en celular y tablet (en pantallas grandes todo está en el lateral) -->
+    <header class="pwa-top-header flex xl:hidden align-items-center justify-content-between px-2 z-2 flex-shrink-0">
       <div class="flex align-items-center gap-2 sm:gap-3 min-w-0">
         <button *ngIf="!menuAbierto" pButton type="button" icon="pi pi-bars" [text]="true" [rounded]="true"
-                class="md:hidden p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all flex align-items-center justify-content-center border-none cursor-pointer flex-shrink-0 relative z-3"
+                class="xl:hidden p-button-text p-button-rounded text-white text-xl hover:bg-white-alpha-15 transition-all flex align-items-center justify-content-center border-none cursor-pointer flex-shrink-0 relative z-3"
                 style="min-width: 44px; min-height: 44px; touch-action: manipulation; -webkit-tap-highlight-color: transparent;"
                 (click)="toggleMenu($event)"
                 (touchstart)="toggleMenu($event)"
@@ -209,12 +212,9 @@
     </header>
 
     <!-- Overlay Panel de Selección Rápida de Empresa -->
-    <p-overlayPanel #opCompany styleClass="company-dropdown-panel shadow-4" [style]="{ width: '92vw', maxWidth: '340px' }">
+    <p-overlayPanel #opCompany appendTo="body" styleClass="company-dropdown-panel shadow-4" [style]="{ width: '92vw', maxWidth: '340px' }">
       <div class="p-2 border-bottom-1 surface-border mb-2 flex align-items-center justify-content-between">
-        <span class="font-bold text-xs text-700 uppercase tracking-wider">Cambiar Empresa</span>
-        <span class="text-xs bg-sky-100 text-sky-700 font-bold px-2 py-1 border-round-pill">
-          {{ empresasDisponibles.length }} asignada(s)
-        </span>
+        <span class="font-bold text-sm text-800">Cambiar de empresa</span>
       </div>
 
       <!-- Buscador rápido en el dropdown -->
@@ -251,7 +251,7 @@
       </div>
 
       <div class="pt-2 mt-2 border-top-1 surface-border text-center">
-        <button pButton type="button" label="Ver Vista General de Empresas" icon="pi pi-th-large"
+        <button pButton type="button" label="Ver todas las empresas" icon="pi pi-th-large"
                 class="p-button-text p-button-secondary p-button-sm w-full border-round-lg font-bold"
                 (click)="irASelector(opCompany)">
         </button>

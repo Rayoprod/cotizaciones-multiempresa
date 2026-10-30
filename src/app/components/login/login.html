@@ -42,7 +42,7 @@
         <div class="flex flex-column gap-2 p-fluid">
           <label for="password" class="font-semibold text-white text-xs uppercase tracking-wider pl-1">Contraseña</label>
           <div class="relative flex align-items-center">
-            <p-password id="password" [(ngModel)]="contrasena" name="contrasena"
+            <p-password id="password" class="w-full" [(ngModel)]="contrasena" name="contrasena"
                         [toggleMask]="true" [feedback]="false"
                         styleClass="w-full" inputStyleClass="w-full p-inputtext-lg border-round-xl bg-white-alpha-10 text-white border-white-alpha-20 focus:border-sky-400"
                         placeholder="••••••••" required autocomplete="current-password">

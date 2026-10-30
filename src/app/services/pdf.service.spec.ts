@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { condicionesPdf, lineasCondicionesComerciales } from './pdf.service';
+import { avisoAnulada, condicionesPdf, lineasCondicionesComerciales, lineasTotales } from './pdf.service';
 
 describe('lineasCondicionesComerciales', () => {
   const condiciones = { mostrarValidez: true, diasValidez: 30, mostrarCuentas: true, mostrarContacto: false };
-  const base = { igv: 18, incluye_igv: true, vendedor: 'ana@correo.com' };
+  const base = { igv: 18, incluye_igv: true, vendedor_nombre: 'Ana Quispe' };
 
   it('imprime el lugar de entrega tal como se guardó', () => {
     const lineas = lineasCondicionesComerciales({ ...base, lugar_entrega: 'PUESTO EN OBRA (CON FLETE)' }, condiciones);
@@ -24,9 +24,54 @@ describe('lineasCondicionesComerciales', () => {
     expect(lineas).toEqual([
       ['Impuestos', 'Los precios NO incluyen IGV'],
       ['Reemplaza a', 'VDC-00000045'],
-      ['Vendedor', 'ana@correo.com'],
+      ['Vendedor', 'Ana Quispe'],
       ['Observaciones', 'Entrega en la mañana']
     ]);
+  });
+
+  it('avisa cómo están los precios en cada modo de IGV', () => {
+    const impuestos = (datos: object) =>
+      lineasCondicionesComerciales({ igv: 0, ...datos }, condiciones).find(l => l[0] === 'Impuestos')?.[1];
+    expect(impuestos({ incluye_igv: true })).toBe('El total incluye IGV (18%)');
+    expect(impuestos({ incluye_igv: true, precios_con_igv: true })).toBe('Los precios incluyen IGV (18%)');
+    expect(impuestos({ incluye_igv: false })).toBe('Los precios NO incluyen IGV');
+  });
+
+  it('nunca imprime el correo: sin nombre no hay línea de vendedor', () => {
+    const lineas = lineasCondicionesComerciales({ igv: 18, incluye_igv: true, vendedor_nombre: null }, condiciones);
+    expect(lineas.map(l => l[0])).not.toContain('Vendedor');
+  });
+});
+
+describe('lineasTotales', () => {
+  const base = { subtotal: 1000, igv: 180, incluye_igv: true };
+
+  it('al sumar IGV: subtotal, IGV y nada después del total', () => {
+    expect(lineasTotales(base)).toEqual({ antes: [['Subtotal', 1000], ['IGV (18%)', 180]], despues: null });
+  });
+
+  it('con IGV incluido: solo el total, y debajo lo que lleva dentro', () => {
+    expect(lineasTotales({ ...base, igv: 152.54, precios_con_igv: true }))
+      .toEqual({ antes: [], despues: ['Incluye IGV (18%):', 152.54] });
+  });
+
+  it('con IGV incluido y descuento: se ve de dónde sale el total', () => {
+    expect(lineasTotales({ ...base, igv: 137.29, precios_con_igv: true, descuento_global: 100 }))
+      .toEqual({ antes: [['Subtotal', 1000], ['Descuento', -100]], despues: ['Incluye IGV (18%):', 137.29] });
+  });
+
+  it('sin IGV: subtotal y descuento, sin línea de IGV', () => {
+    expect(lineasTotales({ subtotal: 1000, igv: 0, incluye_igv: false, descuento_global: 100 }))
+      .toEqual({ antes: [['Subtotal', 1000], ['Descuento', -100]], despues: null });
+  });
+});
+
+describe('avisoAnulada', () => {
+  it('solo en las anuladas, y dice cuál la reemplazó', () => {
+    expect(avisoAnulada({ estado: 'PENDIENTE' }, null)).toBeNull();
+    expect(avisoAnulada({ estado: 'APROBADA' }, 'VDC-2')).toBeNull();
+    expect(avisoAnulada({ estado: 'ANULADA' })).toBe('COTIZACIÓN ANULADA');
+    expect(avisoAnulada({ estado: 'ANULADA' }, 'VDC-2')).toBe('COTIZACIÓN ANULADA · Reemplazada por VDC-2');
   });
 });
 

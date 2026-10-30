@@ -1,51 +1,77 @@
-import { Component, OnInit, ChangeDetectorRef, NgZone, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import { SupabaseService } from '../../services/supabase.service';
 import { PdfService } from '../../services/pdf.service';
+import { SessionContextService } from '../../services/session-context.service';
 import {
-  EstadoCotizacion, ICotizacion, IBorradorCotizador, CLAVE_BORRADOR_COTIZADOR,
+  ICotizacion, IBorradorCotizador, CLAVE_BORRADOR_COTIZADOR, ModoIgv,
+  estaVencida, fechaDeCotizacion, modoIgvDe, venceEl,
   extraerNombreClienteTexto, extraerDocumentoClienteTexto
 } from '../../models';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { Router } from '@angular/router';
 
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
-import { DropdownModule } from 'primeng/dropdown';
-import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { ChartModule } from 'primeng/chart';
-import { DialogModule } from 'primeng/dialog';
-import { RadioButtonModule } from 'primeng/radiobutton';
-import { ToggleButtonModule } from 'primeng/togglebutton';
-import { DividerModule } from 'primeng/divider';
+import { Menu, MenuModule } from 'primeng/menu';
 
+/** El estado como se muestra: una Pendiente con la validez pasada se ve como Vencida. */
+export type EstadoVisible = 'PENDIENTE' | 'VENCIDA' | 'APROBADA' | 'ANULADA';
+export type FiltroEstado = 'TODAS' | EstadoVisible;
+type EstadoDestino = 'PENDIENTE' | 'APROBADA' | 'ANULADA';
 
-import { SessionContextService } from '../../services/session-context.service';
-import { EmpresasUsuarioService } from '../../services/empresas-usuario.service';
+const ETIQUETA_ESTADO: Record<EstadoVisible, string> = {
+  PENDIENTE: 'Pendiente',
+  VENCIDA: 'Vencida',
+  APROBADA: 'Aprobada',
+  ANULADA: 'Anulada'
+};
 
+const ETIQUETA_IGV: Record<ModoIgv, string> = {
+  sumar: 'IGV sumado',
+  incluido: 'IGV incluido',
+  sin_igv: 'Sin IGV'
+};
 
-interface EstadoOption {
-  label: string;
-  value: string;
-}
+const CONFIRMACION_ESTADO: Record<EstadoDestino, {
+  titulo: string;
+  mensaje: (folio: string) => string;
+  aceptar: string;
+  icono: string;
+  claseBoton: string;
+}> = {
+  APROBADA: {
+    titulo: 'Marcar como Aprobada',
+    mensaje: folio => `${folio} contará como venta. Ya no se podrá revisar: solo duplicar o volver a Pendiente.`,
+    aceptar: 'Sí, aprobar',
+    icono: 'pi pi-check-circle',
+    claseBoton: 'p-button-success'
+  },
+  PENDIENTE: {
+    titulo: 'Volver a Pendiente',
+    mensaje: folio => `${folio} saldrá de "Vendido" y se podrá revisar de nuevo.`,
+    aceptar: 'Sí, volver a Pendiente',
+    icono: 'pi pi-undo',
+    claseBoton: 'p-button-warning'
+  },
+  ANULADA: {
+    titulo: 'Anular cotización',
+    mensaje: folio => `${folio} quedará anulada y esto no se puede deshacer. Si la necesitas de nuevo, podrás duplicarla.`,
+    aceptar: 'Sí, anular',
+    icono: 'pi pi-times-circle',
+    claseBoton: 'p-button-danger'
+  }
+};
 
-interface TopCliente {
-  nombre: string;
-  cantidad: number;
-  total: number;
-}
-
-interface OpcionEditar {
-  empresaOrigen: 'misma' | 'otra';
-  empresaSeleccionadaId: string | null;
-  accionOriginal: 'anular' | 'mantener';
+export function estadoVisible(cot: ICotizacion, hoy: Date = new Date()): EstadoVisible {
+  if (estaVencida(cot, hoy)) return 'VENCIDA';
+  return (cot.estado as EstadoVisible) ?? 'PENDIENTE';
 }
 
 @Component({
@@ -58,16 +84,9 @@ interface OpcionEditar {
     ButtonModule,
     InputTextModule,
     TagModule,
-    DropdownModule,
-    ToastModule,
     TooltipModule,
-    ProgressSpinnerModule,
-    ChartModule,
     ConfirmDialogModule,
-    DialogModule,
-    RadioButtonModule,
-    ToggleButtonModule,
-    DividerModule
+    MenuModule
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './historial.html',
@@ -78,15 +97,8 @@ export class HistorialComponent implements OnInit {
   cotizacionesFiltradas: ICotizacion[] = [];
   empresaActiva: any = null;
 
-  // Estado reactivo
-  empresasDisponibles: any[] = [];
   descargando: string | null = null;
   cargando = true;
-  modalEditarVisible = false;
-  cotizacionParaEditar: ICotizacion | null = null;
-  procesandoEdicion = false;
-  cargandoEmpresas = false;
-  cotizacionCargandoModal: string | null = null;
 
   mostrarOcultas = false;
   cantidadOcultas = 0;
@@ -97,43 +109,33 @@ export class HistorialComponent implements OnInit {
   terminoBusqueda = '';
   fechaDesde = '';
   fechaHasta = '';
+  filtroEstado: FiltroEstado = 'TODAS';
+
+  readonly filtros: Array<{ value: FiltroEstado; label: string }> = [
+    { value: 'TODAS', label: 'Todas' },
+    { value: 'PENDIENTE', label: 'Pendientes' },
+    { value: 'VENCIDA', label: 'Vencidas' },
+    { value: 'APROBADA', label: 'Aprobadas' },
+    { value: 'ANULADA', label: 'Anuladas' }
+  ];
+  conteos: Record<FiltroEstado, number> = { TODAS: 0, PENDIENTE: 0, VENCIDA: 0, APROBADA: 0, ANULADA: 0 };
 
   totalVendido = 0;
-  totalPendiente = 0;
-  cotizacionesAprobadas = 0;
-  cotizacionesPendientes = 0;
-  cotizacionesAnuladas = 0;
+  totalPorCobrar = 0;
   tasaConversion = 0;
 
-  topClientes: TopCliente[] = [];
-  chartVentasMensuales: any = {};
-  chartOptions: any = {};
-
-  opcionesEstado: EstadoOption[] = [
-    { label: 'Pendiente', value: 'PENDIENTE' },
-    { label: 'Aprobada',  value: 'APROBADA'  },
-    { label: 'Anulada',   value: 'ANULADA'   }
-  ];
-
-  opcionEditar: OpcionEditar = {
-    empresaOrigen: 'misma',
-    empresaSeleccionadaId: null,
-    accionOriginal: 'anular'
-  };
+  /** Acciones de la cotización cuyo menú está abierto. */
+  accionesMenu: MenuItem[] = [];
 
   constructor(
     private supabase: SupabaseService,
     private msg: MessageService,
     private pdfSvc: PdfService,
     private cdr: ChangeDetectorRef,
-    private zone: NgZone,
     private confirmSvc: ConfirmationService,
     private router: Router,
-    private session: SessionContextService,
-    private empresasUsuario: EmpresasUsuarioService
-  ) {
-    this.initChartOptions();
-  }
+    private session: SessionContextService
+  ) {}
 
   async ngOnInit() {
     await this.cargarDatos();
@@ -143,40 +145,22 @@ export class HistorialComponent implements OnInit {
     this.cargando = true;
     try {
       this.empresaActiva = this.session.empresaActiva();
-
       if (!this.empresaActiva) {
-        this.msg.add({
-          severity: 'warn',
-          summary: 'Empresa no seleccionada',
-          detail: 'Por favor selecciona una empresa para ver el historial'
-        });
+        this.router.navigate(['/selector']);
         return;
       }
-      const data = await this.supabase.getHistorial(
-        this.empresaActiva.id,
-        true // Cargar siempre todas para tener la cuenta exacta de ocultas
+      // Siempre todas: así se sabe cuántas ocultas hay sin otro pedido.
+      const data = await this.supabase.getHistorial(this.empresaActiva.id, true);
+      this.cotizaciones = (data || []).map((c: ICotizacion) => ({ ...c, oculta: c.oculta ?? false }));
+      this.reemplazos = new Map(
+        this.cotizaciones
+          .filter(c => c.tipo_origen === 'revision' && c.cotizacion_origen_id)
+          .map(c => [c.cotizacion_origen_id!, c.folio])
       );
-
-      this.zone.run(() => {
-        this.cotizaciones = (data || []).map((c: ICotizacion) => ({
-          ...c,
-          oculta: c.oculta ?? false
-        }));
-        this.cantidadOcultas = this.cotizaciones.filter(c => c.oculta === true).length;
-        this.reemplazos = new Map(
-          this.cotizaciones
-            .filter(c => c.tipo_origen === 'revision' && c.cotizacion_origen_id)
-            .map(c => [c.cotizacion_origen_id!, c.folio])
-        );
-        this.aplicarFiltros();
-      });
+      this.aplicarFiltros();
     } catch (error: any) {
       console.error('Error cargando historial:', error);
-      this.msg.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudo cargar el historial de cotizaciones'
-      });
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar el historial de cotizaciones' });
     } finally {
       this.cargando = false;
       this.cdr.markForCheck();
@@ -188,48 +172,7 @@ export class HistorialComponent implements OnInit {
     this.aplicarFiltros();
   }
 
-  async cargarEmpresasDisponibles() {
-    if (this.empresasDisponibles.length > 0) return;
-
-    this.cargandoEmpresas = true;
-    try {
-      const empresasUser = await this.empresasUsuario.obtener();
-      this.empresasDisponibles = (empresasUser || []).filter(
-        (emp: any) => emp.id !== this.empresaActiva?.id
-      );
-    } catch (e: any) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar las empresas' });
-    } finally {
-      this.cargandoEmpresas = false;
-      this.cdr.markForCheck();
-    }
-  }
-
-  // ─── KPIs e Insights ──────────────────────────────────────────────────────
-
-  private calcularKPIs() {
-    const base = this.cotizacionesFiltradas;
-    const aprobadas  = base.filter(c => c.estado === 'APROBADA');
-    const pendientes = base.filter(c => c.estado === 'PENDIENTE');
-    const anuladas   = base.filter(c => c.estado === 'ANULADA');
-
-    this.cotizacionesAprobadas  = aprobadas.length;
-    this.cotizacionesPendientes = pendientes.length;
-    this.cotizacionesAnuladas   = anuladas.length;
-
-    this.totalVendido   = aprobadas.reduce((s, c)  => s + (c.total || 0), 0);
-    this.totalPendiente = pendientes.reduce((s, c) => s + (c.total || 0), 0);
-
-    const totalNoAnuladas = base.length - anuladas.length;
-    this.tasaConversion = totalNoAnuladas > 0
-      ? (this.cotizacionesAprobadas / totalNoAnuladas) * 100
-      : 0;
-  }
-
-  private calcularInsights() {
-    this.calcularTopClientes();
-    this.calcularChartVentas();
-  }
+  // ─── Nombres ──────────────────────────────────────────────────────────────
 
   obtenerNombreCliente(cot: any): string {
     const val = cot?.cliente_nombre || cot?.clientenombre || cot?.clienteNombre || cot?.nombre_razon_social || cot?.nombre;
@@ -242,155 +185,182 @@ export class HistorialComponent implements OnInit {
     return extraerDocumentoClienteTexto(val);
   }
 
-  private calcularTopClientes() {
-    const clienteMap = new Map<string, TopCliente>();
-    for (const cot of this.cotizacionesFiltradas) {
-      const key = this.obtenerNombreCliente(cot);
-      const existing = clienteMap.get(key) || { nombre: key, cantidad: 0, total: 0 };
-      existing.cantidad++;
-      existing.total += cot.total || 0;
-      clienteMap.set(key, existing);
-    }
-    this.topClientes = Array.from(clienteMap.values())
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 5);
-  }
-
-  private calcularChartVentas() {
-    const meses: { [key: string]: number } = {};
-    const hoy = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      meses[key] = 0;
-    }
-    for (const cot of this.cotizacionesFiltradas.filter(c => c.estado === 'APROBADA')) {
-      if (!cot.fecha) continue;
-      const fecha = new Date(cot.fecha);
-      const key = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-      if (meses[key] !== undefined) meses[key] += cot.total || 0;
-    }
-    const nombres = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-    const labels = Object.keys(meses).map(k => {
-      const [y, m] = k.split('-');
-      return `${nombres[parseInt(m, 10) - 1]} ${y.slice(2)}`;
-    });
-    this.chartVentasMensuales = {
-      labels,
-      datasets: [{
-        label: 'Ventas Aprobadas (S/)',
-        data: Object.values(meses),
-        backgroundColor: 'rgba(1, 105, 111, 0.7)',
-        borderColor: '#01696f',
-        borderWidth: 1,
-        borderRadius: 6
-      }]
-    };
-  }
-
-  private initChartOptions() {
-    this.chartOptions = {
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, ticks: { font: { size: 10 } }, grid: { color: '#f1f5f9' } },
-        x: { ticks: { font: { size: 10 } }, grid: { display: false } }
-      },
-      maintainAspectRatio: false
-    };
-  }
-
-  // ─── Filtros ──────────────────────────────────────────────────────────────
+  // ─── Filtros y KPIs ───────────────────────────────────────────────────────
 
   filtrarCotizaciones(_termino: string) { this.aplicarFiltros(); }
   aplicarFiltroFecha()                   { this.aplicarFiltros(); }
+
+  elegirFiltroEstado(filtro: FiltroEstado) {
+    this.filtroEstado = filtro;
+    this.aplicarFiltros();
+  }
+
+  get hayFiltros(): boolean {
+    return !!this.terminoBusqueda.trim() || !!this.fechaDesde || !!this.fechaHasta || this.filtroEstado !== 'TODAS';
+  }
 
   limpiarFiltros() {
     this.terminoBusqueda = '';
     this.fechaDesde = '';
     this.fechaHasta = '';
+    this.filtroEstado = 'TODAS';
     this.aplicarFiltros();
   }
 
   private aplicarFiltros() {
-    let resultado = [...this.cotizaciones];
+    this.cantidadOcultas = this.cotizaciones.filter(c => c.oculta === true).length;
+    let base = [...this.cotizaciones];
 
     if (!this.mostrarOcultas) {
-      resultado = resultado.filter(cot => !cot.oculta);
+      base = base.filter(cot => !cot.oculta);
     }
 
     if (this.terminoBusqueda.trim()) {
       const term = this.terminoBusqueda.toLowerCase().trim();
-      resultado = resultado.filter(cot =>
+      base = base.filter(cot =>
         (cot.folio              || '').toLowerCase().includes(term) ||
         (cot.cliente_nombre     || '').toLowerCase().includes(term) ||
-        (cot.cliente_documento  || '').toLowerCase().includes(term) ||
-        (cot.estado             || '').toLowerCase().includes(term)
+        (cot.cliente_documento  || '').toLowerCase().includes(term)
       );
     }
 
     if (this.fechaDesde) {
-      const desde = new Date(this.fechaDesde);
-      resultado = resultado.filter(cot => cot.fecha && new Date(cot.fecha) >= desde);
+      const desde = new Date(this.fechaDesde + 'T00:00:00');
+      base = base.filter(cot => cot.fecha && fechaDeCotizacion(cot.fecha) >= desde);
     }
 
     if (this.fechaHasta) {
       const hasta = new Date(this.fechaHasta + 'T23:59:59');
-      resultado = resultado.filter(cot => cot.fecha && new Date(cot.fecha) <= hasta);
+      base = base.filter(cot => cot.fecha && fechaDeCotizacion(cot.fecha) <= hasta);
     }
 
-    this.cotizacionesFiltradas = resultado;
-    this.calcularKPIs();
-    this.calcularInsights();
+    // Conteos y KPIs no dependen del filtro de estado: elegir "Aprobadas" no
+    // debe dejar en cero lo que hay por cobrar.
+    this.calcularKPIs(base);
+    this.cotizacionesFiltradas = this.filtroEstado === 'TODAS'
+      ? base
+      : base.filter(cot => estadoVisible(cot) === this.filtroEstado);
     this.cdr.markForCheck();
   }
 
-  // ─── Acciones ─────────────────────────────────────────────────────────────
+  private calcularKPIs(base: ICotizacion[]) {
+    const conteos: Record<FiltroEstado, number> = { TODAS: base.length, PENDIENTE: 0, VENCIDA: 0, APROBADA: 0, ANULADA: 0 };
+    let vendido = 0;
+    let porCobrar = 0;
+    for (const cot of base) {
+      const estado = estadoVisible(cot);
+      conteos[estado]++;
+      if (estado === 'APROBADA') vendido += cot.total || 0;
+      if (estado === 'PENDIENTE') porCobrar += cot.total || 0;
+    }
+    this.conteos = conteos;
+    this.totalVendido = vendido;
+    this.totalPorCobrar = porCobrar;
+    const noAnuladas = base.length - conteos.ANULADA;
+    this.tasaConversion = noAnuladas > 0 ? (conteos.APROBADA / noAnuladas) * 100 : 0;
+  }
+
+  // ─── Exportar ─────────────────────────────────────────────────────────────
 
   exportarCSV() {
     if (!this.cotizacionesFiltradas.length) {
       this.msg.add({ severity: 'warn', summary: 'Sin datos', detail: 'No hay cotizaciones para exportar' });
       return;
     }
-    const headers = ['Folio','Fecha','Cliente','Documento','Total','Estado','Vendedor'];
+    const headers = ['Folio', 'Fecha', 'Cliente', 'Documento', 'Subtotal', 'Descuento', 'IGV', 'Total', 'Impuestos', 'Estado', 'Vendedor'];
     const rows = this.cotizacionesFiltradas.map(cot => [
       cot.folio,
-      cot.fecha ? (cot.fecha.includes('T') ? new Date(cot.fecha) : new Date(cot.fecha.replace(/-/g, '/'))).toLocaleDateString('es-PE') : '',
+      cot.fecha ? fechaDeCotizacion(cot.fecha).toLocaleDateString('es-PE') : '',
       cot.cliente_nombre,
       cot.cliente_documento || '',
+      cot.subtotal?.toFixed(2) || '0.00',
+      Number(cot.descuento_global || 0).toFixed(2),
+      cot.igv?.toFixed(2) || '0.00',
       cot.total?.toFixed(2) || '0.00',
-      this.getEstadoLabel(cot.estado as EstadoCotizacion) ,
-      cot.vendedor || ''
+      this.etiquetaIgv(cot),
+      this.getEstadoLabel(cot),
+      cot.vendedor_nombre || cot.vendedor || ''
     ]);
     const csvContent = [headers, ...rows]
       .map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
       .join('\n');
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `cotizaciones_${this.empresaActiva?.nombre_comercial || 'export'}_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    this.msg.add({ severity: 'success', summary: 'Exportado', detail: `${rows.length} registros exportados` });
   }
 
-  async cambiarEstado(cotizacion: ICotizacion, nuevoEstado: string) {
-    if (!cotizacion.id || !nuevoEstado) return;
+  // ─── Acciones por cotización ──────────────────────────────────────────────
+
+  abrirAcciones(event: Event, cot: ICotizacion, menu: Menu) {
+    this.accionesMenu = this.accionesDe(cot);
+    menu.toggle(event);
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Solo se revisa lo Pendiente; Aprobada y Anulada se duplican. Pendiente pasa
+   * a Aprobada o Anulada, Aprobada vuelve a Pendiente o pasa a Anulada, y Anulada
+   * es definitivo. crear_cotizacion() y el trigger de estados aplican lo mismo.
+   */
+  accionesDe(cot: ICotizacion): MenuItem[] {
+    const acciones: MenuItem[] = [];
+    if (cot.estado === 'PENDIENTE' && !this.reemplazadaPor(cot)) {
+      acciones.push({ label: 'Revisar', icon: 'pi pi-pencil', command: () => this.abrirEnCotizador(cot, 'revision') });
+    }
+    acciones.push({ label: 'Duplicar', icon: 'pi pi-copy', command: () => this.abrirEnCotizador(cot, 'duplicar') });
+
+    const estados: EstadoDestino[] =
+      cot.estado === 'PENDIENTE' ? ['APROBADA', 'ANULADA'] :
+      cot.estado === 'APROBADA' ? ['PENDIENTE', 'ANULADA'] : [];
+    if (estados.length) {
+      acciones.push({ separator: true });
+      for (const destino of estados) {
+        const config = CONFIRMACION_ESTADO[destino];
+        acciones.push({
+          label: destino === 'ANULADA' ? 'Anular' : config.titulo,
+          icon: config.icono,
+          command: () => this.confirmarCambioEstado(cot, destino)
+        });
+      }
+    }
+
+    acciones.push({ separator: true });
+    acciones.push({
+      label: cot.oculta ? 'Mostrar de nuevo' : 'Ocultar',
+      icon: cot.oculta ? 'pi pi-eye' : 'pi pi-eye-slash',
+      command: () => this.alternarOculta(cot)
+    });
+    return acciones;
+  }
+
+  confirmarCambioEstado(cot: ICotizacion, destino: EstadoDestino) {
+    const config = CONFIRMACION_ESTADO[destino];
+    this.confirmSvc.confirm({
+      header: config.titulo,
+      message: config.mensaje(cot.folio),
+      icon: config.icono,
+      acceptLabel: config.aceptar,
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: config.claseBoton,
+      accept: () => this.cambiarEstado(cot, destino)
+    });
+  }
+
+  async cambiarEstado(cot: ICotizacion, destino: EstadoDestino) {
+    if (!cot.id) return;
     try {
-      await this.supabase.actualizarEstado(cotizacion.id, nuevoEstado);
-
-      [this.cotizaciones, this.cotizacionesFiltradas].forEach(arr => {
-        const idx = arr.findIndex(c => c.id === cotizacion.id);
-        if (idx !== -1) arr[idx] = { ...arr[idx], estado: nuevoEstado as EstadoCotizacion};
-      });
-
-      this.calcularKPIs();
-      this.calcularInsights();
-      this.msg.add({ severity: 'success', summary: 'Estado actualizado',
-        detail: `${cotizacion.folio} → ${this.getEstadoLabel(nuevoEstado)}` });
+      const actualizada = await this.supabase.actualizarEstado(cot.id, destino);
+      this.cotizaciones = this.cotizaciones.map(c => c.id === cot.id ? { ...c, ...actualizada } : c);
+      this.aplicarFiltros();
     } catch (e: any) {
-      this.msg.add({ severity: 'error', summary: 'No se cambió el estado',
-        detail: e?.code === 'P0001' && e?.message ? e.message : 'No se pudo actualizar el estado' });
+      this.msg.add({
+        severity: 'error', summary: 'No se cambió el estado',
+        detail: e?.code === 'P0001' && e?.message ? e.message : 'No se pudo actualizar el estado'
+      });
       await this.cargarDatos();
     }
   }
@@ -403,6 +373,7 @@ export class HistorialComponent implements OnInit {
   async descargarPDF(cotizacion: ICotizacion) {
     if (!cotizacion.id || !this.empresaActiva) return;
     this.descargando = cotizacion.id;
+    this.cdr.markForCheck();
     try {
       // Las cotizaciones anteriores a que se guardaran las condiciones se
       // reimprimen sin validez, como hasta ahora.
@@ -410,175 +381,92 @@ export class HistorialComponent implements OnInit {
       await this.pdfSvc.generarYDescargarCotizacion(
         cotizacion,
         this.empresaActiva,
-        sinCondicionesGuardadas ? { mostrarValidez: false } : {}
+        sinCondicionesGuardadas ? { mostrarValidez: false } : {},
+        this.reemplazadaPor(cotizacion)
       );
-      this.msg.add({ severity: 'success', summary: 'PDF generado', detail: `${cotizacion.folio} descargada` });
     } catch {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo generar el PDF' });
     } finally {
       this.descargando = null;
+      this.cdr.markForCheck();
     }
   }
 
-  async ocultarCotizacion(cot: ICotizacion) {
-    if (!cot?.id) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'ID de cotización no válido' });
-      return;
-    }
-
-    const yaOculta = cot.oculta === true;
-    const nuevoEstadoOculta = !yaOculta;
-    const accionText = nuevoEstadoOculta ? 'ocultar' : 'restaurar';
-
-    this.confirmSvc.confirm({
-      message: `¿Deseas ${accionText} la cotización <strong>${cot.folio}</strong>?<br>
-                <small class="text-500">${nuevoEstadoOculta
-                  ? 'La cotización se archivará. Podrás consultarla activando el botón "Ver Ocultas".'
-                  : 'La cotización se mostrará de nuevo en la vista principal.'}</small>`,
-      header: nuevoEstadoOculta ? 'Ocultar cotización' : 'Restaurar cotización',
-      icon: nuevoEstadoOculta ? 'pi pi-eye-slash' : 'pi pi-eye',
-      acceptLabel: nuevoEstadoOculta ? 'Sí, ocultar' : 'Sí, restaurar',
-      rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: nuevoEstadoOculta ? 'p-button-warning' : 'p-button-info',
-      accept: async () => {
-        try {
-          // 1. Actualización inmediata local para OnPush
-          cot.oculta = nuevoEstadoOculta;
-
-          // 2. Persistencia en base de datos Supabase
-          await this.supabase.actualizarVisibilidadCotizacion(cot.id!, nuevoEstadoOculta);
-
-          this.msg.add({
-            severity: nuevoEstadoOculta ? 'warn' : 'success',
-            summary: nuevoEstadoOculta ? 'Cotización Ocultada' : 'Cotización Visible',
-            detail: nuevoEstadoOculta
-              ? `${cot.folio} archivada. Activa "Ver Ocultas" para volver a verla.`
-              : `${cot.folio} restaurada al historial principal.`
-          });
-
-          await this.cargarDatos();
-        } catch (e: any) {
-          console.error('Error al ocultar cotización:', e);
-          this.msg.add({
-            severity: 'error',
-            summary: 'Error en BD',
-            detail: e.message || 'No se pudo actualizar la visibilidad en Supabase'
-          });
-        } finally {
-          this.cdr.markForCheck();
-        }
-      }
-    });
-  }
-
-  async abrirModalEditar(cot: ICotizacion) {
-    this.cotizacionParaEditar = cot;
-    this.opcionEditar = {
-      empresaOrigen: 'misma',
-      empresaSeleccionadaId: this.empresaActiva?.id || null,
-      // Una cotización ya reemplazada solo se puede duplicar.
-      accionOriginal: this.reemplazadaPor(cot) ? 'mantener' : 'anular'
-    };
-    this.cotizacionCargandoModal = cot.id!;
-    await this.cargarEmpresasDisponibles();
-    this.modalEditarVisible = true;
-    this.cotizacionCargandoModal = null;  
-  }
-
-  cerrarModalEditar() {
-    this.modalEditarVisible = false;
-    this.cotizacionParaEditar = null;
-    this.cotizacionCargandoModal = null;
-    this.opcionEditar = {
-      empresaOrigen: 'misma',
-      empresaSeleccionadaId: this.empresaActiva?.id || null,
-      accionOriginal: 'anular'
-    };
-    this.cdr.markForCheck();
-  }
-
-  onEmpresaOrigenChange() {
-    if (this.opcionEditar.empresaOrigen === 'misma') {
-      this.opcionEditar.empresaSeleccionadaId = this.empresaActiva?.id || null;
-    } else {
-      this.opcionEditar.empresaSeleccionadaId = null;
-    }
-  }
-
-  async confirmarEdicion() {
-    if (!this.cotizacionParaEditar) return;
-
-    if (this.opcionEditar.empresaOrigen === 'otra' && !this.opcionEditar.empresaSeleccionadaId) {
-      this.msg.add({ severity: 'warn', summary: 'Selecciona una empresa',
-        detail: 'Debes elegir la empresa con la que continuarás' });
-      return;
-    }
-
-    this.procesandoEdicion = true;
-    const cot = this.cotizacionParaEditar;
-
+  /** Ocultar se puede revertir, así que no pide confirmación. */
+  async alternarOculta(cot: ICotizacion) {
+    if (!cot.id) return;
+    const oculta = !cot.oculta;
     try {
-      // La original NO se toca aquí: crear_cotizacion() la anula en la misma
-      // transacción en que se guarda la revisión.
-      let empresaDestino = this.empresaActiva;
-      if (this.opcionEditar.empresaOrigen === 'otra') {
-        empresaDestino = this.empresasDisponibles.find(
-          e => e.id === this.opcionEditar.empresaSeleccionadaId
-        );
-        if (!empresaDestino) throw new Error('No se encontró la empresa seleccionada');
-        this.session.setEmpresaActiva(empresaDestino);
+      await this.supabase.actualizarVisibilidadCotizacion(cot.id, oculta);
+      this.cotizaciones = this.cotizaciones.map(c => c.id === cot.id ? { ...c, oculta } : c);
+      this.aplicarFiltros();
+      if (oculta) {
+        this.msg.add({ severity: 'info', summary: `${cot.folio} oculta`, detail: `La encuentras en "Ver ocultas (${this.cantidadOcultas})".` });
       }
-
-      const nombre = this.obtenerNombreCliente(cot);
-      const borrador: IBorradorCotizador = {
-        modo:               this.opcionEditar.accionOriginal === 'anular' ? 'revision' : 'duplicar',
-        origen_id:          cot.id || null,
-        folio_origen:       cot.folio,
-        cliente_nombre:     nombre === 'Sin nombre' ? '' : nombre,
-        cliente_documento:  this.obtenerDocumentoCliente(cot),
-        cliente_telefono:   cot.cliente_telefono    || '',
-        cliente_direccion:  cot.cliente_direccion   || '',
-        cliente_correo:     cot.cliente_correo      || '',
-        observaciones:      cot.observaciones       || '',
-        lugar_entrega:      cot.lugar_entrega       || null,
-        incluye_igv:        cot.incluye_igv ?? (cot.igv || 0) > 0,
-        condiciones:        cot.condiciones,
-        items:              cot.items               || []
-      };
-
-      sessionStorage.setItem(CLAVE_BORRADOR_COTIZADOR, JSON.stringify(borrador));
-      this.msg.add({ severity: 'success', summary: 'Listo', detail: 'Redirigiendo al cotizador...', life: 1500 });
-      this.modalEditarVisible = false;
-      setTimeout(() => this.router.navigate(['/cotizador']), 900);
-
     } catch (e: any) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: e.message || 'No se pudo procesar' });
-    } finally {
-      this.procesandoEdicion = false;
+      console.error('Error al ocultar cotización:', e);
+      this.msg.add({ severity: 'error', summary: 'No se guardó', detail: 'No se pudo cambiar la visibilidad de la cotización' });
     }
+  }
+
+  /** Copia los datos al cotizador. La original no cambia hasta guardar la revisión. */
+  abrirEnCotizador(cot: ICotizacion, modo: IBorradorCotizador['modo']) {
+    const nombre = this.obtenerNombreCliente(cot);
+    const borrador: IBorradorCotizador = {
+      modo,
+      origen_id:          cot.id || null,
+      folio_origen:       cot.folio,
+      cliente_nombre:     nombre === 'Sin nombre' ? '' : nombre,
+      cliente_documento:  this.obtenerDocumentoCliente(cot),
+      cliente_telefono:   cot.cliente_telefono    || '',
+      cliente_direccion:  cot.cliente_direccion   || '',
+      cliente_correo:     cot.cliente_correo      || '',
+      observaciones:      cot.observaciones       || '',
+      lugar_entrega:      cot.lugar_entrega       || null,
+      modo_igv:           modoIgvDe(cot),
+      descuento:          Number(cot.descuento_global) || 0,
+      condiciones:        cot.condiciones,
+      items:              cot.items               || []
+    };
+    sessionStorage.setItem(CLAVE_BORRADOR_COTIZADOR, JSON.stringify(borrador));
+    this.router.navigate(['/cotizador']);
   }
 
   // ─── Helpers template ─────────────────────────────────────────────────────
 
-  getEstadoLabel(estado: string): string {
-    return this.opcionesEstado.find(o => o.value === estado)?.label || estado || 'Sin estado';
+  getEstadoLabel(cot: ICotizacion): string {
+    return ETIQUETA_ESTADO[estadoVisible(cot)] ?? cot.estado ?? 'Sin estado';
   }
 
-  getSeverity(estado: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
-    switch (estado) {
+  getSeverity(cot: ICotizacion): 'success' | 'info' | 'warning' | 'danger' | 'secondary' {
+    switch (estadoVisible(cot)) {
       case 'APROBADA':  return 'success';
-      case 'PENDIENTE': return 'warn';
+      case 'PENDIENTE': return 'warning';
       case 'ANULADA':   return 'danger';
       default:          return 'secondary';
     }
   }
 
+  etiquetaIgv(cot: ICotizacion): string {
+    return ETIQUETA_IGV[modoIgvDe(cot)];
+  }
+
+  /** Bajo la etiqueta de estado: hasta cuándo vale o quién hizo el último cambio. */
+  detalleEstado(cot: ICotizacion): string {
+    if (cot.estado === 'PENDIENTE') {
+      const limite = venceEl(cot);
+      if (!limite) return '';
+      const fecha = limite.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      return `${estaVencida(cot) ? 'Venció' : 'Vence'} el ${fecha}`;
+    }
+    if (!cot.estado_cambiado_en) return '';
+    const cuando = this.formatearFecha(cot.estado_cambiado_en);
+    return cot.estado_cambiado_por_nombre ? `${cot.estado_cambiado_por_nombre} · ${cuando}` : cuando;
+  }
+
   formatearFecha(fecha: string | undefined): string {
     if (!fecha) return '—';
-    const fechaObj = typeof fecha === 'string' && !fecha.includes('T') && fecha.includes('-')
-      ? new Date(fecha.replace(/-/g, '/'))
-      : new Date(fecha);
-    return fechaObj.toLocaleDateString('es-PE', {
+    return fechaDeCotizacion(fecha).toLocaleDateString('es-PE', {
       day: '2-digit', month: '2-digit', year: 'numeric'
     });
   }

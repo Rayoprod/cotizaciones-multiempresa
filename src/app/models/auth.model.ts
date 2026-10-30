@@ -3,6 +3,8 @@ import { RolGlobal, RolEmpresa } from './types';
 export interface IProfile {
   id: string;
   email?: string;
+  /** Lo que imprime el PDF como vendedor. */
+  nombre?: string | null;
   rol?: RolGlobal;
   activo?: boolean;
   created_at?: string;

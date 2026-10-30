@@ -1,5 +1,5 @@
 // src/app/models/empresa.model.ts
-import { Moneda, RolEmpresa } from './types';
+import { ModoIgv, Moneda, RolEmpresa } from './types';
 
 export interface IEmpresa {
   id: string;
@@ -26,6 +26,8 @@ export interface IEmpresa {
   usuario_actualizacion?: string;
   /** Opciones de "lugar de entrega" de esta empresa; vacía = no se usa. */
   lugares_entrega?: string[];
+  /** Modo de IGV con el que abre una cotización nueva de esta empresa. */
+  modo_igv?: ModoIgv;
   // Relación cargada por separado desde tabla cuentas_bancarias
   cuentas_bancarias?: ICuentaBancaria[];
   /** Rol del usuario actual en esta empresa (no es columna: viene de usuario_empresa). */

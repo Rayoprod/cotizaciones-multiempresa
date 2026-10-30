@@ -20,8 +20,8 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { SessionContextService } from '../../services/session-context.service';
 import {
   extraerNombreClienteTexto, extraerDocumentoClienteTexto,
-  calcularTotales, redondear2, CLAVE_BORRADOR_COTIZADOR,
-  IBorradorCotizador, INuevaCotizacion
+  calcularTotales, redondear2, CLAVE_BORRADOR_COTIZADOR, MODOS_IGV,
+  IBorradorCotizador, INuevaCotizacion, ModoIgv
 } from '../../models';
 
 /** sessionStorage: la cotización que se está armando (sobrevive a una recarga). */
@@ -31,6 +31,8 @@ const CLAVE_EN_CURSO = 'cotizador-en-curso';
 interface IEnCurso extends Omit<IBorradorCotizador, 'modo'> {
   modo: IBorradorCotizador['modo'] | null;
   guardar_cliente: boolean;
+  documento_origen: string | null;
+  origen_cliente: 'cartera' | 'sunat' | 'manual' | null;
 }
 
 @Component({
@@ -86,7 +88,10 @@ export class CotizadorComponent implements OnInit, OnDestroy {
   origenCliente: 'cartera' | 'sunat' | 'manual' | null = null;
 
   // ── Opciones ──────────────────────────────────────────────────────────────
-  incluyeIgv: boolean = true;
+  readonly modosIgv = MODOS_IGV;
+  /** Empieza con el modo de la empresa; se puede cambiar en cada cotización. */
+  modoIgv: ModoIgv = 'sumar';
+  descuento: number | null = null;
 
   // Lugar de entrega: las opciones son de cada empresa (Empresas → Lugares de
   // entrega). Se leen del signal para tomar la versión que refresca el layout.
@@ -105,6 +110,7 @@ export class CotizadorComponent implements OnInit, OnDestroy {
 
   // ── Totales ───────────────────────────────────────────────────────────────
   subtotalGeneral: number = 0;
+  descuentoAplicado: number = 0;
   igvTotal: number = 0;
   totalFinal: number = 0;
 
@@ -112,6 +118,8 @@ export class CotizadorComponent implements OnInit, OnDestroy {
   borradorModo: 'revision' | 'duplicar' | null = null;
   borradorOrigenId: string | null = null;
   borradorFolioPadre: string | null = null;
+  /** RUC/DNI de la cotización que se revisa, para avisar si cambia de cliente. */
+  documentoOrigen: string | null = null;
   /** Se recuperó una cotización a medio armar (p. ej. tras recargar la página). */
   recuperadaDeSesion = false;
 
@@ -143,16 +151,13 @@ export class CotizadorComponent implements OnInit, OnDestroy {
 
     if (!this.empresaActiva?.id) {
       this.cargando = false;
-      this.messageService.add({
-        severity: 'warn', summary: 'Elige una empresa',
-        detail: 'Para cotizar primero selecciona la empresa.'
-      });
       this.router.navigate(['/selector']);
       return;
     }
 
     this.condiciones.mostrarCuentas = this.empresaActiva?.mostrar_cuentas ?? true;
     this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true);
+    this.modoIgv = this.modoIgvDeLaEmpresa;
 
     const borradorCargado = this.cargarBorradorSiExiste() || this.recuperarEnCurso();
     if (!borradorCargado && this.carrito.length === 0) {
@@ -160,6 +165,11 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     }
 
     await this.cargarDatosDesdeBD();
+
+    if (!borradorCargado && !this.tieneCliente && !this.carrito.some(i => i.descripcion?.trim())) {
+      this.modoIgv = this.modoIgvDeLaEmpresa;
+      this.recalcularTodo();
+    }
 
     this.cargando = false;
     this.cdr.markForCheck();
@@ -191,7 +201,17 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     return !!this.clienteNombreTexto &&
       !!this.clienteDocumentoTexto &&
       this.tieneItemsValidos &&
+      this.descuentoValido &&
       !!empresa?.id;
+  }
+
+  get descuentoValido(): boolean {
+    return (this.descuento ?? 0) <= this.subtotalGeneral;
+  }
+
+  /** Del signal: el layout lo refresca al entrar, y lo guardado en la pestaña puede ser anterior. */
+  private get modoIgvDeLaEmpresa(): ModoIgv {
+    return this.session.empresaActiva()?.modo_igv ?? this.empresaActiva?.modo_igv ?? 'sumar';
   }
 
   /** Lo que falta para poder guardar, en palabras. */
@@ -199,6 +219,7 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     const falta: string[] = [];
     if (!this.clienteNombreTexto || !this.clienteDocumentoTexto) falta.push('el cliente (nombre y RUC/DNI)');
     if (!this.tieneItemsValidos) falta.push('al menos un ítem con cantidad y precio');
+    if (!this.descuentoValido) falta.push('un descuento que no supere el subtotal');
     return falta;
   }
 
@@ -259,6 +280,12 @@ export class CotizadorComponent implements OnInit, OnDestroy {
   get clienteYaRegistrado(): boolean {
     const doc = this.clienteDocumentoTexto;
     return !!doc && this.clientesBD.some(c => String(c.documento_identidad || '').trim() === doc);
+  }
+
+  /** La revisión quedó con otro RUC/DNI: al guardar se anula la cotización de otro cliente. */
+  get clienteCambiadoEnRevision(): boolean {
+    return this.borradorModo === 'revision' && !!this.documentoOrigen && !!this.clienteDocumentoTexto
+      && this.clienteDocumentoTexto !== this.documentoOrigen;
   }
 
   /** Si lo escrito en el buscador es un RUC (11) o DNI (8), ese número. */
@@ -419,8 +446,13 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Enter en cantidad o precio: pasa a una fila nueva (o a la siguiente). */
-  alEnterEnFila(indice: number) {
+  /**
+   * Enter en cantidad o precio: pasa a una fila nueva (o a la siguiente).
+   * El preventDefault evita el keypress de p-inputNumber, que con el texto
+   * seleccionado (al llegar con Tab) reemplaza el valor por el Enter y lo borra.
+   */
+  alEnterEnFila(indice: number, event?: Event) {
+    event?.preventDefault();
     if (indice === this.carrito.length - 1) {
       this.agregarFilaYEnfocar();
     } else {
@@ -492,21 +524,50 @@ export class CotizadorComponent implements OnInit, OnDestroy {
   }
 
   recalcularTodo() {
-    const totales = calcularTotales(this.carrito.filter(item => this.esItemValido(item)), this.incluyeIgv);
+    const totales = calcularTotales(this.carrito.filter(item => this.esItemValido(item)), this.modoIgv, this.descuento);
     this.subtotalGeneral = totales.subtotal;
+    this.descuentoAplicado = totales.descuento;
     this.igvTotal = totales.igv;
     this.totalFinal = totales.total;
     this.marcarCambio();
     this.cdr.markForCheck();
   }
 
+  get ayudaModoIgv(): string {
+    return this.modosIgv.find(m => m.value === this.modoIgv)?.ayuda ?? '';
+  }
+
+  get etiquetaTotal(): string {
+    if (this.modoIgv === 'incluido') return 'Total, IGV incluido';
+    return this.modoIgv === 'sumar' ? 'Total con IGV' : 'Total sin IGV';
+  }
+
+  /** Lo que compone el total, en una línea, bajo la cifra de la barra inferior. */
+  get detalleTotal(): string {
+    const soles = (monto: number) =>
+      `S/ ${monto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (this.totalFinal <= 0 && this.descuentoAplicado <= 0) return '';
+    const partes: string[] = [];
+    if (this.modoIgv === 'sumar' || this.descuentoAplicado > 0) partes.push(`Subtotal ${soles(this.subtotalGeneral)}`);
+    if (this.descuentoAplicado > 0) partes.push(`Descuento -${soles(this.descuentoAplicado)}`);
+    if (this.modoIgv === 'sumar') partes.push(`IGV ${soles(this.igvTotal)}`);
+    if (this.modoIgv === 'incluido') partes.push(`Incluye IGV ${soles(this.igvTotal)}`);
+    return partes.join(' · ');
+  }
+
+  /** Un lugar heredado (revisión, duplicado) que la empresa ya no ofrece. */
+  get lugarYaNoDisponible(): string | null {
+    const opciones = this.opcionesLugar().map(o => o.value);
+    return this.lugarEntrega && !opciones.includes(this.lugarEntrega) ? this.lugarEntrega : null;
+  }
+
   /** Resumen de una línea de las opciones del PDF, para cuando están plegadas. */
   get resumenOpciones(): string {
-    const partes = [this.incluyeIgv ? 'Con IGV' : 'Sin IGV'];
+    const partes: string[] = [];
     if (this.lugarSeleccionado) partes.push(this.lugarSeleccionado.toLowerCase());
     if (this.condiciones.mostrarValidez) partes.push(`validez ${this.condiciones.diasValidez} días`);
     if (this.condiciones.mostrarCuentas) partes.push('cuentas bancarias');
-    return partes.join(' · ');
+    return partes.join(' · ') || 'Sin validez ni cuentas';
   }
 
   // ── Guardar y generar PDF ─────────────────────────────────────────────────
@@ -562,7 +623,8 @@ export class CotizadorComponent implements OnInit, OnDestroy {
           cantidad: Number(item.cantidad),
           precio_unitario: Number(item.precio_unitario)
         })),
-      incluyeIgv: this.incluyeIgv,
+      modoIgv: this.modoIgv,
+      descuento: this.descuentoAplicado,
       lugarEntrega: this.lugarSeleccionado,
       observaciones: this.condiciones.mostrarObservaciones ? (this.clienteObservaciones?.trim() || null) : null,
       condiciones: {
@@ -638,11 +700,13 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     this.editandoCliente         = false;
     this.guardarClienteEnCartera = true;
     this.lugarEntrega            = null;
-    this.incluyeIgv              = true;
+    this.modoIgv                 = this.modoIgvDeLaEmpresa;
+    this.descuento               = null;
     this.carrito                 = [];
     this.borradorModo            = null;
     this.borradorOrigenId        = null;
     this.borradorFolioPadre      = null;
+    this.documentoOrigen         = null;
     this.recuperadaDeSesion      = false;
     this.mostrarFaltantes        = false;
     this.agregarFila();
@@ -684,7 +748,10 @@ export class CotizadorComponent implements OnInit, OnDestroy {
       cliente_correo: this.clienteCorreo,
       observaciones: this.clienteObservaciones,
       lugar_entrega: this.lugarEntrega,
-      incluye_igv: this.incluyeIgv,
+      modo_igv: this.modoIgv,
+      descuento: this.descuento ?? 0,
+      documento_origen: this.documentoOrigen,
+      origen_cliente: this.origenCliente,
       condiciones: { ...this.condiciones, diasValidez: Number(this.condiciones.diasValidez) || 15 },
       items: this.carrito,
       guardar_cliente: this.guardarClienteEnCartera
@@ -754,14 +821,13 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     this.clienteTelefono      = b.cliente_telefono  || '';
     this.clienteDireccion     = b.cliente_direccion || '';
     this.clienteCorreo        = b.cliente_correo    || '';
-    this.origenCliente        = this.clienteNombre ? 'cartera' : null;
+    this.origenCliente        = b.origen_cliente ?? (this.clienteNombre ? 'cartera' : null);
     // Las cotizaciones viejas guardaban "[Revisión de X]" en observaciones.
     this.clienteObservaciones = (b.observaciones || '').replace(/^\[(Revisión|Duplicado) de [^\]]+\]\s*/, '');
     this.condiciones.mostrarObservaciones = !!this.clienteObservaciones;
     this.lugarEntrega         = b.lugar_entrega     || null;
-    if (b.incluye_igv !== undefined) {
-      this.incluyeIgv         = b.incluye_igv;
-    }
+    if (b.modo_igv) this.modoIgv = b.modo_igv;
+    this.descuento            = b.descuento || null;
     if (b.condiciones && Object.keys(b.condiciones).length > 0) {
       const { diasValidez, ...resto } = b.condiciones;
       Object.assign(this.condiciones, resto);
@@ -783,6 +849,7 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     this.borradorModo       = b.modo || null;
     this.borradorOrigenId   = b.origen_id ?? null;
     this.borradorFolioPadre = b.folio_origen ?? null;
+    this.documentoOrigen    = b.documento_origen ?? (b.modo === 'revision' ? b.cliente_documento ?? null : null);
 
     this.recalcularTodo();
   }
@@ -790,7 +857,9 @@ export class CotizadorComponent implements OnInit, OnDestroy {
   confirmarLimpiarFormulario() {
     if (this.tieneCliente || this.tieneItemsValidos) {
       this.confirmationSvc.confirm({
-        message: 'Se borrarán el cliente y los ítems de esta cotización.',
+        message: this.borradorModo
+          ? `Se descarta lo que armaste y ${this.borradorFolioPadre} no cambia.`
+          : 'Se borrarán el cliente y los ítems de esta cotización.',
         header: '¿Empezar de nuevo?',
         icon: 'pi pi-refresh',
         acceptLabel: 'Sí, empezar de nuevo',

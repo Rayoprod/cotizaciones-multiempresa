@@ -32,6 +32,22 @@
     <i class="pi pi-copy"></i>
     <div><strong>Copia de {{ borradorFolioPadre }}.</strong> Se guardará con un folio nuevo; la original no cambia.</div>
   </div>
+  <div *ngIf="clienteCambiadoEnRevision" class="aviso aviso-ambar" role="alert">
+    <i class="pi pi-exclamation-triangle"></i>
+    <div>
+      <strong>Cambiaste de cliente.</strong>
+      {{ borradorFolioPadre }} era para el {{ documentoOrigen!.length === 11 ? 'RUC' : 'DNI' }} {{ documentoOrigen }} y se anulará igual al guardar.
+      Si es una cotización para otro cliente, usa Duplicar desde el Historial.
+    </div>
+  </div>
+  <div *ngIf="lugarYaNoDisponible as lugar" class="aviso aviso-ambar">
+    <i class="pi pi-map-marker"></i>
+    <div class="flex-1">
+      <strong>"{{ lugar }}" ya no es un lugar de entrega de esta empresa.</strong>
+      {{ lugarSeleccionado ? 'Se usará "' + lugarSeleccionado + '".' : 'No se imprimirá ningún lugar.' }}
+      <button *ngIf="lugarSeleccionado" type="button" class="enlace" (click)="opcionesAbiertas = true">Cambiar</button>
+    </div>
+  </div>
   <div *ngIf="recuperadaDeSesion" class="aviso aviso-azul">
     <i class="pi pi-history"></i>
     <div class="flex-1">Recuperamos la cotización que estabas armando.</div>
@@ -53,7 +69,8 @@
                         inputId="buscar-cliente"
                         placeholder="Nombre, RUC o DNI"
                         [delay]="150"
-                        styleClass="flex-1 min-w-0" inputStyleClass="w-full"
+                        emptyMessage="No está en tu cartera"
+                        class="flex-1 min-w-0" styleClass="w-full" inputStyleClass="w-full"
                         (keydown.enter)="alPresionarEnterBusqueda()">
           <ng-template let-c pTemplate="item">
             <div class="flex flex-column">
@@ -84,7 +101,7 @@
           <p class="text-sm text-700 m-0 mt-1">
             {{ clienteDocumentoTexto ? tipoDocumento + ' ' + clienteDocumentoTexto : 'Sin RUC/DNI' }}
             <span *ngIf="origenCliente === 'sunat'" class="etiqueta etiqueta-verde ml-2">Datos de SUNAT/RENIEC</span>
-            <span *ngIf="origenCliente === 'cartera'" class="etiqueta etiqueta-gris ml-2">De tu cartera</span>
+            <span *ngIf="origenCliente === 'cartera' && clienteYaRegistrado" class="etiqueta etiqueta-gris ml-2">De tu cartera</span>
           </p>
           <p *ngIf="clienteDireccion" class="text-sm text-600 m-0 mt-1">{{ clienteDireccion }}</p>
           <p *ngIf="contactoCliente" class="text-sm text-600 m-0 mt-1">{{ contactoCliente }}</p>
@@ -133,7 +150,7 @@
         <input pInputText id="clienteDireccion" [(ngModel)]="clienteDireccion" placeholder="Av. Principal 123, Lima" />
       </div>
       <div class="col-12 px-0 flex justify-content-end gap-2">
-        <button pButton type="button" label="Listo" icon="pi pi-check" class="p-button-sm"
+        <button pButton type="button" label="Listo" icon="pi pi-check" class="p-button-sm" style="width: auto"
                 (click)="terminarEdicionCliente()"></button>
       </div>
     </div>
@@ -147,7 +164,7 @@
     </div>
 
     <!-- Escritorio -->
-    <div class="hidden md:block">
+    <div class="hidden lg:block">
       <table class="tabla-items">
         <thead>
           <tr>
@@ -171,6 +188,7 @@
                               (onSelect)="alElegirProductoSugerido($event, item)"
                               [inputId]="'item-desc-' + i"
                               placeholder="Busca en el catálogo o escribe"
+                              [showEmptyMessage]="false"
                               appendTo="body" styleClass="w-full" inputStyleClass="w-full" [maxlength]="100"></p-autoComplete>
             </td>
             <td><input pInputText [(ngModel)]="item.unidad" (ngModelChange)="marcarCambio()" class="w-full text-center" placeholder="und" /></td>
@@ -178,13 +196,13 @@
               <p-inputNumber [(ngModel)]="item.cantidad" (ngModelChange)="recalcularItem(item)"
                              [min]="0" [maxFractionDigits]="2" placeholder="0"
                              styleClass="w-full" inputStyleClass="w-full text-center"
-                             (keydown.enter)="alEnterEnFila(i)"></p-inputNumber>
+                             (keydown.enter)="alEnterEnFila(i, $event)"></p-inputNumber>
             </td>
             <td>
               <p-inputNumber [(ngModel)]="item.precio_unitario" (ngModelChange)="recalcularItem(item)"
                              mode="decimal" [minFractionDigits]="2" [maxFractionDigits]="2" [min]="0" prefix="S/ "
                              placeholder="S/ 0.00" styleClass="w-full" inputStyleClass="w-full text-right"
-                             (keydown.enter)="alEnterEnFila(i)"></p-inputNumber>
+                             (keydown.enter)="alEnterEnFila(i, $event)"></p-inputNumber>
             </td>
             <td class="text-right font-semibold text-900 white-space-nowrap">S/ {{ item.subtotal | number:'1.2-2' }}</td>
             <td class="text-center">
@@ -196,8 +214,8 @@
       </table>
     </div>
 
-    <!-- Celular -->
-    <div class="flex flex-column gap-2 md:hidden">
+    <!-- Celular y tablet -->
+    <div class="flex flex-column gap-2 lg:hidden">
       <div *ngFor="let item of carrito; let i = index; trackBy: porIndice" class="item-movil">
         <div class="flex align-items-center justify-content-between mb-2">
           <span class="text-sm font-semibold text-700">Ítem {{ i + 1 }}</span>
@@ -211,19 +229,22 @@
                         (onSelect)="alElegirProductoSugerido($event, item)"
                         [inputId]="'item-desc-m-' + i"
                         placeholder="Producto o servicio"
+                        [showEmptyMessage]="false"
                         appendTo="body" styleClass="w-full" inputStyleClass="w-full" [maxlength]="100"></p-autoComplete>
         <div class="grid m-0 mt-2">
-          <div class="col-4 p-0 pr-1">
+          <div class="col-3 p-0 pr-1">
             <input pInputText [(ngModel)]="item.unidad" (ngModelChange)="marcarCambio()" class="w-full text-center" placeholder="und" aria-label="Unidad" />
           </div>
-          <div class="col-4 p-0 px-1">
+          <div class="col-3 p-0 px-1">
             <p-inputNumber [(ngModel)]="item.cantidad" (ngModelChange)="recalcularItem(item)" [min]="0" [maxFractionDigits]="2"
-                           placeholder="Cant." styleClass="w-full" inputStyleClass="w-full text-center" ariaLabel="Cantidad"></p-inputNumber>
+                           placeholder="Cant." class="w-full" styleClass="w-full" inputStyleClass="w-full text-center" ariaLabel="Cantidad"
+                           (keydown.enter)="$event.preventDefault()"></p-inputNumber>
           </div>
-          <div class="col-4 p-0 pl-1">
+          <div class="col-6 p-0 pl-1">
             <p-inputNumber [(ngModel)]="item.precio_unitario" (ngModelChange)="recalcularItem(item)" mode="decimal"
                            [minFractionDigits]="2" [maxFractionDigits]="2" [min]="0" placeholder="Precio"
-                           styleClass="w-full" inputStyleClass="w-full text-right" ariaLabel="Precio unitario"></p-inputNumber>
+                           class="w-full" styleClass="w-full" inputStyleClass="w-full text-right" ariaLabel="Precio unitario"
+                           (keydown.enter)="$event.preventDefault()"></p-inputNumber>
           </div>
         </div>
         <div class="flex justify-content-end mt-2 text-sm">
@@ -235,8 +256,28 @@
 
     <button type="button" class="agregar-item" (click)="agregarFilaYEnfocar()">
       <i class="pi pi-plus"></i> Agregar ítem
-      <span class="hidden md:inline text-600 font-normal">· o Enter en el precio</span>
+      <span class="hidden lg:inline text-600 font-normal">· o Enter en el precio</span>
     </button>
+
+    <!-- IGV y descuento: cambian el total, por eso no van plegados -->
+    <div class="ajustes-precio">
+      <div class="min-w-0">
+        <span id="etiqueta-igv" class="etiqueta-campo">IGV de los precios</span>
+        <p-selectButton [options]="modosIgv" [ngModel]="modoIgv"
+                        (ngModelChange)="modoIgv = $event; recalcularTodo()"
+                        optionLabel="label" optionValue="value" [allowEmpty]="false"
+                        ariaLabelledBy="etiqueta-igv" styleClass="selector-igv"></p-selectButton>
+        <p class="text-sm text-600 m-0 mt-2">{{ ayudaModoIgv }}</p>
+      </div>
+      <div class="campo-descuento">
+        <label for="descuento" class="etiqueta-campo">Descuento global</label>
+        <p-inputNumber inputId="descuento" [(ngModel)]="descuento" (ngModelChange)="recalcularTodo()"
+                       mode="decimal" [minFractionDigits]="2" [maxFractionDigits]="2" [min]="0" prefix="S/ "
+                       placeholder="S/ 0.00" class="w-full" styleClass="w-full" inputStyleClass="w-full text-right"
+                       (keydown.enter)="$event.preventDefault()"></p-inputNumber>
+        <p *ngIf="!descuentoValido" class="text-sm text-red-600 m-0 mt-1" role="alert">No puede superar el subtotal.</p>
+      </div>
+    </div>
   </section>
 
   <!-- 3. Opciones del PDF (plegadas) -->
@@ -249,14 +290,6 @@
     </button>
 
     <div *ngIf="opcionesAbiertas" id="opciones-pdf" class="opciones-cuerpo">
-      <div class="opcion">
-        <div>
-          <label for="incluyeIgv" class="font-semibold text-900 text-sm">Sumar IGV (18%)</label>
-          <p class="text-sm text-600 m-0">{{ incluyeIgv ? 'El total incluye IGV.' : 'Operación sin IGV.' }}</p>
-        </div>
-        <p-inputSwitch inputId="incluyeIgv" [(ngModel)]="incluyeIgv" (onChange)="recalcularTodo()"></p-inputSwitch>
-      </div>
-
       <div class="opcion" *ngIf="opcionesLugar().length">
         <div class="w-full">
           <span class="font-semibold text-900 text-sm block mb-2">Lugar de entrega</span>
@@ -306,18 +339,19 @@
 
   <!-- Total siempre visible -->
   <div class="barra-total">
-    <div class="min-w-0">
-      <div class="text-xs text-600">{{ incluyeIgv ? 'Total con IGV' : 'Total sin IGV' }}</div>
+    <div class="total-bloque">
+      <div class="text-xs text-600">{{ etiquetaTotal }}</div>
       <div class="total" [style.color]="empresaActiva?.color || null">S/ {{ totalFinal | number:'1.2-2' }}</div>
-      <div class="text-xs text-600" *ngIf="incluyeIgv && totalFinal > 0">
-        Subtotal S/ {{ subtotalGeneral | number:'1.2-2' }} · IGV S/ {{ igvTotal | number:'1.2-2' }}
-      </div>
     </div>
-    <div class="flex flex-column align-items-end gap-1 min-w-0">
-      <button pButton type="button" label="Guardar y descargar PDF" icon="pi pi-file-pdf"
+    <div class="total-detalle text-xs text-600" *ngIf="detalleTotal">{{ detalleTotal }}</div>
+    <div class="boton-bloque">
+      <button pButton type="button" icon="pi pi-file-pdf"
               class="boton-guardar" [loading]="generandoPDF"
               [style.background]="empresaActiva?.color || null" [style.border-color]="empresaActiva?.color || null"
-              (click)="generarPDF()"></button>
+              (click)="generarPDF()">
+        <span class="p-button-label hidden sm:inline">Guardar y descargar PDF</span>
+        <span class="p-button-label sm:hidden">Guardar PDF</span>
+      </button>
       <span *ngIf="mostrarFaltantes && faltantes.length" class="text-xs text-amber-800 text-right" role="alert">
         Falta {{ faltantes.join(' y ') }}.
       </span>

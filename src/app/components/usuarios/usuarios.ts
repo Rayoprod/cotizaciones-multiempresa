@@ -25,6 +25,7 @@ import { IAsignacionEmpresa, IEmpresa, RolEmpresa, RolGlobal } from '../../model
 interface Usuario {
   id: string;
   email?: string;
+  nombre?: string | null;
   rol: RolGlobal;
   activo: boolean;
 }
@@ -80,6 +81,7 @@ export class UsuariosComponent implements OnInit {
 
   // Modal nuevo usuario
   modalVisible   = false;
+  nuevoNombre    = '';
   nuevoEmail     = '';
   nuevoPassword  = '';
   nuevoSuperadmin = false;
@@ -90,6 +92,7 @@ export class UsuariosComponent implements OnInit {
   drawerVisible       = false;
   usuarioSeleccionado: Usuario | null = null;
   borradorSuperadmin  = false;
+  borradorNombre      = '';
   /** empresa_id → rol del usuario seleccionado en esa empresa. */
   empresasAsignadas = new Map<string, RolEmpresa>();
   guardandoAcceso     = false;
@@ -141,6 +144,7 @@ export class UsuariosComponent implements OnInit {
     const q = (this.terminoBusqueda || '').trim().toLowerCase();
     if (!q) return this.usuarios;
     return this.usuarios.filter(u =>
+      (u.nombre && u.nombre.toLowerCase().includes(q)) ||
       (u.email && u.email.toLowerCase().includes(q)) ||
       (u.id && u.id.toLowerCase().includes(q)) ||
       this.acceso(u).some(e => e.texto.toLowerCase().includes(q))
@@ -171,6 +175,7 @@ export class UsuariosComponent implements OnInit {
   // ── Nuevo usuario ────────────────────────────────
 
   abrirModal() {
+    this.nuevoNombre     = '';
     this.nuevoEmail      = '';
     this.nuevoPassword   = '';
     this.nuevoSuperadmin = false;
@@ -180,6 +185,7 @@ export class UsuariosComponent implements OnInit {
 
   cerrarModal() {
     this.modalVisible    = false;
+    this.nuevoNombre     = '';
     this.nuevoEmail      = '';
     this.nuevoPassword   = '';
     this.nuevoSuperadmin = false;
@@ -207,6 +213,12 @@ export class UsuariosComponent implements OnInit {
       const res = await this.supabase.crearUsuario(email, this.nuevoPassword, this.nuevoSuperadmin ? 'admin' : 'usuario');
       if (!res?.id) {
         throw new Error('No se pudo obtener la respuesta de creación de usuario.');
+      }
+      // La cuenta ya existe: si esto falla no debe parecer que no se creó.
+      if (this.nuevoNombre.trim()) {
+        await this.supabase.actualizarNombreUsuario(res.id, this.nuevoNombre.trim()).catch(() => {
+          this.msg.add({ severity: 'warn', summary: 'No se guardó el nombre', detail: 'Puedes ponerlo desde "Nombre y acceso".' });
+        });
       }
 
       this.msg.add({ severity: 'success', summary: 'Usuario creado', detail: email });
@@ -237,8 +249,6 @@ export class UsuariosComponent implements OnInit {
     try {
       await this.supabase.toggleActivoUsuario(usuario.id, nuevo);
       usuario.activo = nuevo;
-      this.msg.add({ severity: nuevo ? 'success' : 'warn',
-        summary: nuevo ? 'Activado' : 'Desactivado', detail: usuario.email || usuario.id });
     } catch {
       this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cambiar el estado' });
     } finally {
@@ -263,7 +273,6 @@ export class UsuariosComponent implements OnInit {
       await this.supabase.eliminarUsuario(usuario.id);
       this.usuarios = this.usuarios.filter(u => u.id !== usuario.id);
       this.asignaciones.delete(usuario.id);
-      this.msg.add({ severity: 'success', summary: 'Eliminado', detail: 'Usuario eliminado' });
     } catch (e: any) {
       this.msg.add({ severity: 'error', summary: 'No se eliminó', detail: e?.message || 'No se pudo eliminar' });
     } finally {
@@ -276,6 +285,7 @@ export class UsuariosComponent implements OnInit {
   abrirAcceso(usuario: Usuario) {
     this.usuarioSeleccionado = usuario;
     this.borradorSuperadmin  = usuario.rol === 'admin';
+    this.borradorNombre      = usuario.nombre ?? '';
     this.empresasAsignadas   = new Map((this.asignaciones.get(usuario.id) ?? []).map(a => [a.empresa_id, a.rol]));
     this.drawerVisible       = true;
     this.cdr.markForCheck();
@@ -330,6 +340,11 @@ export class UsuariosComponent implements OnInit {
     this.guardandoAcceso = true;
     this.cdr.markForCheck();
     try {
+      const nombre = this.borradorNombre.trim() || null;
+      if (nombre !== (usuario.nombre ?? null)) {
+        await this.supabase.actualizarNombreUsuario(usuario.id, nombre);
+        usuario.nombre = nombre;
+      }
       const nuevoRol: RolGlobal = this.borradorSuperadmin ? 'admin' : 'usuario';
       if (nuevoRol !== usuario.rol) {
         await this.supabase.actualizarRolUsuario(usuario.id, nuevoRol);

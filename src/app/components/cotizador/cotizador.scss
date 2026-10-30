@@ -131,6 +131,34 @@
   &:hover { background: var(--sky-50); border-color: var(--sky-300); }
 }
 
+.ajustes-precio {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-border);
+}
+
+.campo-descuento {
+  width: 11rem;
+  flex-shrink: 0;
+}
+
+/* Los botones del selector se reparten el ancho en celular */
+:host ::ng-deep .selector-igv {
+  display: flex;
+  flex-wrap: wrap;
+
+  .p-button {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+}
+
 .opciones-cabecera {
   width: 100%;
   display: flex;
@@ -142,6 +170,9 @@
   cursor: pointer;
   text-align: left;
   font-size: 0.95rem;
+  border-radius: 0.5rem;
+
+  &:focus-visible { outline-offset: 0.375rem; }
 }
 
 .opciones-cuerpo {
@@ -160,15 +191,19 @@
   border-top: 1px solid var(--surface-border);
 }
 
-/* Total y botón siempre a la vista (sticky dentro del área que hace scroll) */
+/*
+ * Total y botón siempre a la vista. El área que hace scroll tiene padding
+ * inferior (.app-scroll-container) y sticky lo respeta: sin el offset negativo
+ * se ve contenido pasando por debajo de la barra.
+ */
 .barra-total {
   position: sticky;
-  bottom: 0;
+  bottom: calc(-1 * max(1.5rem, 1.5rem + var(--sab, 0px)));
   z-index: 5;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  column-gap: 1rem;
   background: #ffffff;
   border: 1px solid var(--surface-border);
   border-radius: 1rem 1rem 0 0;
@@ -183,24 +218,48 @@
   }
 }
 
+.total-bloque {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.total-detalle {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.boton-bloque {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
 .boton-guardar {
+  gap: 0.5rem;
   font-weight: 700;
   white-space: nowrap;
 }
 
-.esqueleto {
-  border-radius: 0.75rem;
-  background: linear-gradient(90deg, var(--slate-100) 25%, var(--slate-50) 50%, var(--slate-100) 75%);
-  background-size: 200% 100%;
-  animation: brillo 1.2s ease-in-out infinite;
-}
+@media (max-width: 767px) {
+  .ajustes-precio {
+    flex-direction: column;
+    gap: 1rem;
+  }
 
-@keyframes brillo {
-  from { background-position: 200% 0; }
-  to   { background-position: -200% 0; }
+  .campo-descuento {
+    width: 100%;
+  }
 }
 
 @media (max-width: 575px) {
+  /* En celular el detalle ocupa todo el ancho para no apretar el botón */
+  .boton-bloque { grid-row: 1; }
+  .total-detalle { grid-column: 1 / -1; margin-top: 0.25rem; }
+
   .barra-total {
     padding-left: 1rem;
     padding-right: 1rem;
@@ -208,6 +267,6 @@
     .total { font-size: 1.35rem; }
   }
 
-  .boton-guardar ::ng-deep .p-button-label { font-size: 0.875rem; }
+  .boton-guardar { padding-left: 0.75rem; padding-right: 0.75rem; }
   .boton-sunat ::ng-deep .p-button-label { display: none; }
 }

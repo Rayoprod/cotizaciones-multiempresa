@@ -3,6 +3,33 @@
 @import "primeng/resources/primeng.min.css";
 @import "primeflex/primeflex.css";
 
+/* ── Variables que PrimeFlex 4 espera y el tema no define ───────────────────
+   PrimeFlex 4 está hecho para PrimeNG 18, que publica sus colores como --p-*.
+   El tema de PrimeNG 17 los define sin ese prefijo. Sin este puente, text-500 y
+   compañía salen del color del texto base, surface-border casi negro y los
+   fondos surface-* transparentes. La app no tiene modo oscuro: color-scheme hace
+   que el light-dark() de PrimeFlex siempre tome el valor claro. */
+$colores-tema: blue, green, yellow, cyan, pink, indigo, teal, orange, bluegray, purple, red, gray, primary;
+$tonos-tema: 50, 100, 200, 300, 400, 500, 600, 700, 800, 900;
+
+:root {
+  color-scheme: light;
+  --p-surface-0: var(--surface-0);
+  @each $tono in $tonos-tema {
+    --p-surface-#{$tono}: var(--surface-#{$tono});
+  }
+  --p-surface-950: var(--surface-900);
+  @each $color in $colores-tema {
+    @each $tono in $tonos-tema {
+      --p-#{$color}-#{$tono}: var(--#{$color}-#{$tono});
+    }
+  }
+  --p-primary-contrast-color: var(--primary-color-text);
+  --p-content-border-radius: 6px;
+  --p-text-color: var(--text-color);
+  --p-text-muted-color: var(--text-color-secondary);
+}
+
 /* ── Colores que usan las plantillas y PrimeFlex no trae ────────────────────
    Las plantillas usan nombres de Tailwind (sky, emerald, amber, rose, slate)
    que PrimeFlex no define: sin esto el navegador las ignora en silencio.
@@ -128,7 +155,8 @@ body.layout-menu-open {
   -webkit-tap-highlight-color: transparent;
 }
 
-@media screen and (max-width: 767.98px) {
+/* El menú lateral fijo le quita 18.5rem al contenido: solo va en pantallas grandes */
+@media screen and (max-width: 1199.98px) {
   .mobile-sidebar-drawer {
     position: fixed !important;
     top: 0 !important;
@@ -148,17 +176,19 @@ body.layout-menu-open {
     transform: translate3d(-100%, 0, 0) !important;
     pointer-events: none !important;
     visibility: hidden !important;
-    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.28s ease !important;
   }
   .mobile-sidebar-drawer.open {
     transform: translate3d(0, 0, 0) !important;
     pointer-events: auto !important;
     visibility: visible !important;
+  }
+  /* Solo anima cuando alguien abre o cierra el menú: al cargar la página no se debe ver */
+  .mobile-sidebar-drawer.animado {
     transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.28s ease !important;
   }
 }
 
-@media screen and (min-width: 768px) {
+@media screen and (min-width: 1200px) {
   .mobile-sidebar-drawer {
     position: static !important;
     transform: none !important;
@@ -199,6 +229,40 @@ body.layout-menu-open {
   .sidebar-top-header {
     padding-top: 1.25rem !important;
   }
+}
+
+/* Sin pButton: sus clases llegan después del primer pintado y se veía un destello blanco */
+.boton-salir {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  background: none;
+  border: none;
+  border-radius: 0.75rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  touch-action: manipulation;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+}
+
+/* El bloque de la empresa activa en el menú lateral es un botón */
+.boton-empresa {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
 }
 
 .pwa-company-pill {
@@ -560,4 +624,28 @@ p-toast .p-toast-message *,
 
 .p-datatable {
   max-width: 100% !important;
+}
+
+/* Lugar de lo que se está cargando */
+.esqueleto {
+  border-radius: 0.75rem;
+  background: linear-gradient(90deg, var(--slate-100) 25%, var(--slate-50) 50%, var(--slate-100) 75%);
+  background-size: 200% 100%;
+  animation: brillo 1.2s ease-in-out infinite;
+}
+
+@keyframes brillo {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+/* En los diálogos de confirmación solo destaca la acción; cancelar queda discreto */
+.p-confirm-dialog .p-confirm-dialog-reject {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--slate-700) !important;
+
+  &:hover {
+    background: var(--slate-100) !important;
+  }
 }

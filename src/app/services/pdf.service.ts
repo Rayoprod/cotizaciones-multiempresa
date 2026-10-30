@@ -2,6 +2,14 @@ import { Injectable } from '@angular/core';
 import { ICondicionesPdf, ICotizacion } from '../models/cotizacion.model';
 import { SupabaseService } from './supabase.service';
 import { extraerNombreClienteTexto, extraerDocumentoClienteTexto } from '../models/cliente.model';
+import { modoIgvDe } from '../models/cotizacion.model';
+import { ModoIgv } from '../models/types';
+
+const AVISO_IMPUESTOS: Record<ModoIgv, string> = {
+  sumar: 'El total incluye IGV (18%)',
+  incluido: 'Los precios incluyen IGV (18%)',
+  sin_igv: 'Los precios NO incluyen IGV'
+};
 
 /**
  * Condiciones con las que se imprime una cotización: las que se guardaron con
@@ -30,21 +38,45 @@ export function condicionesPdf(
  * aparece si la empresa usa lugares de entrega.
  */
 export function lineasCondicionesComerciales(
-  cotizacion: Pick<ICotizacion, 'lugar_entrega' | 'incluye_igv' | 'igv' | 'tipo_origen' | 'folio_origen' | 'vendedor' | 'observaciones'>,
+  cotizacion: Pick<ICotizacion, 'lugar_entrega' | 'incluye_igv' | 'precios_con_igv' | 'igv' | 'tipo_origen' | 'folio_origen' | 'vendedor_nombre' | 'observaciones'>,
   condiciones: ICondicionesPdf
 ): Array<[string, string]> {
   const lineas: Array<[string, string]> = [];
   const lugar = cotizacion.lugar_entrega?.trim();
   if (lugar) lineas.push(['Lugar de entrega', lugar]);
 
-  const tieneIgv = cotizacion.incluye_igv ?? Number(cotizacion.igv) > 0;
-  lineas.push(['Impuestos', tieneIgv ? 'El total incluye IGV (18%)' : 'Los precios NO incluyen IGV']);
+  lineas.push(['Impuestos', AVISO_IMPUESTOS[modoIgvDe(cotizacion)]]);
 
   if (condiciones.mostrarValidez) lineas.push(['Validez', `${condiciones.diasValidez} días calendario`]);
   if (cotizacion.tipo_origen === 'revision' && cotizacion.folio_origen) lineas.push(['Reemplaza a', cotizacion.folio_origen]);
-  if (cotizacion.vendedor) lineas.push(['Vendedor', cotizacion.vendedor]);
+  if (cotizacion.vendedor_nombre) lineas.push(['Vendedor', cotizacion.vendedor_nombre]);
   if (cotizacion.observaciones) lineas.push(['Observaciones', cotizacion.observaciones]);
   return lineas;
+}
+
+/**
+ * Filas de los totales del PDF: las que van antes de TOTAL y, si los precios ya
+ * traen IGV, la que va después con lo que el total lleva dentro.
+ */
+export function lineasTotales(
+  cotizacion: Pick<ICotizacion, 'subtotal' | 'descuento_global' | 'igv' | 'incluye_igv' | 'precios_con_igv'>
+): { antes: Array<[string, number]>; despues: [string, number] | null } {
+  const modo = modoIgvDe(cotizacion);
+  const descuento = Number(cotizacion.descuento_global) || 0;
+  const antes: Array<[string, number]> = [];
+  if (modo !== 'incluido' || descuento > 0) antes.push(['Subtotal', cotizacion.subtotal]);
+  if (descuento > 0) antes.push(['Descuento', -descuento]);
+  if (modo === 'sumar') antes.push(['IGV (18%)', cotizacion.igv]);
+  return { antes, despues: modo === 'incluido' ? ['Incluye IGV (18%):', cotizacion.igv] : null };
+}
+
+/** Aviso al inicio del PDF de una cotización anulada. */
+export function avisoAnulada(
+  cotizacion: Pick<ICotizacion, 'estado'>,
+  reemplazadaPor?: string | null
+): string | null {
+  if (cotizacion.estado !== 'ANULADA') return null;
+  return reemplazadaPor ? `COTIZACIÓN ANULADA · Reemplazada por ${reemplazadaPor}` : 'COTIZACIÓN ANULADA';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -122,12 +154,17 @@ export class PdfService {
     return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  private formatSoles(value: number): string {
+    return value < 0 ? `- S/ ${this.formatNumber(-value)}` : `S/ ${this.formatNumber(value)}`;
+  }
+
   // ── Método principal ─────────────────────────────────────────────────────
 
   async generarYDescargarCotizacion(
     data: ICotizacion,
     datosEmpresa: any,
-    ajustes: Partial<ICondicionesPdf> = {}
+    ajustes: Partial<ICondicionesPdf> = {},
+    reemplazadaPor: string | null = null
   ) {
     if (!datosEmpresa) return;
     const condiciones = condicionesPdf(data, datosEmpresa, ajustes);
@@ -161,8 +198,6 @@ export class PdfService {
     const fechaFormat = fechaObj.toLocaleDateString('es-PE', {
       day: '2-digit', month: 'long', year: 'numeric'
     });
-
-    const tieneIgv = data.incluye_igv ?? Number(data.igv) > 0;
 
     // ── Header ─────────────────────────────────────────────────────────────
     const headerFn = () => {
@@ -258,6 +293,8 @@ export class PdfService {
 
     // ── Bloque de totales (inline en content, no en footer) ──────────────
     const bloqueTotales: any[] = [];
+    const totales = lineasTotales(data);
+    const sinBorde = [false, false, false, false];
 
     bloqueTotales.push({
       columns: [
@@ -267,18 +304,22 @@ export class PdfService {
           table: {
             widths: ['*', 'auto'],
             body: [
-              [
-                { text: 'Subtotal', fontSize: 9, color: '#374151', border: [false, false, false, false], margin: [0, 4, 0, 4] },
-                { text: `S/ ${this.formatNumber(data.subtotal)}`, fontSize: 9, alignment: 'right', border: [false, false, false, false], margin: [0, 4, 0, 4] }
-              ],
-              ...(tieneIgv ? [[
-                { text: 'IGV (18%)', fontSize: 9, color: '#6b7280', border: [false, false, false, false], margin: [0, 2, 0, 2] },
-                { text: `S/ ${this.formatNumber(data.igv)}`, fontSize: 9, color: '#6b7280', alignment: 'right', border: [false, false, false, false], margin: [0, 2, 0, 2] }
-              ]] : []),
+              ...totales.antes.map(([etiqueta, monto]) => {
+                const color = monto < 0 ? '#b91c1c' : etiqueta === 'Subtotal' ? '#374151' : '#6b7280';
+                const margen = etiqueta === 'Subtotal' ? [0, 4, 0, 4] : [0, 2, 0, 2];
+                return [
+                  { text: etiqueta, fontSize: 9, color, border: sinBorde, margin: margen },
+                  { text: this.formatSoles(monto), fontSize: 9, color, alignment: 'right', border: sinBorde, margin: margen }
+                ];
+              }),
               [
                 { text: 'TOTAL', fontSize: 13, bold: true, color: colorEmpresa, border: [false, true, false, false], borderColor: [colorEmpresa, colorEmpresa, colorEmpresa, colorEmpresa], margin: [0, 6, 0, 4] },
                 { text: `S/ ${this.formatNumber(data.total)}`, fontSize: 13, bold: true, color: colorEmpresa, alignment: 'right', border: [false, true, false, false], borderColor: [colorEmpresa, colorEmpresa, colorEmpresa, colorEmpresa], margin: [0, 6, 0, 4] }
-              ]
+              ],
+              ...(totales.despues ? [[
+                { text: totales.despues[0], fontSize: 9, color: '#6b7280', border: sinBorde, margin: [0, 0, 0, 2] },
+                { text: this.formatSoles(totales.despues[1]), fontSize: 9, color: '#6b7280', alignment: 'right', border: sinBorde, margin: [0, 0, 0, 2] }
+              ]] : [])
             ]
           },
           layout: { hLineWidth: (i: number) => i === 0 ? 0 : 0.5, vLineWidth: () => 0, hLineColor: () => '#e5e7eb' }
@@ -424,13 +465,16 @@ export class PdfService {
     };
 
     // ── Documento completo ───────────────────────────────────────────────
+    const aviso = avisoAnulada(data, reemplazadaPor);
     const docDefinition: any = {
       pageSize: 'A4',
       pageMargins: [40, 125, 40, 40],
       header: headerFn,
       footer: footerFn,
+      ...(aviso ? { watermark: { text: 'ANULADA', color: '#dc2626', opacity: 0.14, bold: true } } : {}),
 
       content: [
+        ...(aviso ? [{ text: aviso, fontSize: 10, bold: true, color: '#b91c1c', alignment: 'center', margin: [0, 0, 0, 10] }] : []),
         cajaCliente,
         {
           table: {
@@ -470,7 +514,7 @@ export class PdfService {
     const nombreEmpresa = (datosEmpresa.nombre_comercial || datosEmpresa.id || 'empresa')
       .replace(/\s+/g, '_');
     const nombreCliente = clienteNombreVal.replace(/\s+/g, '_');
-    const nombreArchivo = `${data.folio}_${nombreEmpresa}_${nombreCliente}.pdf`;
+    const nombreArchivo = `${data.folio}${aviso ? '_ANULADA' : ''}_${nombreEmpresa}_${nombreCliente}.pdf`;
 
     const generadorPdf = await pdfMake;
     generadorPdf.createPdf(docDefinition).download(nombreArchivo);

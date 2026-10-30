@@ -104,7 +104,8 @@ describe('CotizadorComponent - Guardar cotización', () => {
       cliente_nombre: 'CLIENTE SAC', cliente_documento: '20123456789',
       observaciones: '[Revisión de VDC-00000040] Precio puesto en obra',
       condiciones: { diasValidez: 30, mostrarCuentas: false },
-      incluye_igv: false,
+      modo_igv: 'sin_igv',
+      descuento: 6,
       items: [{ sku: 'VAR-1234', descripcion: 'Arena', cantidad: 1, precio_unitario: 16, subtotal: 16 },
               { sku: 'PRD-0001', descripcion: 'Piedra', cantidad: 1, precio_unitario: 20, subtotal: 20 }]
     }));
@@ -117,8 +118,80 @@ describe('CotizadorComponent - Guardar cotización', () => {
     expect(comp.condiciones.diasValidez).toBe('30');
     expect(comp.condiciones.mostrarCuentas).toBe(false);
     expect(comp.carrito.map((i: any) => i.sku)).toEqual([null, 'PRD-0001']);
-    expect(comp.totalFinal).toBe(36);
+    expect(comp.modoIgv).toBe('sin_igv');
+    expect(comp.descuento).toBe(6);
+    expect(comp.totalFinal).toBe(30);
     expect(sessionStorage.getItem(CLAVE_BORRADOR_COTIZADOR)).toBeNull();
+  });
+
+  it('envía el modo de IGV y el descuento elegidos', async () => {
+    comp.modoIgv = 'incluido';
+    comp.descuento = 5;
+    comp.recalcularTodo();
+    expect(comp.totalFinal).toBe(35);
+    expect(comp.igvTotal).toBe(5.34);
+    expect(comp.detalleTotal).toBe('Subtotal S/ 40.00 · Descuento -S/ 5.00 · Incluye IGV S/ 5.34');
+
+    await comp.generarPDF();
+
+    const enviado = supabase.crearCotizacion.mock.calls[0][0];
+    expect(enviado.modoIgv).toBe('incluido');
+    expect(enviado.descuento).toBe(5);
+  });
+
+  it('un descuento mayor al subtotal no se envía y dice qué falta', async () => {
+    comp.descuento = 41;
+    comp.recalcularTodo();
+    expect(comp.descuentoValido).toBe(false);
+    expect(comp.faltantes).toContain('un descuento que no supere el subtotal');
+
+    await comp.generarPDF();
+
+    expect(supabase.crearCotizacion).not.toHaveBeenCalled();
+    expect(comp.mostrarFaltantes).toBe(true);
+  });
+
+  it('avisa si una revisión cambia de RUC o DNI', () => {
+    sessionStorage.setItem(CLAVE_BORRADOR_COTIZADOR, JSON.stringify({
+      modo: 'revision', origen_id: 'orig-1', folio_origen: 'VDC-00000045',
+      cliente_nombre: 'CLIENTE SAC', cliente_documento: '20123456789',
+      modo_igv: 'sumar', descuento: 0,
+      items: [{ descripcion: 'Arena', cantidad: 1, precio_unitario: 16, subtotal: 16 }]
+    }));
+    comp['cargarBorradorSiExiste']();
+
+    expect(comp.clienteCambiadoEnRevision).toBe(false);
+    comp.clienteDocumento = '20999999999';
+    expect(comp.clienteCambiadoEnRevision).toBe(true);
+    comp.borradorModo = 'duplicar';
+    expect(comp.clienteCambiadoEnRevision).toBe(false);
+  });
+
+  it('el detalle del total depende del modo', () => {
+    comp.modoIgv = 'sumar';
+    comp.recalcularTodo();
+    expect(comp.etiquetaTotal).toBe('Total con IGV');
+    expect(comp.detalleTotal).toBe('Subtotal S/ 40.00 · IGV S/ 7.20');
+
+    comp.modoIgv = 'incluido';
+    comp.recalcularTodo();
+    expect(comp.etiquetaTotal).toBe('Total, IGV incluido');
+    expect(comp.detalleTotal).toBe('Incluye IGV S/ 6.10');
+
+    comp.modoIgv = 'sin_igv';
+    comp.recalcularTodo();
+    expect(comp.etiquetaTotal).toBe('Total sin IGV');
+    expect(comp.detalleTotal).toBe('');
+  });
+
+  it('al terminar, el formulario vuelve al modo de IGV de la empresa', async () => {
+    comp.empresaActiva = { ...empresa, modo_igv: 'sin_igv' };
+    comp.modoIgv = 'incluido';
+    comp.descuento = 5;
+    comp.recalcularTodo();
+    await comp.generarPDF();
+    expect(comp.modoIgv).toBe('sin_igv');
+    expect(comp.descuento).toBeNull();
   });
 });
 
@@ -267,9 +340,11 @@ describe('CotizadorComponent - Lugar de entrega por empresa', () => {
     expect(supabase.crearCotizacion.mock.calls[0][0].lugarEntrega).toBe('PUESTO EN OBRA (CON FLETE)');
   });
 
-  it('un lugar heredado que ya no es opción de la empresa cae en la primera', () => {
+  it('un lugar heredado que ya no es opción de la empresa cae en la primera y lo avisa', () => {
     const { comp } = crear(['PUESTO EN CANTERA', 'PUESTO EN OBRA (CON FLETE)']);
+    expect(comp.lugarYaNoDisponible).toBeNull();
     comp.lugarEntrega = 'CANTERA';
     expect(comp.lugarSeleccionado).toBe('PUESTO EN CANTERA');
+    expect(comp.lugarYaNoDisponible).toBe('CANTERA');
   });
 });

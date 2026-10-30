@@ -164,7 +164,6 @@ export class ClientesComponent implements OnInit {
       if (!this.clienteActual.telefono) this.clienteActual.telefono = '';
       if (!this.clienteActual.correo) this.clienteActual.correo = '';
 
-      this.messageService.add({ severity: 'success', summary: 'API', detail: 'Datos obtenidos de SUNAT/RENIEC.' });
       this.cdr.markForCheck();
 
     } catch (e: any) {
@@ -229,11 +228,7 @@ export class ClientesComponent implements OnInit {
       };
 
       await this.supabaseSvc.guardarCliente(payload);
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: 'Cliente guardado correctamente.'
-      });
+      this.messageService.add({ severity: 'success', summary: 'Cliente guardado' });
       this.clienteDialog = false;
       await this.cargarClientes();
     } catch (error: any) {
@@ -266,11 +261,6 @@ export class ClientesComponent implements OnInit {
     try {
       if (cliente.id) {
         await this.supabaseSvc.eliminarCliente(cliente.id);
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Eliminado',
-          detail: 'Cliente eliminado correctamente.'
-        });
         await this.cargarClientes();
       }
     } catch (error) {

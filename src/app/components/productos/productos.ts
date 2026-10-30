@@ -155,11 +155,6 @@ export class ProductosComponent implements OnInit {
     try {
       if (producto.id) {
         await this.supabaseSvc.eliminarProducto(producto.id);
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Eliminado',
-          detail: 'Producto eliminado correctamente.'
-        });
         await this.cargarProductos();
       }
     } catch (error) {
@@ -228,11 +223,7 @@ export class ProductosComponent implements OnInit {
       }
 
       await this.supabaseSvc.guardarProducto(payload);
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: 'Producto guardado correctamente.'
-      });
+      this.messageService.add({ severity: 'success', summary: 'Producto guardado' });
       this.productoDialog = false;
       await this.cargarProductos();
     } catch (error: any) {

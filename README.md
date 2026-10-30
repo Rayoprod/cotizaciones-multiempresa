@@ -25,7 +25,7 @@ api/                      Función de Vercel: consulta DNI/RUC con sesión y lí
 src/app/
   components/             Pantallas (cotizador, historial, clientes, productos, empresas, usuarios…)
   guards/                 Acceso por sesión y rol; verifican que la cuenta siga activa
-  layout/                 Marco de la app (vendedor) y del panel de administración
+  layout/                 Marco de la app: un solo menú lateral para todos los roles
   models/                 Tipos y lógica pura (p. ej. cálculo de totales)
   services/               Supabase, sesión, PDF, imágenes, consulta DNI/RUC, PWA
 supabase/
@@ -79,7 +79,7 @@ puede ser admin en VDC y vendedor en WM.
 | --- | --- | --- | --- |
 | Cotizar, revisar, cambiar estado, ocultar | ✓ | ✓ | ✓ |
 | Clientes y productos (incluidos precios base) | ✓ | ✓ | ✓ |
-| Ficha, cuentas bancarias, logos y lugares de entrega | ✓ | ✓ | ✗ |
+| Ficha, cuentas bancarias, logos, lugares de entrega y modo de IGV | ✓ | ✓ | ✗ |
 | Crear empresas y cuentas, asignar empresas y roles | ✓ | ✗ | ✗ |
 
 - `profiles.rol` solo distingue al superadmin (`'admin'`) del resto (`'usuario'`).
@@ -96,16 +96,39 @@ Funciones auxiliares de las políticas: `es_superadmin()`,
 
 - Se crean **solo** con `crear_cotizacion()`, en una transacción. Esa función
   asigna el folio (`PREFIJO-00000001`, correlativo por empresa), recalcula
-  importes e IGV (18 %), guarda o actualiza el cliente y, si es una revisión,
-  anula la original. Si algo falla no se guarda nada ni se consume folio.
+  importes, descuento e IGV, guarda o actualiza el cliente y, si es una
+  revisión, anula la original. Si algo falla no se guarda nada ni se consume
+  folio.
 - Desde la app solo se puede cambiar el `estado` y la marca `oculta` de una
   cotización emitida. Ítems, totales y folio no se editan y las cotizaciones
   no se borran (se ocultan); para corregir se crea una **revisión**.
-- **Revisión**: la nueva cotización reemplaza a la original
-  (`cotizacion_origen_id`, `folio_origen`), y la original pasa a ANULADA al
-  guardarse la nueva. Una cotización solo puede tener una revisión, y una
-  original reemplazada no se puede reactivar.
-- **Duplicado**: copia los datos; la original no cambia.
+- **Revisión**: solo de una cotización Pendiente y dentro de la misma empresa.
+  La nueva reemplaza a la original (`cotizacion_origen_id`, `folio_origen`), que
+  pasa a Anulada al guardarse la nueva. La nueva lleva folio y fecha de hoy, nace
+  Pendiente, su vendedor es quien la guarda y el PDF dice a cuál reemplaza. Cada
+  cotización admite una sola revisión. Si cambia el RUC o DNI, el cotizador avisa.
+- **Duplicado**: copia los datos dentro de la misma empresa, desde cualquier
+  estado; la original no cambia.
+- **Estados**: Pendiente pasa a Aprobada o Anulada; Aprobada vuelve a Pendiente o
+  pasa a Anulada; Anulada es definitivo (el PDF sale con marca de agua). Lo aplica
+  un trigger, que además guarda quién hizo el último cambio y cuándo.
+- **Vencida** no es un estado: es una Pendiente con la validez pasada, y se calcula
+  al mostrarla (`estaVencida`). No suma en "Por cobrar" y se puede aprobar o
+  revisar. Las cotizaciones que no guardaron sus condiciones asumen 15 días.
+- **IGV**, en tres modos (`incluye_igv` y `precios_con_igv`). Cada empresa define
+  con cuál abre el cotizador (`empresas.modo_igv`), y se puede cambiar en cada
+  cotización. El precio del catálogo se copia tal cual, sin convertir:
+
+  | Modo | Total | `igv` | Aviso en el PDF |
+  | --- | --- | --- | --- |
+  | Sumar IGV | neto + 18 % | 18 % del neto | El total incluye IGV (18%) |
+  | Ya incluyen IGV | neto | lo que el neto lleva dentro | Los precios incluyen IGV (18%) |
+  | Sin IGV | neto | 0 | Los precios NO incluyen IGV |
+
+  `subtotal` es siempre la suma de los ítems y neto = subtotal - `descuento_global`.
+- El **vendedor** que imprime el PDF es `vendedor_nombre`: el nombre de la cuenta
+  (Usuarios) copiado al crear la cotización. Sin nombre no se imprime esa línea;
+  el correo (`vendedor`) nunca sale en el PDF.
 - Las condiciones del PDF (validez, cuentas, contacto) se guardan con la
   cotización, así que el PDF del historial sale igual al original.
 - El lugar de entrega se elige entre las opciones de la empresa
