@@ -5,7 +5,7 @@
   <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
     <div>
       <h1 class="text-2xl md:text-3xl font-bold text-900 m-0 tracking-tight flex align-items-center gap-2">
-        <i class="pi pi-users text-sky-600"></i>Directorio de Clientes
+        <i class="pi pi-users text-acento"></i>Directorio de Clientes
       </h1>
       <p class="text-500 text-sm mt-1 mb-0 font-medium">
         Gestión centralizada de contactos y clientes corporativos
@@ -31,14 +31,14 @@
     <!-- KPI Cards -->
     <div class="grid mb-4">
       <div class="col-6 md:col-4">
-        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-sky-500 h-full card-hover-effect">
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-acento h-full card-hover-effect">
           <div class="flex align-items-center justify-content-between mb-2">
             <span class="text-500 text-xs font-bold uppercase tracking-wider">Total Registrados</span>
-            <div class="w-2rem h-2rem border-circle bg-sky-100 text-sky-600 flex align-items-center justify-content-center">
+            <div class="w-2rem h-2rem border-circle bg-acento-suave text-acento flex align-items-center justify-content-center">
               <i class="pi pi-users text-sm"></i>
             </div>
           </div>
-          <p class="text-3xl font-bold text-sky-600 m-0">{{ clientes.length }}</p>
+          <p class="text-3xl font-bold text-acento m-0">{{ clientes.length }}</p>
           <p class="text-xs text-500 font-medium m-0 mt-1">clientes activos en cartera</p>
         </div>
       </div>
@@ -74,7 +74,7 @@
     <div class="bg-white border-round-2xl shadow-1 p-3 md:p-4 mb-4 border-1 surface-border">
       <div class="flex flex-column sm:flex-row align-items-stretch sm:align-items-center justify-content-between gap-3">
         <span class="font-bold text-900 text-base">
-          Clientes Cartera (<span class="text-sky-600 font-extrabold">{{ clientesFiltrados.length }}</span>)
+          Clientes Cartera (<span class="text-acento font-extrabold">{{ clientesFiltrados.length }}</span>)
         </span>
         <div class="relative flex align-items-center w-full sm:w-20rem">
           <i class="pi pi-search absolute pl-3 text-400"></i>
@@ -88,7 +88,7 @@
     <div class="block md:hidden flex flex-column gap-3 mb-4">
       <div *ngFor="let cliente of clientesFiltrados" class="bg-white border-round-2xl p-3 shadow-1 border-1 surface-border flex flex-column gap-3">
         <div class="flex align-items-center justify-content-between gap-2 min-w-0">
-          <span class="font-mono text-xs font-bold text-sky-700 bg-sky-50 px-2 py-1 border-round-md flex-shrink-0">
+          <span class="font-mono text-xs font-bold text-acento bg-acento-suave px-2 py-1 border-round-md flex-shrink-0">
             {{ cliente.documento_identidad }}
           </span>
           <div class="flex gap-1 flex-shrink-0">
@@ -146,7 +146,7 @@
         <ng-template pTemplate="body" let-cliente>
           <tr>
             <td>
-              <span class="font-mono text-xs font-bold text-sky-700 bg-sky-50 px-2 py-1 border-round-md">
+              <span class="font-mono text-xs font-bold text-acento bg-acento-suave px-2 py-1 border-round-md">
                 {{ cliente.documento_identidad }}
               </span>
             </td>

@@ -348,3 +348,150 @@ describe('CotizadorComponent - Lugar de entrega por empresa', () => {
     expect(comp.lugarYaNoDisponible).toBe('CANTERA');
   });
 });
+
+
+describe('CotizadorComponent - Unidad y catálogo', () => {
+  function crear(productos: any[] = [], guardarProducto = vi.fn(async (p: any) => ({ id: 'nuevo', ...p }))) {
+    const empresa = { id: 'VDC', nombre_comercial: 'VDC', mostrar_cuentas: true };
+    const supabase = {
+      crearCotizacion: vi.fn(async (datos: any) => ({ id: 'nueva', folio: 'VDC-00000072', ...datos })),
+      getClientes: vi.fn(async () => []),
+      getProductos: vi.fn(async () => productos),
+      guardarProducto
+    };
+    const mensajes = { add: vi.fn() };
+    const comp: any = new CotizadorComponent(
+      { markForCheck: () => {} } as any,
+      supabase as any, { generarYDescargarCotizacion: vi.fn(async () => {}) } as any, {} as any,
+      mensajes as any, {} as any, {} as any,
+      { empresaActiva: () => empresa } as any
+    );
+    comp.empresaActiva = empresa;
+    return { comp, supabase, mensajes };
+  }
+  const catalogo = [
+    { codigo_sku: 'PRD-0001', descripcion: 'Arena gruesa', unidad: 'm3', precio_unitario_base: 80 },
+    { codigo_sku: 'PRD-0007', descripcion: 'Bloqueta', unidad: 'und', precio_unitario_base: 3.5 }
+  ];
+
+  beforeEach(() => {
+    vi.stubGlobal('sessionStorage', almacenamientoEnMemoria());
+    vi.stubGlobal('navigator', { onLine: true });
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('una línea nueva abre con la unidad que más usa la empresa', async () => {
+    const { comp } = crear([{ unidad: 'und' }, { unidad: 'und' }, { unidad: 'm3' }]);
+    comp.agregarFila();
+    expect(comp.carrito[0].unidad).toBe('m3');
+    await comp.cargarDatosDesdeBD();
+    expect(comp.carrito[0].unidad).toBe('und');
+    comp.agregarFila();
+    expect(comp.carrito[1].unidad).toBe('und');
+  });
+
+  it('nunca envía una línea sin unidad', async () => {
+    const { comp, supabase } = crear();
+    comp.clienteNombre = 'CLIENTE SAC';
+    comp.clienteDocumento = '20123456789';
+    comp.carrito = [{ sku: null, descripcion: 'Arena', unidad: '  ', cantidad: 1, precio_unitario: 16, subtotal: 16 }];
+    await comp.generarPDF();
+    expect(supabase.crearCotizacion.mock.calls[0][0].items[0].unidad).toBe('m3');
+  });
+
+  it('al revisar una línea vieja sin unidad, toma la de la empresa', () => {
+    const { comp } = crear();
+    comp['aplicarBorrador']({ items: [{ descripcion: 'Arena', unidad: '', cantidad: 1, precio_unitario: 16 }] });
+    expect(comp.carrito[0].unidad).toBe('m3');
+  });
+
+  it('elegir un producto toma su unidad, aunque la línea ya tuviera otra', () => {
+    const { comp } = crear();
+    comp.productosBD = catalogo;
+    const item: any = { sku: null, descripcion: 'Bloqueta', unidad: 'm3', cantidad: null, precio_unitario: null, subtotal: 0 };
+    comp.carrito = [item];
+    comp.alCambiarDescripcion(item);
+    expect(item.unidad).toBe('und');
+  });
+
+  it('cambiar la unidad a mano se respeta si el producto no cambia', () => {
+    const { comp } = crear();
+    comp.productosBD = catalogo;
+    const item: any = { sku: 'PRD-0001', descripcion: 'Arena gruesa', unidad: 'viaje', cantidad: 1, precio_unitario: 80, subtotal: 80 };
+    comp.carrito = [item];
+    comp.alCambiarDescripcion(item);
+    expect(item.unidad).toBe('viaje');
+  });
+
+  it('ofrece la unidad de la línea aunque no sea de las comunes', () => {
+    const { comp } = crear();
+    expect(comp.unidadesDe({ unidad: 'cubo' }).map((u: any) => u.value)).toContain('cubo');
+    expect(comp.unidadesDe({ unidad: 'm3' }).filter((u: any) => u.value === 'm3')).toHaveLength(1);
+  });
+
+  it('una línea escrita a mano se puede agregar al catálogo', async () => {
+    const { comp, supabase } = crear();
+    comp.productosBD = catalogo;
+    const item: any = { sku: null, descripcion: '  Piedra   de base ', unidad: 'm3', cantidad: 2, precio_unitario: 98, subtotal: 196 };
+    expect(comp.lineaFueraDeCatalogo(item)).toBe(true);
+
+    await comp.agregarAlCatalogo(item);
+
+    expect(supabase.guardarProducto).toHaveBeenCalledWith({
+      codigo_sku: 'PRD-0008', descripcion: 'Piedra de base', unidad: 'm3', precio_unitario_base: 98, empresa_id: 'VDC'
+    });
+    expect(item.sku).toBe('PRD-0008');
+    expect(item.descripcion).toBe('Piedra de base');
+    expect(comp.lineaFueraDeCatalogo(item)).toBe(false);
+    expect(comp.productosBD).toHaveLength(3);
+  });
+
+  it('una línea vacía o ya ligada no ofrece agregarse', () => {
+    const { comp } = crear();
+    expect(comp.lineaFueraDeCatalogo({ sku: null, descripcion: '   ' })).toBe(false);
+    expect(comp.lineaFueraDeCatalogo({ sku: 'PRD-0001', descripcion: 'Arena gruesa' })).toBe(false);
+  });
+
+  it('si falla agregar al catálogo, avisa y la línea sigue igual', async () => {
+    const { comp, mensajes } = crear([], vi.fn(async () => { throw new Error('sin permiso'); }));
+    const item: any = { sku: null, descripcion: 'Piedra', unidad: 'm3', cantidad: 1, precio_unitario: 10, subtotal: 10 };
+
+    await comp.agregarAlCatalogo(item);
+
+    expect(mensajes.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error', detail: 'sin permiso' }));
+    expect(item.sku).toBeNull();
+    expect(comp.agregandoAlCatalogo).toBeNull();
+  });
+
+  it('el título dice qué se está haciendo', () => {
+    const { comp } = crear();
+    expect(comp.tituloDocumento).toBe('Nueva cotización');
+    comp.borradorFolioPadre = 'VDC-00000045';
+    comp.borradorModo = 'revision';
+    expect(comp.tituloDocumento).toBe('Revisión de VDC-00000045');
+    comp.borradorModo = 'duplicar';
+    expect(comp.tituloDocumento).toBe('Copia de VDC-00000045');
+  });
+
+  it('las condiciones visibles son las que saldrán en el PDF', () => {
+    const { comp } = crear();
+    comp.condiciones = { mostrarValidez: true, diasValidez: '30', mostrarCuentas: true, mostrarContacto: false, mostrarObservaciones: false };
+    expect(comp.condicionesActivas.map((c: any) => c.texto)).toEqual(['Validez 30 días', 'Cuentas bancarias']);
+
+    comp.empresaActiva = { ...comp.empresaActiva, mostrar_cuentas: false };
+    comp.condiciones.mostrarValidez = false;
+    expect(comp.condicionesActivas).toEqual([]);
+  });
+
+  it('los totales del resumen siguen el modo de IGV', () => {
+    const { comp } = crear();
+    comp.carrito = [{ sku: null, descripcion: 'Arena', unidad: 'm3', cantidad: 10, precio_unitario: 100, subtotal: 1000 }];
+    comp.modoIgv = 'sumar';
+    comp.recalcularTodo();
+    expect(comp.filasTotales).toEqual({ antes: [['Subtotal', 1000], ['IGV (18%)', 180]], despues: null });
+    comp.modoIgv = 'incluido';
+    comp.recalcularTodo();
+    expect(comp.filasTotales).toEqual({ antes: [], despues: ['Incluye IGV (18%):', 152.54] });
+  });
+});

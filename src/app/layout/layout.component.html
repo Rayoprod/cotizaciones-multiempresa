@@ -54,48 +54,48 @@
       <div class="flex flex-column gap-2">
 
         <a routerLink="/cotizador"
-           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-sky-400"
+           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-white-alpha-50"
            [routerLinkActiveOptions]="{ exact: false }"
            style="min-height: 48px; touch-action: manipulation;"
            (click)="cerrarMenu()"
            class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
-          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-sky-500-alpha-20 text-sky-400">
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-white-alpha-10 text-white-alpha-90">
             <i class="pi pi-plus-circle text-base"></i>
           </div>
           <span>Cotizar</span>
         </a>
 
         <a routerLink="/historial"
-           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-indigo-400"
+           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-white-alpha-50"
            [routerLinkActiveOptions]="{ exact: false }"
            style="min-height: 48px; touch-action: manipulation;"
            (click)="cerrarMenu()"
            class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
-          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-indigo-500-alpha-20 text-indigo-400">
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-white-alpha-10 text-white-alpha-90">
             <i class="pi pi-history text-base"></i>
           </div>
           <span>Historial</span>
         </a>
 
         <a routerLink="/productos"
-           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-emerald-400"
+           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-white-alpha-50"
            [routerLinkActiveOptions]="{ exact: false }"
            style="min-height: 48px; touch-action: manipulation;"
            (click)="cerrarMenu()"
            class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
-          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-emerald-500-alpha-20 text-emerald-400">
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-white-alpha-10 text-white-alpha-90">
             <i class="pi pi-box text-base"></i>
           </div>
           <span>Productos</span>
         </a>
 
         <a routerLink="/clientes"
-           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-amber-400"
+           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-white-alpha-50"
            [routerLinkActiveOptions]="{ exact: false }"
            style="min-height: 48px; touch-action: manipulation;"
            (click)="cerrarMenu()"
            class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
-          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-amber-500-alpha-20 text-amber-400">
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-white-alpha-10 text-white-alpha-90">
             <i class="pi pi-users text-base"></i>
           </div>
           <span>Clientes</span>
@@ -109,12 +109,12 @@
         </div>
 
         <a routerLink="/empresas"
-           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-sky-400"
+           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-white-alpha-50"
            [routerLinkActiveOptions]="{ exact: false }"
            style="min-height: 48px; touch-action: manipulation;"
            (click)="cerrarMenu()"
            class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
-          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-sky-500-alpha-20 text-sky-400">
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-white-alpha-10 text-white-alpha-90">
             <i class="pi pi-building text-base"></i>
           </div>
           <span>{{ esAdminGeneral ? 'Empresas' : 'Mi empresa' }}</span>
@@ -122,12 +122,12 @@
 
         <a routerLink="/usuarios"
            *ngIf="esAdminGeneral"
-           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-rose-400"
+           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-white-alpha-50"
            [routerLinkActiveOptions]="{ exact: false }"
            style="min-height: 48px; touch-action: manipulation;"
            (click)="cerrarMenu()"
            class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
-          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-rose-500-alpha-20 text-rose-400">
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-white-alpha-10 text-white-alpha-90">
             <i class="pi pi-user-edit text-base"></i>
           </div>
           <span>Usuarios</span>
@@ -188,9 +188,9 @@
           <div class="flex flex-column text-left overflow-hidden min-w-0">
             <span class="font-bold text-sm text-white line-height-1 flex align-items-center gap-1 text-overflow-ellipsis overflow-hidden white-space-nowrap">
               <span class="text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ empresaActiva?.nombre_comercial || 'Seleccionar Empresa' }}</span>
-              <i class="pi pi-chevron-down text-xs text-sky-300 font-bold ml-1 flex-shrink-0"></i>
+              <i class="pi pi-chevron-down text-xs text-white-alpha-70 font-bold ml-1 flex-shrink-0"></i>
             </span>
-            <span class="text-xs text-sky-200 font-medium line-height-1 mt-1 text-overflow-ellipsis overflow-hidden white-space-nowrap" *ngIf="empresaActiva?.ruc">
+            <span class="text-xs text-white-alpha-70 font-medium line-height-1 mt-1 text-overflow-ellipsis overflow-hidden white-space-nowrap" *ngIf="empresaActiva?.ruc">
               RUC: {{ empresaActiva?.ruc }}
             </span>
           </div>
@@ -242,7 +242,7 @@
             </span>
             <span class="text-xs text-500 font-mono">RUC: {{ emp.ruc }}</span>
           </div>
-          <i *ngIf="emp.id === empresaActiva?.id" class="pi pi-check-circle text-sky-600 font-bold text-base"></i>
+          <i *ngIf="emp.id === empresaActiva?.id" class="pi pi-check-circle text-acento font-bold text-base"></i>
         </div>
 
         <div *ngIf="empresasFiltradas.length === 0" class="p-3 text-center text-500 text-xs">

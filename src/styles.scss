@@ -1,5 +1,5 @@
 @import "primeicons/primeicons.css";
-@import "primeng/resources/themes/lara-light-blue/theme.css";
+@import "./theme/lara-acento.css";
 @import "primeng/resources/primeng.min.css";
 @import "primeflex/primeflex.css";
 
@@ -9,7 +9,7 @@
    compañía salen del color del texto base, surface-border casi negro y los
    fondos surface-* transparentes. La app no tiene modo oscuro: color-scheme hace
    que el light-dark() de PrimeFlex siempre tome el valor claro. */
-$colores-tema: blue, green, yellow, cyan, pink, indigo, teal, orange, bluegray, purple, red, gray, primary;
+$colores-tema: "blue", "green", "yellow", "cyan", "pink", "indigo", "teal", "orange", "bluegray", "purple", "red", "gray", "primary";
 $tonos-tema: 50, 100, 200, 300, 400, 500, 600, 700, 800, 900;
 
 :root {
@@ -68,6 +68,13 @@ $paletas-extra: (
   --font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --p-primary-color: #0284c7;
   --p-primary-hover: #0369a1;
+  /* Acento de la empresa: lo reemplaza src/app/services/tema.ts al elegir empresa */
+  --acento: #0277b5;
+  --acento-hover: #02699f;
+  --acento-fuerte: #025682;
+  --acento-suave: #ebf5fa;
+  --acento-borde: #b3d6e9;
+  --acento-anillo: #c0ddec;
   --surface-ground-bg: #f8fafc;
   --card-border-radius: 1rem;
   --glass-bg: rgba(255, 255, 255, 0.88);
@@ -101,6 +108,21 @@ body {
   -webkit-text-size-adjust: 100%;
   touch-action: manipulation;
 }
+
+/* Los botones e inputs no heredan la letra por defecto */
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+/* Sin esto, el foco de teclado toma el color del sistema operativo */
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+.text-acento { color: var(--acento) !important; }
+.bg-acento-suave { background-color: var(--acento-suave) !important; }
+.border-acento { border-color: var(--acento) !important; }
 
 .h-svh { height: 100svh !important; }
 .h-dvh { height: 100dvh !important; }
@@ -490,8 +512,8 @@ p-toast .p-toast-message *,
 }
 
 .p-inputtext:enabled:focus, .p-dropdown:not(.p-disabled).p-focus, .p-autocomplete:not(.p-disabled).p-focus .p-autocomplete-input {
-  border-color: var(--company-accent-color, #0284c7) !important;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18) !important;
+  border-color: var(--acento) !important;
+  box-shadow: 0 0 0 3px var(--acento-anillo) !important;
 }
 
 /* Buttons Polish */

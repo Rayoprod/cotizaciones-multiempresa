@@ -24,14 +24,14 @@
     <!-- KPI Cards: solo tienen sentido con varias empresas -->
     <div class="grid mb-4" *ngIf="esAdminGeneral">
       <div class="col-12 md:col-4">
-        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-sky-500 h-full card-hover-effect">
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-acento h-full card-hover-effect">
           <div class="flex align-items-center justify-content-between mb-2">
             <span class="text-500 text-xs font-bold uppercase tracking-wider">Empresas Totales</span>
-            <div class="w-2rem h-2rem border-circle bg-sky-100 text-sky-600 flex align-items-center justify-content-center">
+            <div class="w-2rem h-2rem border-circle bg-acento-suave text-acento flex align-items-center justify-content-center">
               <i class="pi pi-building text-sm"></i>
             </div>
           </div>
-          <p class="text-3xl font-bold text-sky-600 m-0">{{ empresas.length }}</p>
+          <p class="text-3xl font-bold text-acento m-0">{{ empresas.length }}</p>
           <p class="text-xs text-500 font-medium m-0 mt-1">registradas en la plataforma</p>
         </div>
       </div>
@@ -67,7 +67,7 @@
     <div *ngIf="empresas.length > 3" class="bg-white border-round-2xl shadow-1 p-3 md:p-4 mb-4 border-1 surface-border">
       <div class="flex flex-column sm:flex-row align-items-stretch sm:align-items-center justify-content-between gap-3">
         <span class="font-bold text-900 text-base">
-          Empresas Registradas (<span class="text-sky-600 font-extrabold">{{ empresasFiltradas.length }}</span>)
+          Empresas Registradas (<span class="text-acento font-extrabold">{{ empresasFiltradas.length }}</span>)
         </span>
         <div class="relative flex align-items-center w-full sm:w-20rem">
           <i class="pi pi-search absolute pl-3 text-400"></i>
@@ -86,7 +86,7 @@
               <img *ngIf="emp.ruta_logo" [src]="emp.ruta_logo" [alt]="emp.nombre_comercial" style="max-width: 100%; max-height: 100%; object-fit: contain;">
               <i *ngIf="!emp.ruta_logo" class="pi pi-building text-500 text-lg"></i>
             </div>
-            <span class="font-mono text-xs font-bold bg-sky-50 text-sky-700 px-2 py-1 border-round-md flex-shrink-0">
+            <span class="font-mono text-xs font-bold bg-acento-suave text-acento px-2 py-1 border-round-md flex-shrink-0">
               {{ emp.id }}
             </span>
           </div>
@@ -154,7 +154,7 @@
             </td>
 
             <td>
-              <span class="font-mono text-xs font-bold bg-sky-50 text-sky-700 px-2 py-1 border-round-md">
+              <span class="font-mono text-xs font-bold bg-acento-suave text-acento px-2 py-1 border-round-md">
                 {{ emp.id }}
               </span>
             </td>

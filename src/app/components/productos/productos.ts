@@ -10,7 +10,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ToolbarModule } from 'primeng/toolbar';
 
 import { SupabaseService } from '../../services/supabase.service';
-import { IProducto} from '../../models';
+import { IProducto, siguienteSkuProducto} from '../../models';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -93,21 +93,7 @@ export class ProductosComponent implements OnInit {
   }
 
   generarSkuAutomatico(): string {
-    const numeros = this.productos
-      .map(p => p.codigo_sku)
-      .filter(Boolean)
-      .map(sku => {
-        const match = (sku || '').match(/PRD-(\d+)/i);
-        return match ? parseInt(match[1], 10) : 0;
-      });
-    const maxNum = numeros.length > 0 ? Math.max(...numeros) : 0;
-    let siguiente = maxNum + 1;
-    let skuCandidate = `PRD-${siguiente.toString().padStart(4, '0')}`;
-    while (this.productos.some(p => (p.codigo_sku || '').trim().toLowerCase() === skuCandidate.toLowerCase())) {
-      siguiente++;
-      skuCandidate = `PRD-${siguiente.toString().padStart(4, '0')}`;
-    }
-    return skuCandidate;
+    return siguienteSkuProducto(this.productos);
   }
 
   abrirNuevo() {

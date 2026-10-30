@@ -22,6 +22,7 @@ Es el prototipo multiempresa de SIGO-WM.
 
 ```
 api/                      Función de Vercel: consulta DNI/RUC con sesión y límite por usuario
+scripts/generar-tema.mjs  Genera src/theme/lara-acento.css; volver a correrlo al actualizar PrimeNG
 src/app/
   components/             Pantallas (cotizador, historial, clientes, productos, empresas, usuarios…)
   guards/                 Acceso por sesión y rol; verifican que la cuenta siga activa
@@ -137,6 +138,14 @@ Funciones auxiliares de las políticas: `es_superadmin()`,
   campo no aparece.
 - El cotizador muestra los totales con el mismo cálculo que el servidor
   (`calcularTotales` en `models/cotizacion.model.ts`).
+
+## Color de la empresa
+
+Toda la interfaz usa un solo acento, el color de la empresa activa. `services/tema.ts`
+lo convierte en las variables `--acento*` y lo oscurece si hace falta para que el texto
+blanco se lea (contraste de al menos 4.5:1). El PDF y la cabecera usan el color original.
+El tema de PrimeNG trae su azul escrito a mano, por eso la app usa una copia generada
+con esas variables (`src/theme/lara-acento.css`) en lugar del tema original.
 
 ## Base de datos
 

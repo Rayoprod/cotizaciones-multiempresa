@@ -1,3 +1,4 @@
+import { paletaDeAcento } from './tema';
 import { Injectable, signal, computed } from '@angular/core';
 import { IEmpresa } from '../models/empresa.model';
 import { IProfile } from '../models/auth.model';
@@ -57,7 +58,11 @@ export class SessionContextService {
   private aplicarTemaEmpresa(color?: string | null): void {
     if (typeof document !== 'undefined') {
       const activeColor = color && color.trim() ? color.trim() : '#0284c7';
-      document.documentElement.style.setProperty('--company-accent-color', activeColor);
+      const raiz = document.documentElement.style;
+      raiz.setProperty('--company-accent-color', activeColor);
+      for (const [variable, valor] of Object.entries(paletaDeAcento(activeColor))) {
+        raiz.setProperty(variable, valor);
+      }
     }
   }
 

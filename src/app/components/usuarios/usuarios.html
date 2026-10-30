@@ -6,7 +6,7 @@
   <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
     <div>
       <h1 class="text-2xl md:text-3xl font-bold text-900 m-0 tracking-tight flex align-items-center gap-2">
-        <i class="pi pi-users text-sky-600"></i>Usuarios
+        <i class="pi pi-users text-acento"></i>Usuarios
       </h1>
       <p class="text-500 text-sm mt-1 mb-0 font-medium">
         Cada persona tiene una cuenta. En cada empresa que le asignes es <strong>Admin</strong> o <strong>Vendedor</strong>.
@@ -31,9 +31,9 @@
     <!-- KPI Cards -->
     <div class="grid mb-4">
       <div class="col-6 md:col-3">
-        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-sky-500 h-full">
+        <div class="bg-white border-round-2xl p-4 shadow-1 border-1 surface-border border-left-4 border-acento h-full">
           <span class="text-500 text-xs font-bold uppercase tracking-wider">Total</span>
-          <p class="text-3xl font-bold text-sky-600 m-0 mt-2">{{ usuarios.length }}</p>
+          <p class="text-3xl font-bold text-acento m-0 mt-2">{{ usuarios.length }}</p>
           <p class="text-xs text-500 font-medium m-0 mt-1">cuentas registradas</p>
         </div>
       </div>
@@ -70,7 +70,7 @@
     <div class="bg-white border-round-2xl shadow-1 p-3 md:p-4 mb-4 border-1 surface-border">
       <div class="flex flex-column sm:flex-row align-items-stretch sm:align-items-center justify-content-between gap-3">
         <span class="font-bold text-900 text-base">
-          Usuarios (<span class="text-sky-600 font-extrabold">{{ usuariosFiltrados.length }}</span>)
+          Usuarios (<span class="text-acento font-extrabold">{{ usuariosFiltrados.length }}</span>)
         </span>
         <div class="relative flex align-items-center w-full sm:w-20rem">
           <i class="pi pi-search absolute pl-3 text-400"></i>
@@ -99,13 +99,13 @@
             <td>
               <div class="flex align-items-center gap-3 max-w-22rem overflow-hidden">
                 <div class="flex align-items-center justify-content-center border-circle flex-shrink-0"
-                     [style]="{'width':'40px','height':'40px','background': u.rol === 'admin' ? 'var(--red-50)' : 'var(--sky-50)'}">
-                  <i [class]="u.rol === 'admin' ? 'pi pi-shield text-red-500' : 'pi pi-user text-sky-600'" class="text-lg"></i>
+                     [style]="{'width':'40px','height':'40px','background': u.rol === 'admin' ? 'var(--red-50)' : 'var(--acento-suave)'}">
+                  <i [class]="u.rol === 'admin' ? 'pi pi-shield text-red-500' : 'pi pi-user text-acento'" class="text-lg"></i>
                 </div>
                 <div class="min-w-0 flex-1 overflow-hidden">
                   <p class="font-bold text-900 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="u.email || u.id">
                     {{ u.nombre || u.email || u.id }}
-                    <span *ngIf="esUnoMismo(u)" class="text-xs text-sky-700 font-semibold ml-1">Tú</span>
+                    <span *ngIf="esUnoMismo(u)" class="text-xs text-acento font-semibold ml-1">Tú</span>
                   </p>
                   <p *ngIf="u.nombre" class="text-xs text-600 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap">{{ u.email }}</p>
                   <p *ngIf="!u.nombre" class="text-xs text-amber-800 m-0">Sin nombre: el PDF no mostrará vendedor</p>
@@ -164,8 +164,8 @@
            [class.opacity-60]="!u.activo">
         <div class="flex align-items-center gap-3 min-w-0">
           <div class="flex align-items-center justify-content-center border-circle flex-shrink-0"
-               [style]="{'width':'40px','height':'40px','background': u.rol === 'admin' ? 'var(--red-50)' : 'var(--sky-50)'}">
-            <i [class]="u.rol === 'admin' ? 'pi pi-shield text-red-500' : 'pi pi-user text-sky-600'"></i>
+               [style]="{'width':'40px','height':'40px','background': u.rol === 'admin' ? 'var(--red-50)' : 'var(--acento-suave)'}">
+            <i [class]="u.rol === 'admin' ? 'pi pi-shield text-red-500' : 'pi pi-user text-acento'"></i>
           </div>
           <div class="flex-1 min-w-0 overflow-hidden">
             <p class="font-bold text-900 m-0 text-base line-height-2 overflow-hidden text-overflow-ellipsis word-break-break-word">
@@ -259,7 +259,7 @@
   <ng-template pTemplate="header">
     <div class="flex flex-column gap-1 min-w-0">
       <span class="font-bold text-900 text-lg">Nombre y acceso</span>
-      <span class="text-sm text-sky-600 font-medium text-overflow-ellipsis overflow-hidden white-space-nowrap">
+      <span class="text-sm text-acento font-medium text-overflow-ellipsis overflow-hidden white-space-nowrap">
         {{ usuarioSeleccionado?.email }}
       </span>
     </div>
@@ -297,12 +297,12 @@
       <div class="flex flex-column gap-2">
         <div *ngFor="let emp of todasLasEmpresas"
              class="flex align-items-center gap-3 p-3 border-round-xl cursor-pointer transition-colors"
-             [class.bg-sky-50]="estaAsignada(emp.id)"
+             [class.bg-acento-suave]="estaAsignada(emp.id)"
              [class.bg-white]="!estaAsignada(emp.id)"
-             [style.border]="estaAsignada(emp.id) ? '2px solid var(--sky-500)' : '2px solid var(--surface-border)'"
+             [style.border]="estaAsignada(emp.id) ? '2px solid var(--acento)' : '2px solid var(--surface-border)'"
              (click)="toggleEmpresa(emp.id)">
 
-          <i [class]="estaAsignada(emp.id) ? 'pi pi-check-square text-sky-600 text-xl' : 'pi pi-stop text-400 text-xl'"></i>
+          <i [class]="estaAsignada(emp.id) ? 'pi pi-check-square text-acento text-xl' : 'pi pi-stop text-400 text-xl'"></i>
 
           <div class="flex align-items-center justify-content-center border-round-lg flex-shrink-0 overflow-hidden"
                style="width:38px;height:38px;background:#f8fafc;border:1px solid #e2e8f0">

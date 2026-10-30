@@ -62,8 +62,8 @@
 
 .filtro-activo,
 .filtro-activo:hover {
-  background: var(--sky-700);
-  border-color: var(--sky-700);
+  background: var(--acento);
+  border-color: var(--acento);
   color: #ffffff;
 
   .filtro-cuenta { color: #ffffff; }
@@ -86,7 +86,7 @@
 .folio {
   font-weight: 700;
   font-size: 0.875rem;
-  color: var(--sky-800);
+  color: var(--acento);
   white-space: nowrap;
 }
 

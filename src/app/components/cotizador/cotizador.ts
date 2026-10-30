@@ -4,13 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { SupabaseService } from '../../services/supabase.service';
-import { PdfService } from '../../services/pdf.service';
+import { PdfService, lineasTotales } from '../../services/pdf.service';
 import { ApiPeruService } from '../../services/api-peru.service';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputSwitchModule } from 'primeng/inputswitch';
 import { SelectButtonModule } from 'primeng/selectbutton';
+import { RadioButtonModule } from 'primeng/radiobutton';
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextareaModule } from 'primeng/inputtextarea';
@@ -20,8 +21,8 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { SessionContextService } from '../../services/session-context.service';
 import {
   extraerNombreClienteTexto, extraerDocumentoClienteTexto,
-  calcularTotales, redondear2, CLAVE_BORRADOR_COTIZADOR, MODOS_IGV,
-  IBorradorCotizador, INuevaCotizacion, ModoIgv
+  calcularTotales, redondear2, CLAVE_BORRADOR_COTIZADOR, MODOS_IGV, UNIDADES_COMUNES,
+  IBorradorCotizador, INuevaCotizacion, ModoIgv, siguienteSkuProducto, unidadMasUsada
 } from '../../models';
 
 /** sessionStorage: la cotización que se está armando (sobrevive a una recarga). */
@@ -41,7 +42,7 @@ interface IEnCurso extends Omit<IBorradorCotizador, 'modo'> {
   imports: [
     CommonModule, FormsModule, RouterModule,
     ButtonModule, InputNumberModule, InputTextModule, InputSwitchModule,
-    SelectButtonModule, AutoCompleteModule, TooltipModule, InputTextareaModule,
+    SelectButtonModule, RadioButtonModule, AutoCompleteModule, TooltipModule, InputTextareaModule,
     ProgressSpinnerModule, ConfirmDialogModule, CheckboxModule
   ],
   templateUrl: './cotizador.html',
@@ -73,6 +74,8 @@ export class CotizadorComponent implements OnInit, OnDestroy {
 
   // ── Carrito ───────────────────────────────────────────────────────────────
   carrito: any[] = [];
+  /** La línea que se está agregando al catálogo, para mostrar que está en curso. */
+  agregandoAlCatalogo: any = null;
 
   // ── Cliente ───────────────────────────────────────────────────────────────
   /** Texto del buscador único (nombre, RUC o DNI); al elegir trae el cliente. */
@@ -237,6 +240,10 @@ export class CotizadorComponent implements OnInit, OnDestroy {
 
       this.productosBD = prods || [];
       this.clientesBD = clis || [];
+      // Las líneas vacías toman la unidad que más usa esta empresa.
+      for (const item of this.carrito) {
+        if (!item.descripcion?.trim()) item.unidad = this.unidadPorDefecto;
+      }
     } catch (e) {
       console.error('Error cargando datos:', e);
       this.messageService.add({
@@ -427,7 +434,7 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     this.carrito = [...this.carrito, {
       sku: null,
       descripcion: '',
-      unidad: '',
+      unidad: this.unidadPorDefecto,
       cantidad: null,
       precio_unitario: null,
       subtotal: 0
@@ -470,6 +477,55 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     return indice;
   }
 
+  private get unidadPorDefecto(): string {
+    return unidadMasUsada(this.productosBD);
+  }
+
+  /** Las unidades comunes, más la del catálogo o de la cotización original si es otra. */
+  unidadesDe(item: any): Array<{ value: string; label: string }> {
+    const propias = new Set([item.unidad, ...this.productosBD.map(p => p.unidad)].map(u => String(u ?? '').trim()).filter(Boolean));
+    const conocidas = new Set(UNIDADES_COMUNES.map(u => u.value));
+    return [
+      ...UNIDADES_COMUNES,
+      ...[...propias].filter(u => !conocidas.has(u)).map(u => ({ value: u, label: u }))
+    ];
+  }
+
+  /** Línea escrita a mano: sale en la cotización, pero no cuenta para el catálogo. */
+  lineaFueraDeCatalogo(item: any): boolean {
+    return !!item.descripcion?.trim() && !item.sku;
+  }
+
+  async agregarAlCatalogo(item: any) {
+    const descripcion = String(item.descripcion ?? '').trim().replace(/\s+/g, ' ');
+    if (!descripcion || this.agregandoAlCatalogo || !this.empresaActiva?.id) return;
+
+    this.agregandoAlCatalogo = item;
+    this.cdr.markForCheck();
+    try {
+      const creado = await this.supabaseSvc.guardarProducto({
+        codigo_sku: siguienteSkuProducto(this.productosBD),
+        descripcion,
+        unidad: item.unidad || this.unidadPorDefecto,
+        precio_unitario_base: Number(item.precio_unitario) || 0,
+        empresa_id: this.empresaActiva.id
+      });
+      this.productosBD = [...this.productosBD, creado];
+      item.descripcion = descripcion;
+      item.sku = creado.codigo_sku;
+      this.marcarCambio();
+    } catch (e: any) {
+      console.error('Error al agregar al catálogo:', e);
+      this.messageService.add({
+        severity: 'error', summary: 'No se agregó al catálogo',
+        detail: e?.message || 'Revisa tu conexión e inténtalo de nuevo.'
+      });
+    } finally {
+      this.agregandoAlCatalogo = null;
+      this.cdr.markForCheck();
+    }
+  }
+
   filtrarNombresProductos(event: any) {
     const query = (event.query || '').toLowerCase();
     const productos = this.productosBD
@@ -489,7 +545,7 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     if (producto) {
       item.sku = producto.codigo_sku;
       item.descripcion = producto.descripcion;
-      item.unidad = producto.unidad;
+      item.unidad = producto.unidad || this.unidadPorDefecto;
       item.precio_unitario = producto.precio_unitario_base;
       item.cantidad = item.cantidad || 1;
       this.recalcularItem(item);
@@ -503,10 +559,11 @@ export class CotizadorComponent implements OnInit, OnDestroy {
         )
       : null;
 
+    const cambioDeProducto = !!prodMatch && prodMatch.codigo_sku !== item.sku;
     item.sku = prodMatch?.codigo_sku ?? null;
     if (prodMatch) {
-      if (!item.unidad) {
-        item.unidad = prodMatch.unidad || item.unidad;
+      if (cambioDeProducto && prodMatch.unidad) {
+        item.unidad = prodMatch.unidad;
       }
       if (item.precio_unitario === null || item.precio_unitario === undefined) {
         item.precio_unitario = prodMatch.precio_unitario_base;
@@ -555,19 +612,39 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     return partes.join(' · ');
   }
 
+  get tituloDocumento(): string {
+    if (this.borradorModo === 'revision') return `Revisión de ${this.borradorFolioPadre}`;
+    if (this.borradorModo === 'duplicar' && this.borradorFolioPadre) return `Copia de ${this.borradorFolioPadre}`;
+    return 'Nueva cotización';
+  }
+
+  get filasTotales() {
+    return lineasTotales({
+      subtotal: this.subtotalGeneral,
+      descuento_global: this.descuentoAplicado,
+      igv: this.igvTotal,
+      incluye_igv: this.modoIgv !== 'sin_igv',
+      precios_con_igv: this.modoIgv === 'incluido'
+    });
+  }
+
   /** Un lugar heredado (revisión, duplicado) que la empresa ya no ofrece. */
   get lugarYaNoDisponible(): string | null {
     const opciones = this.opcionesLugar().map(o => o.value);
     return this.lugarEntrega && !opciones.includes(this.lugarEntrega) ? this.lugarEntrega : null;
   }
 
-  /** Resumen de una línea de las opciones del PDF, para cuando están plegadas. */
-  get resumenOpciones(): string {
-    const partes: string[] = [];
-    if (this.lugarSeleccionado) partes.push(this.lugarSeleccionado.toLowerCase());
-    if (this.condiciones.mostrarValidez) partes.push(`validez ${this.condiciones.diasValidez} días`);
-    if (this.condiciones.mostrarCuentas) partes.push('cuentas bancarias');
-    return partes.join(' · ') || 'Sin validez ni cuentas';
+  /** Lo que saldrá en el PDF, para verlo de un vistazo sin abrir las opciones. */
+  get condicionesActivas(): Array<{ icono: string; texto: string }> {
+    const activas: Array<{ icono: string; texto: string }> = [];
+    if (this.lugarSeleccionado) activas.push({ icono: 'pi pi-map-marker', texto: this.lugarSeleccionado });
+    if (this.condiciones.mostrarValidez) activas.push({ icono: 'pi pi-clock', texto: `Validez ${this.condiciones.diasValidez} días` });
+    if (this.condiciones.mostrarCuentas && this.empresaActiva?.mostrar_cuentas !== false) {
+      activas.push({ icono: 'pi pi-building', texto: 'Cuentas bancarias' });
+    }
+    if (this.condiciones.mostrarContacto) activas.push({ icono: 'pi pi-user', texto: 'Contacto de aprobación' });
+    if (this.condiciones.mostrarObservaciones) activas.push({ icono: 'pi pi-comment', texto: 'Observaciones' });
+    return activas;
   }
 
   // ── Guardar y generar PDF ─────────────────────────────────────────────────
@@ -619,7 +696,7 @@ export class CotizadorComponent implements OnInit, OnDestroy {
         .map(item => ({
           sku: item.sku || null,
           descripcion: String(item.descripcion).trim(),
-          unidad: item.unidad ? String(item.unidad).trim() : null,
+          unidad: String(item.unidad ?? '').trim() || this.unidadPorDefecto,
           cantidad: Number(item.cantidad),
           precio_unitario: Number(item.precio_unitario)
         })),
@@ -839,7 +916,7 @@ export class CotizadorComponent implements OnInit, OnDestroy {
         // Los códigos VAR-/MAQ- eran aleatorios, no de un producto real.
         sku:             item.sku && !/^(VAR|MAQ)-/.test(item.sku) ? item.sku : null,
         descripcion:     item.descripcion     || '',
-        unidad:          item.unidad          || '',
+        unidad:          item.unidad          || this.unidadPorDefecto,
         cantidad:        item.cantidad        ?? null,
         precio_unitario: item.precio_unitario ?? null,
         subtotal:        redondear2((item.cantidad || 0) * (item.precio_unitario || 0))
