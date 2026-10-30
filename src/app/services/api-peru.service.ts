@@ -15,6 +15,9 @@ export interface IDatosDocumento {
 @Injectable({ providedIn: 'root' })
 export class ApiPeruService {
 
+  // El plan de Decolecta tiene pocas consultas: no repetir un número ya consultado.
+  private cache = new Map<string, IDatosDocumento>();
+
   constructor(private supabase: SupabaseService) {}
 
   async buscarDocumento(documento: string): Promise<IDatosDocumento> {
@@ -22,6 +25,9 @@ export class ApiPeruService {
     if (!/^\d{8}$|^\d{11}$/.test(doc)) {
       throw new Error('El DNI debe tener 8 dígitos y el RUC 11.');
     }
+
+    const enCache = this.cache.get(doc);
+    if (enCache) return enCache;
 
     const { data } = await this.supabase.obtenerSesion();
     const token = data.session?.access_token;
@@ -35,6 +41,7 @@ export class ApiPeruService {
     if (!respuesta.ok) {
       throw new Error(cuerpo?.message || `No se encontraron datos para ${doc}.`);
     }
+    this.cache.set(doc, cuerpo as IDatosDocumento);
     return cuerpo as IDatosDocumento;
   }
 }

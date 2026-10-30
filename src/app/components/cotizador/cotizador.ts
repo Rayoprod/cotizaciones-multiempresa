@@ -247,10 +247,21 @@ export class CotizadorComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
+  // Al escribir solo se busca en los clientes ya guardados (no gasta consultas).
+  // SUNAT/RENIEC se consulta únicamente con el botón o Enter.
   alCambiarDocumentoInput() {
     const doc = this.clienteDocumentoTexto;
-    if ((doc.length === 8 || doc.length === 11) && !this.buscandoDocumento && !this.clienteNombre) {
-      this.buscarDocumento();
+    if ((doc.length !== 8 && doc.length !== 11) || this.clienteNombre) return;
+
+    const clienteExistente = this.clientesBD.find(
+      c => String(c.documento_identidad || '').trim() === doc
+    );
+    if (clienteExistente) {
+      this.clienteNombre = clienteExistente.nombre_razon_social || '';
+      this.clienteDireccion = clienteExistente.direccion || '';
+      this.clienteTelefono = clienteExistente.telefono || '';
+      this.clienteCorreo = clienteExistente.correo || '';
+      this.cdr.markForCheck();
     }
   }
 

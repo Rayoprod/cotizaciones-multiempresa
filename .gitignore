@@ -46,3 +46,5 @@ Thumbs.db
 # Supabase CLI (estado local y backups con datos reales)
 supabase/.temp/
 .backups/
+.vercel
+.env*
