@@ -47,7 +47,7 @@
     <!-- Navegación de menú -->
     <div class="flex-1 min-h-0 app-scroll-container p-3">
       <div class="mb-3 px-2" style="color: rgba(255,255,255,0.45); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;">
-        Ventas y Operaciones
+        Ventas
       </div>
       <div class="flex flex-column gap-2">
 
@@ -60,7 +60,7 @@
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-sky-500-alpha-20 text-sky-400">
             <i class="pi pi-plus-circle text-base"></i>
           </div>
-          <span>Nueva cotización</span>
+          <span>Cotizar</span>
         </a>
 
         <a routerLink="/historial"
@@ -72,7 +72,7 @@
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-indigo-500-alpha-20 text-indigo-400">
             <i class="pi pi-history text-base"></i>
           </div>
-          <span>Historial de ventas</span>
+          <span>Historial</span>
         </a>
 
         <a routerLink="/productos"
@@ -84,7 +84,7 @@
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-emerald-500-alpha-20 text-emerald-400">
             <i class="pi pi-box text-base"></i>
           </div>
-          <span>Catálogo / Productos</span>
+          <span>Productos</span>
         </a>
 
         <a routerLink="/clientes"
@@ -96,7 +96,7 @@
           <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-amber-500-alpha-20 text-amber-400">
             <i class="pi pi-users text-base"></i>
           </div>
-          <span>Directorio clientes</span>
+          <span>Clientes</span>
         </a>
 
         <ng-container *ngIf="esAdminEmpresa || esAdminGeneral">
@@ -106,21 +106,30 @@
           Administración
         </div>
 
-        <!-- Admin de la empresa activa: configurar su empresa -->
-        <button *ngIf="esAdminEmpresa" pButton type="button"
-                icon="pi pi-cog" label="Configurar empresa"
-                severity="secondary" class="w-full justify-content-start border-round-xl py-3 px-3 text-white bg-white-alpha-05 hover:bg-white-alpha-15 border-none cursor-pointer"
-                style="min-height: 48px; touch-action: manipulation;"
-                (click)="configurarEmpresa()">
-        </button>
+        <a routerLink="/empresas"
+           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-sky-400"
+           [routerLinkActiveOptions]="{ exact: false }"
+           style="min-height: 48px; touch-action: manipulation;"
+           (click)="cerrarMenu()"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-sky-500-alpha-20 text-sky-400">
+            <i class="pi pi-building text-base"></i>
+          </div>
+          <span>{{ esAdminGeneral ? 'Empresas' : 'Mi empresa' }}</span>
+        </a>
 
-        <!-- Solo admin general: volver al panel -->
-        <button *ngIf="esAdminGeneral" pButton type="button"
-                icon="pi pi-shield" label="Panel Admin General"
-                severity="secondary" class="w-full justify-content-start border-round-xl py-3 px-3 text-white bg-white-alpha-05 hover:bg-white-alpha-15 border-none cursor-pointer"
-                style="min-height: 48px; touch-action: manipulation;"
-                (click)="volverAlAdmin()">
-        </button>
+        <a routerLink="/usuarios"
+           *ngIf="esAdminGeneral"
+           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-rose-400"
+           [routerLinkActiveOptions]="{ exact: false }"
+           style="min-height: 48px; touch-action: manipulation;"
+           (click)="cerrarMenu()"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-rose-500-alpha-20 text-rose-400">
+            <i class="pi pi-user-edit text-base"></i>
+          </div>
+          <span>Usuarios</span>
+        </a>
         </ng-container>
 
       </div>
@@ -132,7 +141,7 @@
         <p-avatar icon="pi pi-user" shape="circle" [style]="{ background: 'var(--p-primary-color)', color: '#ffffff' }"></p-avatar>
         <div class="flex flex-column overflow-hidden flex-1">
           <span class="font-bold text-sm text-white flex align-items-center gap-2">
-            {{ esAdminGeneral ? 'Admin General' : esAdminEmpresa ? 'Admin Empresa' : 'Vendedor' }}
+            {{ etiquetaRol }}
           </span>
           <span class="white-space-nowrap overflow-hidden text-overflow-ellipsis text-xs text-white-alpha-70 mt-1">
             {{ usuarioActivo }}
@@ -193,7 +202,7 @@
                 (click)="instalarPwa()" pTooltip="Instalar PWA" tooltipPosition="bottom">
           <span class="hidden sm:inline ml-1">Instalar App</span>
         </button>
-        <p-tag [value]="esAdminGeneral ? 'Super Admin' : esAdminEmpresa ? 'Admin Empresa' : 'Vendedor'"
+        <p-tag [value]="etiquetaRol"
                [severity]="esAdminGeneral ? 'danger' : esAdminEmpresa ? 'warning' : 'info'"
                styleClass="font-bold text-xs px-2 py-1 border-round-md hidden sm:inline-flex"></p-tag>
       </div>

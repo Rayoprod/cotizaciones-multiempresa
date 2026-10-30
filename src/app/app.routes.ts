@@ -11,43 +11,21 @@ export const routes: Routes = [
   // ── PÚBLICAS ──────────────────────────────────────
   { path: 'login', component: LoginComponent },
 
-  // ── SELECTOR VENDEDOR ─────────────────────────────
+  // ── ELEGIR EMPRESA ────────────────────────────────
   {
     path: 'selector',
     component: SelectorComponent,
     canActivate: [authGuard]
   },
 
-  // ── PANEL ADMIN (gestión pura) ────────────────────
-  {
-    path: 'admin',
-    loadComponent: () =>
-      import('./layout/admin-layout/admin-layout')
-        .then(m => m.AdminLayoutComponent),
-    canActivate: [adminGuard],
-    children: [
-      { path: '', redirectTo: 'empresas', pathMatch: 'full' },
-      {
-        path: 'empresas',
-        loadComponent: () =>
-          import('./components/empresas/empresas')
-            .then(m => m.EmpresasComponent)
-      },
-      {
-        path: 'usuarios',
-        canActivate: [adminGeneralGuard],
-        loadComponent: () =>
-          import('./components/usuarios/usuarios')
-            .then(m => m.UsuariosComponent)
-      },
-      {
-        path: 'selector',
-        component: SelectorComponent   // reutilizamos el mismo selector
-      }
-    ]
-  },
+  // Direcciones del antiguo panel de administración (marcadores, PWA instalada)
+  { path: 'admin', pathMatch: 'full', redirectTo: 'empresas' },
+  { path: 'admin/empresas', redirectTo: 'empresas' },
+  { path: 'admin/usuarios', redirectTo: 'usuarios' },
+  { path: 'admin/selector', redirectTo: 'selector' },
 
-  // ── COTIZADOR (vendedor + admin operando) ─────────
+  // ── APP: un solo layout para todos los roles ──────
+  // El menú muestra la administración según el rol; los guards la protegen.
   {
     path: '',
     loadComponent: () =>
@@ -80,6 +58,20 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/clientes/clientes')
             .then(m => m.ClientesComponent)
+      },
+      {
+        path: 'empresas',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./components/empresas/empresas')
+            .then(m => m.EmpresasComponent)
+      },
+      {
+        path: 'usuarios',
+        canActivate: [adminGeneralGuard],
+        loadComponent: () =>
+          import('./components/usuarios/usuarios')
+            .then(m => m.UsuariosComponent)
       }
     ]
   },

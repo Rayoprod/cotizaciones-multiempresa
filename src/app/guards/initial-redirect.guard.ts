@@ -9,8 +9,7 @@ export const initialRedirectGuard: CanActivateFn = async () => {
   const perfil = await auth.asegurarPerfil();
   if (!perfil) return auth.urlLogin();
 
-  // El superadmin entra al panel; el resto cotiza (el cotizador lleva al
-  // selector si aún no hay empresa activa). La administración de una empresa
-  // se abre desde "Configurar empresa".
-  return router.createUrlTree([perfil.rol === 'admin' ? '/admin/empresas' : '/cotizador']);
+  // El superadmin entra a Empresas; el resto cotiza (el cotizador lleva al
+  // selector si aún no hay empresa activa).
+  return router.createUrlTree([perfil.rol === 'admin' ? '/empresas' : '/cotizador']);
 };

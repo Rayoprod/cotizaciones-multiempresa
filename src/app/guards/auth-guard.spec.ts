@@ -51,11 +51,11 @@ describe('guards', () => {
 
   it('adminGeneralGuard: solo el superadmin', async () => {
     expect(await ejecutar(adminGeneralGuard, { rol: 'admin' })).toBe(true);
-    expect(await ejecutar(adminGeneralGuard, { rol: 'usuario' })).toBe('/admin/empresas');
+    expect(await ejecutar(adminGeneralGuard, { rol: 'usuario' })).toBe('/cotizador');
   });
 
   it('initialRedirectGuard: superadmin al panel, el resto al cotizador', async () => {
-    expect(await ejecutar(initialRedirectGuard, { rol: 'admin' })).toBe('/admin/empresas');
+    expect(await ejecutar(initialRedirectGuard, { rol: 'admin' })).toBe('/empresas');
     expect(await ejecutar(initialRedirectGuard, { rol: 'usuario' })).toBe('/cotizador');
   });
 });

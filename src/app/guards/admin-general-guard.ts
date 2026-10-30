@@ -9,8 +9,8 @@ export const adminGeneralGuard: CanActivateFn = async () => {
   const perfil = await auth.asegurarPerfil();
   if (!perfil) return auth.urlLogin();
 
-  // Solo el admin general ve /admin/usuarios
+  // Solo el superadmin gestiona usuarios
   if (perfil.rol === 'admin') return true;
 
-  return router.createUrlTree(['/admin/empresas']);
+  return router.createUrlTree(['/cotizador']);
 };

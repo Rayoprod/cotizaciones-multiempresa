@@ -127,9 +127,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
     return this.session.esSuperadmin();
   }
 
-  /** Admin de la empresa activa (sin ser superadmin): ve "Configurar empresa". */
+  /** Admin de la empresa activa (sin ser superadmin): ve "Mi empresa". */
   get esAdminEmpresa(): boolean {
     return !this.session.esSuperadmin() && this.session.esAdminEmpresaActiva();
+  }
+
+  /** Rol con el que trabaja ahora: depende de la empresa activa. */
+  get etiquetaRol(): string {
+    if (this.esAdminGeneral) return 'Superadmin';
+    return this.esAdminEmpresa ? 'Admin de la empresa' : 'Vendedor';
   }
 
   async ngOnInit() {
@@ -188,17 +194,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
         document.body.classList.remove('layout-menu-open');
       }
     }
-  }
-
-  volverAlAdmin() {
-    this.cerrarMenu();
-    this.router.navigate(['/admin/empresas']);
-  }
-
-  // ✅ Abre modal de edición de la empresa activa (para admin_empresa)
-  configurarEmpresa() {
-    this.cerrarMenu();
-    this.router.navigate(['/admin/empresas']);
   }
 
   seleccionarEmpresaRapida(empresa: IEmpresa, op?: OverlayPanel) {

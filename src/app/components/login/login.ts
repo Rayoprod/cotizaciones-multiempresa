@@ -69,7 +69,7 @@ export class LoginComponent implements OnInit {
       }
 
       if (perfil.rol === 'admin') {
-        this.router.navigate(['/admin/empresas']);
+        this.router.navigate(['/empresas']);
       } else {
         this.router.navigate(['/selector']);
       }

@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
@@ -6,17 +6,13 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { SupabaseService } from '../../services/supabase.service';
 import { PdfService } from '../../services/pdf.service';
 import { ApiPeruService } from '../../services/api-peru.service';
-import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
-
-import { ToggleButtonModule } from 'primeng/togglebutton';
+import { InputSwitchModule } from 'primeng/inputswitch';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import { TooltipModule } from 'primeng/tooltip';
-import { ToastModule } from 'primeng/toast';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -28,21 +24,29 @@ import {
   IBorradorCotizador, INuevaCotizacion
 } from '../../models';
 
+/** sessionStorage: la cotización que se está armando (sobrevive a una recarga). */
+const CLAVE_EN_CURSO = 'cotizador-en-curso';
+
+/** Lo que se guarda de la cotización en curso, para no perderla al recargar. */
+interface IEnCurso extends Omit<IBorradorCotizador, 'modo'> {
+  modo: IBorradorCotizador['modo'] | null;
+  guardar_cliente: boolean;
+}
+
 @Component({
   selector: 'app-cotizador',
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule,
-    TableModule, ButtonModule, CardModule,
-    InputNumberModule, InputTextModule,
-    ToggleButtonModule, SelectButtonModule, AutoCompleteModule,
-    TooltipModule, ToastModule, InputTextareaModule,
+    ButtonModule, InputNumberModule, InputTextModule, InputSwitchModule,
+    SelectButtonModule, AutoCompleteModule, TooltipModule, InputTextareaModule,
     ProgressSpinnerModule, ConfirmDialogModule, CheckboxModule
   ],
   templateUrl: './cotizador.html',
+  styleUrl: './cotizador.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CotizadorComponent implements OnInit {
+export class CotizadorComponent implements OnInit, OnDestroy {
 
   // ── Estado de empresa ─────────────────────────────────────────────────────
   empresaActiva: any = null;
@@ -57,17 +61,20 @@ export class CotizadorComponent implements OnInit {
     mostrarContacto: false,
     mostrarObservaciones: false
   };
+  opcionesAbiertas = false;
 
   // ── Datos BD ──────────────────────────────────────────────────────────────
   productosBD: any[] = [];
   clientesBD: any[] = [];
-  nombresClientesFiltrados: any[] = [];
+  sugerenciasClientes: any[] = [];
   nombresProductosFiltrados: string[] = [];
 
   // ── Carrito ───────────────────────────────────────────────────────────────
   carrito: any[] = [];
 
-  // ── Formulario cliente ────────────────────────────────────────────────────
+  // ── Cliente ───────────────────────────────────────────────────────────────
+  /** Texto del buscador único (nombre, RUC o DNI); al elegir trae el cliente. */
+  busquedaCliente: any = '';
   clienteNombre: string = '';
   clienteDocumento: string = '';
   clienteTelefono: string = '';
@@ -75,6 +82,8 @@ export class CotizadorComponent implements OnInit {
   clienteCorreo: string = '';
   clienteObservaciones: string = '';
   guardarClienteEnCartera = true;
+  editandoCliente = false;
+  origenCliente: 'cartera' | 'sunat' | 'manual' | null = null;
 
   // ── Opciones ──────────────────────────────────────────────────────────────
   incluyeIgv: boolean = true;
@@ -103,11 +112,16 @@ export class CotizadorComponent implements OnInit {
   borradorModo: 'revision' | 'duplicar' | null = null;
   borradorOrigenId: string | null = null;
   borradorFolioPadre: string | null = null;
+  /** Se recuperó una cotización a medio armar (p. ej. tras recargar la página). */
+  recuperadaDeSesion = false;
 
   // ── Estado de la vista ────────────────────────────────────────────────────
   cargando = true;
   generandoPDF = false;
   buscandoDocumento = false;
+  /** Tras intentar guardar con datos incompletos se muestra qué falta. */
+  mostrarFaltantes = false;
+  private temporizadorEnCurso: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private cdr: ChangeDetectorRef,
@@ -130,8 +144,8 @@ export class CotizadorComponent implements OnInit {
     if (!this.empresaActiva?.id) {
       this.cargando = false;
       this.messageService.add({
-        severity: 'warn', summary: 'Empresa no seleccionada',
-        detail: 'Debes seleccionar una empresa antes de cotizar.'
+        severity: 'warn', summary: 'Elige una empresa',
+        detail: 'Para cotizar primero selecciona la empresa.'
       });
       this.router.navigate(['/selector']);
       return;
@@ -140,7 +154,7 @@ export class CotizadorComponent implements OnInit {
     this.condiciones.mostrarCuentas = this.empresaActiva?.mostrar_cuentas ?? true;
     this.condiciones.mostrarContacto = !(this.empresaActiva?.mostrar_cuentas ?? true);
 
-    const borradorCargado = this.cargarBorradorSiExiste();
+    const borradorCargado = this.cargarBorradorSiExiste() || this.recuperarEnCurso();
     if (!borradorCargado && this.carrito.length === 0) {
       this.agregarFila();
     }
@@ -149,6 +163,14 @@ export class CotizadorComponent implements OnInit {
 
     this.cargando = false;
     this.cdr.markForCheck();
+  }
+
+  ngOnDestroy() {
+    // Si se sale del cotizador antes de que corra el guardado diferido.
+    if (this.temporizadorEnCurso) {
+      clearTimeout(this.temporizadorEnCurso);
+      this.guardarEnCurso();
+    }
   }
 
   // ── Validación ────────────────────────────────────────────────────────────
@@ -170,6 +192,14 @@ export class CotizadorComponent implements OnInit {
       !!this.clienteDocumentoTexto &&
       this.tieneItemsValidos &&
       !!empresa?.id;
+  }
+
+  /** Lo que falta para poder guardar, en palabras. */
+  get faltantes(): string[] {
+    const falta: string[] = [];
+    if (!this.clienteNombreTexto || !this.clienteDocumentoTexto) falta.push('el cliente (nombre y RUC/DNI)');
+    if (!this.tieneItemsValidos) falta.push('al menos un ítem con cantidad y precio');
+    return falta;
   }
 
   // ── Carga inicial ─────────────────────────────────────────────────────────
@@ -199,7 +229,7 @@ export class CotizadorComponent implements OnInit {
     }
   }
 
-  // ── Clientes ──────────────────────────────────────────────────────────────
+  // ── Cliente ───────────────────────────────────────────────────────────────
 
   obtenerNombreClienteTexto(val: any): string {
     return extraerNombreClienteTexto(val);
@@ -213,47 +243,139 @@ export class CotizadorComponent implements OnInit {
     return extraerDocumentoClienteTexto(this.clienteDocumento);
   }
 
+  get tieneCliente(): boolean {
+    return !!this.clienteNombreTexto || !!this.clienteDocumentoTexto;
+  }
+
+  get tipoDocumento(): string {
+    const largo = this.clienteDocumentoTexto.length;
+    return largo === 11 ? 'RUC' : largo === 8 ? 'DNI' : 'Doc.';
+  }
+
+  get contactoCliente(): string {
+    return [this.clienteTelefono?.trim(), this.clienteCorreo?.trim()].filter(Boolean).join(' · ');
+  }
+
   get clienteYaRegistrado(): boolean {
     const doc = this.clienteDocumentoTexto;
     return !!doc && this.clientesBD.some(c => String(c.documento_identidad || '').trim() === doc);
   }
 
-  filtrarNombresClientes(event: any) {
-    const query = (event.query || '').toLowerCase();
-    const nombres = this.clientesBD
+  /** Si lo escrito en el buscador es un RUC (11) o DNI (8), ese número. */
+  get documentoBuscable(): string | null {
+    const texto = typeof this.busquedaCliente === 'string' ? this.busquedaCliente.trim() : '';
+    return /^\d{8}$|^\d{11}$/.test(texto) ? texto : null;
+  }
+
+  filtrarClientes(event: { query: string }) {
+    const q = (event.query || '').toLowerCase().trim();
+    this.sugerenciasClientes = this.clientesBD
       .filter(c =>
-        (c.nombre_razon_social?.toLowerCase().includes(query)) ||
-        (String(c.documento_identidad || '').includes(query))
+        c.nombre_razon_social?.toLowerCase().includes(q) ||
+        String(c.documento_identidad || '').includes(q)
       )
-      .map(c => c.nombre_razon_social)
-      .filter(Boolean);
-    this.nombresClientesFiltrados = Array.from(new Set(nombres));
+      .slice(0, 8);
     this.cdr.markForCheck();
   }
 
-  alElegirNombreSugerido(event: any) {
-    const nombreElegido = this.obtenerNombreClienteTexto(event);
-    const target = nombreElegido.toLowerCase().trim();
-    if (!target) return;
+  elegirCliente(cliente: any) {
+    if (!cliente || typeof cliente !== 'object') return;
+    this.clienteNombre = cliente.nombre_razon_social || '';
+    this.clienteDocumento = cliente.documento_identidad || '';
+    this.clienteTelefono = cliente.telefono || '';
+    this.clienteDireccion = cliente.direccion || '';
+    this.clienteCorreo = cliente.correo || '';
+    this.origenCliente = 'cartera';
+    this.busquedaCliente = '';
+    this.editandoCliente = false;
+    this.marcarCambio();
+    this.cdr.markForCheck();
+  }
 
-    const cliente = this.clientesBD.find(
-      c => c.nombre_razon_social?.toLowerCase().trim() === target ||
-           String(c.documento_identidad || '').trim() === target
-    );
-    if (cliente) {
-      this.clienteNombre = cliente.nombre_razon_social;
-      this.clienteDocumento = cliente.documento_identidad || '';
-      this.clienteTelefono = cliente.telefono || '';
-      this.clienteDireccion = cliente.direccion || '';
-      this.clienteCorreo = cliente.correo || '';
-    } else {
-      this.clienteNombre = nombreElegido;
+  /** Enter en el buscador: si es un RUC o DNI, se consulta. */
+  alPresionarEnterBusqueda() {
+    if (this.documentoBuscable) this.buscarEnSunat();
+  }
+
+  /**
+   * Busca el documento primero en la cartera (no gasta consultas) y, si no
+   * está, en SUNAT/RENIEC. Solo se llama al presionar el botón o Enter.
+   */
+  async buscarEnSunat(documento?: string) {
+    if (this.buscandoDocumento) return;
+    const doc = (documento ?? this.documentoBuscable ?? this.clienteDocumentoTexto ?? '').trim();
+
+    if (!/^\d{8}$|^\d{11}$/.test(doc)) {
+      this.messageService.add({ severity: 'warn', summary: 'Documento inválido', detail: 'Escribe un DNI de 8 dígitos o un RUC de 11.' });
+      return;
     }
+
+    const enCartera = this.clientesBD.find(c => String(c.documento_identidad || '').trim() === doc);
+    if (enCartera) {
+      this.elegirCliente(enCartera);
+      return;
+    }
+
+    this.buscandoDocumento = true;
+    this.cdr.markForCheck();
+    try {
+      const datos = await this.apiPeru.buscarDocumento(doc);
+      this.clienteNombre = datos.nombre;
+      this.clienteDocumento = doc;
+      this.clienteDireccion = datos.direccion;
+      this.clienteTelefono = '';
+      this.clienteCorreo = '';
+      this.origenCliente = 'sunat';
+      this.busquedaCliente = '';
+      this.marcarCambio();
+    } catch (e: any) {
+      this.messageService.add({ severity: 'error', summary: 'No encontrado', detail: e?.message || 'No se pudo consultar el documento.' });
+    } finally {
+      this.buscandoDocumento = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /** El botón de búsqueda dentro de los datos del cliente. */
+  buscarDocumento() {
+    return this.buscarEnSunat(this.clienteDocumentoTexto);
+  }
+
+  ingresarManual() {
+    const texto = typeof this.busquedaCliente === 'string' ? this.busquedaCliente.trim() : '';
+    if (/^\d+$/.test(texto)) {
+      this.clienteDocumento = texto;
+    } else if (texto) {
+      this.clienteNombre = texto;
+    }
+    this.busquedaCliente = '';
+    this.origenCliente = 'manual';
+    this.editandoCliente = true;
     this.cdr.markForCheck();
   }
 
-  // Al escribir solo se busca en los clientes ya guardados (no gasta consultas).
-  // SUNAT/RENIEC se consulta únicamente con el botón o Enter.
+  cambiarCliente() {
+    this.clienteNombre = '';
+    this.clienteDocumento = '';
+    this.clienteTelefono = '';
+    this.clienteDireccion = '';
+    this.clienteCorreo = '';
+    this.origenCliente = null;
+    this.editandoCliente = false;
+    this.marcarCambio();
+    this.cdr.markForCheck();
+    setTimeout(() => document.getElementById('buscar-cliente')?.focus());
+  }
+
+  terminarEdicionCliente() {
+    if (!this.clienteNombreTexto || !this.clienteDocumentoTexto) {
+      this.mostrarFaltantes = true;
+      return;
+    }
+    this.editandoCliente = false;
+  }
+
+  // Al escribir el documento solo se busca en la cartera (no gasta consultas).
   alCambiarDocumentoInput() {
     const doc = this.clienteDocumentoTexto;
     if ((doc.length !== 8 && doc.length !== 11) || this.clienteNombre) return;
@@ -266,56 +388,6 @@ export class CotizadorComponent implements OnInit {
       this.clienteDireccion = clienteExistente.direccion || '';
       this.clienteTelefono = clienteExistente.telefono || '';
       this.clienteCorreo = clienteExistente.correo || '';
-      this.cdr.markForCheck();
-    }
-  }
-
-  async buscarDocumento() {
-    if (this.buscandoDocumento) return;
-
-    const doc = this.clienteDocumentoTexto;
-
-    if (!doc) {
-      this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Escribe un DNI o RUC' });
-      return;
-    }
-
-    const clienteExistente = this.clientesBD.find(
-      c => String(c.documento_identidad || '').trim() === doc
-    );
-
-    if (clienteExistente) {
-      this.clienteNombre = clienteExistente.nombre_razon_social || '';
-      this.clienteDireccion = clienteExistente.direccion || '';
-      this.clienteTelefono = clienteExistente.telefono || '';
-      this.clienteCorreo = clienteExistente.correo || '';
-      this.messageService.add({ severity: 'success', summary: 'Local', detail: 'Datos obtenidos de tu Base de Datos.' });
-      this.cdr.markForCheck();
-      return;
-    }
-
-    if (doc.length !== 8 && doc.length !== 11) {
-      this.messageService.add({ severity: 'warn', summary: 'Error', detail: 'DNI (8) o RUC (11) inválido.' });
-      return;
-    }
-
-    this.buscandoDocumento = true;
-    this.cdr.markForCheck();
-    this.messageService.add({ severity: 'info', summary: 'Consultando', detail: 'Buscando en SUNAT/RENIEC...' });
-
-    try {
-      const datos = await this.apiPeru.buscarDocumento(doc);
-
-      this.clienteNombre = datos.nombre;
-      this.clienteDireccion = datos.direccion;
-      this.clienteTelefono = '';
-      this.clienteCorreo = '';
-
-      this.messageService.add({ severity: 'success', summary: 'API', detail: 'Datos obtenidos de SUNAT/RENIEC.' });
-    } catch (e: any) {
-      this.messageService.add({ severity: 'error', summary: 'No encontrado', detail: e?.message || 'No se pudo consultar el documento.' });
-    } finally {
-      this.buscandoDocumento = false;
       this.cdr.markForCheck();
     }
   }
@@ -335,9 +407,35 @@ export class CotizadorComponent implements OnInit {
     }];
   }
 
+  /** Agrega una fila y lleva el cursor a su descripción. */
+  agregarFilaYEnfocar() {
+    this.agregarFila();
+    this.cdr.markForCheck();
+    const indice = this.carrito.length - 1;
+    setTimeout(() => {
+      const escritorio = document.getElementById(`item-desc-${indice}`);
+      const destino = escritorio?.offsetParent ? escritorio : document.getElementById(`item-desc-m-${indice}`);
+      destino?.focus();
+    });
+  }
+
+  /** Enter en cantidad o precio: pasa a una fila nueva (o a la siguiente). */
+  alEnterEnFila(indice: number) {
+    if (indice === this.carrito.length - 1) {
+      this.agregarFilaYEnfocar();
+    } else {
+      document.getElementById(`item-desc-${indice + 1}`)?.focus();
+    }
+  }
+
   eliminarItem(index: number) {
     this.carrito = this.carrito.filter((_, i) => i !== index);
+    if (this.carrito.length === 0) this.agregarFila();
     this.recalcularTodo();
+  }
+
+  porIndice(indice: number): number {
+    return indice;
   }
 
   filtrarNombresProductos(event: any) {
@@ -398,25 +496,32 @@ export class CotizadorComponent implements OnInit {
     this.subtotalGeneral = totales.subtotal;
     this.igvTotal = totales.igv;
     this.totalFinal = totales.total;
+    this.marcarCambio();
     this.cdr.markForCheck();
+  }
+
+  /** Resumen de una línea de las opciones del PDF, para cuando están plegadas. */
+  get resumenOpciones(): string {
+    const partes = [this.incluyeIgv ? 'Con IGV' : 'Sin IGV'];
+    if (this.lugarSeleccionado) partes.push(this.lugarSeleccionado.toLowerCase());
+    if (this.condiciones.mostrarValidez) partes.push(`validez ${this.condiciones.diasValidez} días`);
+    if (this.condiciones.mostrarCuentas) partes.push('cuentas bancarias');
+    return partes.join(' · ');
   }
 
   // ── Guardar y generar PDF ─────────────────────────────────────────────────
 
   async generarPDF() {
-    if (!this.puedeGenerar || this.generandoPDF) {
-      if (!this.puedeGenerar) {
-        this.messageService.add({
-          severity: 'warn',
-          summary: 'Formulario incompleto',
-          detail: 'Completa el nombre y documento del cliente e ingresa al menos un ítem válido.'
-        });
-      }
+    if (this.generandoPDF) return;
+    if (!this.puedeGenerar) {
+      this.mostrarFaltantes = true;
+      this.cdr.markForCheck();
       return;
     }
 
     const diasValidez = Number(this.condiciones.diasValidez);
     if (this.condiciones.mostrarValidez && !(Number.isInteger(diasValidez) && diasValidez >= 1 && diasValidez <= 365)) {
+      this.opcionesAbiertas = true;
       this.messageService.add({
         severity: 'warn', summary: 'Validez inválida', detail: 'La validez de la oferta debe ser un número de días entre 1 y 365.'
       });
@@ -496,14 +601,14 @@ export class CotizadorComponent implements OnInit {
     try {
       await this.pdfSvc.generarYDescargarCotizacion(guardada, this.empresaActiva);
       this.messageService.add({
-        severity: 'success', summary: '¡Listo!', detail: `Cotización ${guardada.folio} guardada y descargada.`
+        severity: 'success', summary: `Cotización ${guardada.folio} guardada`, detail: 'El PDF se está descargando.'
       });
     } catch (pdfError) {
       console.error('Error al generar PDF:', pdfError);
       this.messageService.add({
         severity: 'warn',
-        summary: 'Cotización guardada',
-        detail: `La cotización ${guardada.folio} quedó registrada, pero no se pudo generar el PDF. Descárgalo desde el Historial.`,
+        summary: `Cotización ${guardada.folio} guardada`,
+        detail: 'No se pudo generar el PDF. Descárgalo desde el Historial.',
         life: 8000
       });
     }
@@ -521,12 +626,16 @@ export class CotizadorComponent implements OnInit {
 
   private resetearFormulario() {
     sessionStorage.removeItem(CLAVE_BORRADOR_COTIZADOR);
+    this.limpiarEnCurso();
+    this.busquedaCliente         = '';
     this.clienteNombre           = '';
     this.clienteDocumento        = '';
     this.clienteTelefono         = '';
     this.clienteDireccion        = '';
     this.clienteCorreo           = '';
     this.clienteObservaciones    = '';
+    this.origenCliente           = null;
+    this.editandoCliente         = false;
     this.guardarClienteEnCartera = true;
     this.lugarEntrega            = null;
     this.incluyeIgv              = true;
@@ -534,8 +643,84 @@ export class CotizadorComponent implements OnInit {
     this.borradorModo            = null;
     this.borradorOrigenId        = null;
     this.borradorFolioPadre      = null;
+    this.recuperadaDeSesion      = false;
+    this.mostrarFaltantes        = false;
     this.agregarFila();
     this.recalcularTodo();
+    this.limpiarEnCurso();
+  }
+
+  // ── Cotización en curso (sobrevive a recargas) ────────────────────────────
+
+  private get claveEnCurso(): string {
+    const usuario = this.session.usuario?.()?.id ?? 'sin-usuario';
+    return `${CLAVE_EN_CURSO}:${usuario}:${this.empresaActiva?.id ?? 'sin-empresa'}`;
+  }
+
+  /** Guarda la cotización en curso un momento después del último cambio. */
+  marcarCambio() {
+    if (this.temporizadorEnCurso) clearTimeout(this.temporizadorEnCurso);
+    this.temporizadorEnCurso = setTimeout(() => {
+      this.temporizadorEnCurso = null;
+      this.guardarEnCurso();
+    }, 600);
+  }
+
+  private guardarEnCurso() {
+    if (!this.empresaActiva?.id) return;
+    const hayAlgo = this.tieneCliente || this.carrito.some(i => i.descripcion?.trim());
+    if (!hayAlgo) {
+      this.limpiarEnCurso();
+      return;
+    }
+    const enCurso: IEnCurso = {
+      modo: this.borradorModo,
+      origen_id: this.borradorOrigenId,
+      folio_origen: this.borradorFolioPadre,
+      cliente_nombre: this.clienteNombreTexto,
+      cliente_documento: this.clienteDocumentoTexto,
+      cliente_telefono: this.clienteTelefono,
+      cliente_direccion: this.clienteDireccion,
+      cliente_correo: this.clienteCorreo,
+      observaciones: this.clienteObservaciones,
+      lugar_entrega: this.lugarEntrega,
+      incluye_igv: this.incluyeIgv,
+      condiciones: { ...this.condiciones, diasValidez: Number(this.condiciones.diasValidez) || 15 },
+      items: this.carrito,
+      guardar_cliente: this.guardarClienteEnCartera
+    };
+    try {
+      sessionStorage.setItem(this.claveEnCurso, JSON.stringify(enCurso));
+    } catch { /* sin almacenamiento: no se recupera, pero se puede seguir */ }
+  }
+
+  private limpiarEnCurso() {
+    if (this.temporizadorEnCurso) {
+      clearTimeout(this.temporizadorEnCurso);
+      this.temporizadorEnCurso = null;
+    }
+    try { sessionStorage.removeItem(this.claveEnCurso); } catch { /* sin almacenamiento */ }
+  }
+
+  private recuperarEnCurso(): boolean {
+    let raw: string | null = null;
+    try { raw = sessionStorage.getItem(this.claveEnCurso); } catch { return false; }
+    if (!raw) return false;
+    try {
+      const enCurso: IEnCurso = JSON.parse(raw);
+      this.aplicarBorrador(enCurso);
+      this.guardarClienteEnCartera = enCurso.guardar_cliente ?? true;
+      this.recuperadaDeSesion = true;
+      return true;
+    } catch {
+      this.limpiarEnCurso();
+      return false;
+    }
+  }
+
+  descartarRecuperada() {
+    this.resetearFormulario();
+    this.cdr.markForCheck();
   }
 
   // ── Borrador desde el historial ───────────────────────────────────────────
@@ -548,50 +733,14 @@ export class CotizadorComponent implements OnInit {
     try {
       // Las claves folio_padre / cotizacion_id son de la versión anterior.
       const b: IBorradorCotizador & { folio_padre?: string; cotizacion_id?: string } = JSON.parse(raw);
-
-      this.clienteNombre        = b.cliente_nombre    || '';
-      this.clienteDocumento     = b.cliente_documento || '';
-      this.clienteTelefono      = b.cliente_telefono  || '';
-      this.clienteDireccion     = b.cliente_direccion || '';
-      this.clienteCorreo        = b.cliente_correo    || '';
-      // Las cotizaciones viejas guardaban "[Revisión de X]" en observaciones.
-      this.clienteObservaciones = (b.observaciones || '').replace(/^\[(Revisión|Duplicado) de [^\]]+\]\s*/, '');
-      this.condiciones.mostrarObservaciones = !!this.clienteObservaciones;
-      this.lugarEntrega         = b.lugar_entrega     || null;
-      if (b.incluye_igv !== undefined) {
-        this.incluyeIgv         = b.incluye_igv;
-      }
-      if (b.condiciones && Object.keys(b.condiciones).length > 0) {
-        const { diasValidez, ...resto } = b.condiciones;
-        Object.assign(this.condiciones, resto);
-        if (diasValidez) this.condiciones.diasValidez = String(diasValidez);
-      }
-
-      if (b.items?.length > 0) {
-        this.carrito = b.items.map(item => ({
-          // Los códigos VAR-/MAQ- eran aleatorios, no de un producto real.
-          sku:             item.sku && !/^(VAR|MAQ)-/.test(item.sku) ? item.sku : null,
-          descripcion:     item.descripcion     || '',
-          unidad:          item.unidad          || '',
-          cantidad:        item.cantidad        ?? null,
-          precio_unitario: item.precio_unitario ?? null,
-          subtotal:        redondear2((item.cantidad || 0) * (item.precio_unitario || 0))
-        }));
-      }
-
-      this.borradorModo       = b.modo || null;
-      this.borradorOrigenId   = b.origen_id ?? b.cotizacion_id ?? null;
-      this.borradorFolioPadre = b.folio_origen ?? b.folio_padre ?? null;
-
-      this.recalcularTodo();
-
-      this.messageService.add({
-        severity: b.modo === 'revision' ? 'warn' : 'info',
-        summary:  b.modo === 'revision' ? `Revisando ${this.borradorFolioPadre}` : 'Cotización duplicada',
-        detail:   b.modo === 'revision'
-          ? 'La original se anulará cuando guardes esta revisión.'
-          : `Datos cargados desde ${this.borradorFolioPadre || 'borrador'}.`
+      this.aplicarBorrador({
+        ...b,
+        origen_id: b.origen_id ?? b.cotizacion_id ?? null,
+        folio_origen: b.folio_origen ?? b.folio_padre ?? null
       });
+      // Abrir una revisión o un duplicado reemplaza lo que se estaba armando.
+      this.limpiarEnCurso();
+      this.marcarCambio();
       return true;
     } catch (e) {
       console.error('Error al cargar borrador:', e);
@@ -599,13 +748,52 @@ export class CotizadorComponent implements OnInit {
     }
   }
 
+  private aplicarBorrador(b: Partial<IEnCurso>) {
+    this.clienteNombre        = b.cliente_nombre    || '';
+    this.clienteDocumento     = b.cliente_documento || '';
+    this.clienteTelefono      = b.cliente_telefono  || '';
+    this.clienteDireccion     = b.cliente_direccion || '';
+    this.clienteCorreo        = b.cliente_correo    || '';
+    this.origenCliente        = this.clienteNombre ? 'cartera' : null;
+    // Las cotizaciones viejas guardaban "[Revisión de X]" en observaciones.
+    this.clienteObservaciones = (b.observaciones || '').replace(/^\[(Revisión|Duplicado) de [^\]]+\]\s*/, '');
+    this.condiciones.mostrarObservaciones = !!this.clienteObservaciones;
+    this.lugarEntrega         = b.lugar_entrega     || null;
+    if (b.incluye_igv !== undefined) {
+      this.incluyeIgv         = b.incluye_igv;
+    }
+    if (b.condiciones && Object.keys(b.condiciones).length > 0) {
+      const { diasValidez, ...resto } = b.condiciones;
+      Object.assign(this.condiciones, resto);
+      if (diasValidez) this.condiciones.diasValidez = String(diasValidez);
+    }
+
+    if (b.items?.length) {
+      this.carrito = b.items.map(item => ({
+        // Los códigos VAR-/MAQ- eran aleatorios, no de un producto real.
+        sku:             item.sku && !/^(VAR|MAQ)-/.test(item.sku) ? item.sku : null,
+        descripcion:     item.descripcion     || '',
+        unidad:          item.unidad          || '',
+        cantidad:        item.cantidad        ?? null,
+        precio_unitario: item.precio_unitario ?? null,
+        subtotal:        redondear2((item.cantidad || 0) * (item.precio_unitario || 0))
+      }));
+    }
+
+    this.borradorModo       = b.modo || null;
+    this.borradorOrigenId   = b.origen_id ?? null;
+    this.borradorFolioPadre = b.folio_origen ?? null;
+
+    this.recalcularTodo();
+  }
+
   confirmarLimpiarFormulario() {
-    if (this.clienteNombre || this.tieneItemsValidos) {
+    if (this.tieneCliente || this.tieneItemsValidos) {
       this.confirmationSvc.confirm({
-        message: '¿Deseas restablecer la cotización actual? Se borrarán los datos e ítems ingresados.',
-        header: 'Limpiar Formulario',
+        message: 'Se borrarán el cliente y los ítems de esta cotización.',
+        header: '¿Empezar de nuevo?',
         icon: 'pi pi-refresh',
-        acceptLabel: 'Sí, limpiar',
+        acceptLabel: 'Sí, empezar de nuevo',
         rejectLabel: 'Cancelar',
         acceptButtonStyleClass: 'p-button-warning border-round-xl',
         accept: () => this.limpiarFormulario()
@@ -617,11 +805,6 @@ export class CotizadorComponent implements OnInit {
 
   limpiarFormulario() {
     this.resetearFormulario();
-    this.messageService.add({
-      severity: 'info',
-      summary: 'Formulario limpiado',
-      detail: 'Todos los campos restablecidos',
-      life: 3000
-    });
+    this.cdr.markForCheck();
   }
 }

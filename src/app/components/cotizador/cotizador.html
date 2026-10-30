@@ -1,466 +1,326 @@
 <p-confirmDialog appendTo="body" styleClass="max-w-28rem border-round-2xl"></p-confirmDialog>
 
-<!-- Spinner / Skeleton de carga inicial -->
-<div *ngIf="cargando" class="flex justify-content-center align-items-center py-8">
-  <p-progressSpinner strokeWidth="4" [style]="{ width: '60px', height: '60px' }">
-  </p-progressSpinner>
+<!-- Carga inicial: el esqueleto de la página, no un spinner -->
+<div *ngIf="cargando" class="cotizador" aria-busy="true">
+  <div class="esqueleto" style="height: 2.2rem; width: 14rem;"></div>
+  <div class="esqueleto mt-4" style="height: 7rem;"></div>
+  <div class="esqueleto mt-3" style="height: 12rem;"></div>
 </div>
 
-<!-- Contenido del formulario -->
-<ng-container *ngIf="!cargando">
+<div *ngIf="!cargando" class="cotizador">
 
-  <div *ngIf="borradorModo" class="px-3 pt-3 md:px-5 md:pt-4">
-
-    <div *ngIf="borradorModo === 'revision'"
-         class="flex align-items-center gap-3 p-3 border-round-xl border-1 border-orange-300 mb-0 shadow-1"
-         style="background:#fff7ed">
-      <i class="pi pi-refresh text-orange-500 text-xl flex-shrink-0"></i>
-      <div class="flex-1">
-        <p class="font-bold text-orange-800 m-0 text-sm">✏️ Revisión de {{ borradorFolioPadre }}</p>
-        <p class="text-orange-700 m-0 text-xs mt-1">
-          Al guardar se generará un folio nuevo y {{ borradorFolioPadre }} pasará a <strong>Anulada</strong>.
-          Si sales sin guardar, la original sigue vigente.
-        </p>
-      </div>
-      <button pButton icon="pi pi-times" class="p-button-text p-button-secondary p-button-sm flex-shrink-0"
-              pTooltip="Limpiar formulario" (click)="confirmarLimpiarFormulario()"></button>
+  <!-- Encabezado -->
+  <div class="flex align-items-start justify-content-between gap-3 mb-3">
+    <div class="min-w-0">
+      <h1 class="text-2xl font-bold text-900 m-0">Nueva cotización</h1>
+      <p class="text-600 text-sm m-0 mt-1">{{ empresaActiva?.nombre_comercial }}</p>
     </div>
-
-    <div *ngIf="borradorModo === 'duplicar'"
-         class="flex align-items-center gap-3 p-3 border-round-xl border-1 border-blue-300 mb-0 shadow-1"
-         style="background:#eff6ff">
-      <i class="pi pi-copy text-blue-500 text-xl flex-shrink-0"></i>
-      <div class="flex-1">
-        <p class="font-bold text-blue-800 m-0 text-sm">📋 Cotización duplicada</p>
-        <p class="text-blue-700 m-0 text-xs mt-1">
-          Datos cargados desde el historial. Se generará un <strong>folio nuevo</strong> al guardar.
-        </p>
-      </div>
-      <button pButton icon="pi pi-times" class="p-button-text p-button-secondary p-button-sm flex-shrink-0"
-              pTooltip="Limpiar formulario" (click)="confirmarLimpiarFormulario()"></button>
-    </div>
-
+    <button *ngIf="tieneCliente || tieneItemsValidos" pButton type="button" icon="pi pi-refresh" label="Empezar de nuevo"
+            class="p-button-text p-button-secondary p-button-sm flex-shrink-0"
+            (click)="confirmarLimpiarFormulario()"></button>
   </div>
 
-  <div class="p-3 md:p-5">
-
-    <!-- Header Principal de la Vista -->
-    <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
-      <div>
-        <h1 class="text-2xl md:text-3xl font-bold text-900 m-0 tracking-tight flex align-items-center gap-2">
-          <i class="pi pi-file-edit text-sky-600"></i>Nueva Cotización
-        </h1>
-        <p class="text-500 mt-1 mb-0 text-sm font-medium">
-          Emisión de propuesta comercial para <strong class="text-sky-700">{{ empresaActiva?.nombre_comercial || 'Empresa seleccionada' }}</strong>
-        </p>
-      </div>
+  <!-- Avisos -->
+  <div *ngIf="borradorModo === 'revision'" class="aviso aviso-ambar">
+    <i class="pi pi-refresh"></i>
+    <div>
+      <strong>Revisión de {{ borradorFolioPadre }}.</strong>
+      Al guardar se crea un folio nuevo y {{ borradorFolioPadre }} pasa a Anulada. Si no guardas, la original sigue vigente.
     </div>
-
-    <div class="grid m-0 gap-4">
-
-      <!-- COLUMNA IZQUIERDA (Pasos 1 & 2) -->
-      <div class="col-12 lg:col-8 p-0 flex flex-column gap-4">
-
-        <!-- SECCIÓN 1: CLIENTE -->
-        <div class="bg-white border-round-2xl shadow-1 p-4 border-1 surface-border">
-          <div class="flex align-items-center gap-3 mb-4 border-bottom-1 surface-border pb-3">
-            <div class="step-badge">1</div>
-            <div>
-              <span class="font-bold text-900 text-lg block line-height-1">Información del Cliente</span>
-              <span class="text-xs text-500 font-medium">Selecciona un cliente registrado o busca por RUC/DNI en SUNAT</span>
-            </div>
-          </div>
-
-          <div class="grid p-fluid">
-
-            <div class="col-12 md:col-8 mb-3">
-              <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">
-                Razón Social / Nombres <span class="text-red-500">*</span>
-              </label>
-              <p-autoComplete
-                [(ngModel)]="clienteNombre"
-                [suggestions]="nombresClientesFiltrados"
-                (completeMethod)="filtrarNombresClientes($event)"
-                (onSelect)="alElegirNombreSugerido($event)"
-                [dropdown]="true"
-                placeholder="Escribe o busca el cliente..."
-                styleClass="w-full"
-                [inputStyle]="{'font-weight':'600'}">
-                <ng-template let-c pTemplate="item">
-                  <div class="flex align-items-center justify-content-between w-full py-1">
-                    <span class="font-bold text-900">{{ c }}</span>
-                    <span class="text-xs bg-sky-100 text-sky-800 font-semibold px-2 py-1 border-round">Cliente</span>
-                  </div>
-                </ng-template>
-              </p-autoComplete>
-            </div>
-
-            <div class="col-12 md:col-4 mb-3">
-              <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">
-                RUC / DNI <span class="text-red-500">*</span>
-              </label>
-              <div class="flex gap-2">
-                <input pInputText [(ngModel)]="clienteDocumento"
-                       (ngModelChange)="alCambiarDocumentoInput()"
-                       placeholder="20123456789" class="w-full font-semibold"
-                       [disabled]="buscandoDocumento"
-                       (keyup.enter)="buscarDocumento()" />
-                <button pButton [icon]="buscandoDocumento ? 'pi pi-spin pi-spinner' : 'pi pi-search'"
-                        class="p-button-primary border-round-xl flex-shrink-0"
-                        pTooltip="Consultar en SUNAT / RENIEC"
-                        [disabled]="buscandoDocumento"
-                        [loading]="buscandoDocumento"
-                        (click)="buscarDocumento()">
-                </button>
-              </div>
-            </div>
-
-            <div class="col-12 md:col-4 mb-3">
-              <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">Teléfono</label>
-              <input pInputText [(ngModel)]="clienteTelefono"
-                     placeholder="987 654 321" class="w-full" />
-            </div>
-
-            <div class="col-12 md:col-4 mb-3">
-              <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">Correo Electrónico</label>
-              <input pInputText [(ngModel)]="clienteCorreo"
-                     placeholder="contacto@empresa.com" class="w-full" />
-            </div>
-
-            <div class="col-12 md:col-4 mb-3">
-              <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">Dirección Fiscal / Entrega</label>
-              <input pInputText [(ngModel)]="clienteDireccion"
-                     placeholder="Dirección fiscal..." class="w-full" />
-            </div>
-
-            <div class="col-12 flex align-items-center gap-2">
-              <p-checkbox [(ngModel)]="guardarClienteEnCartera" [binary]="true" inputId="guardarCliente"></p-checkbox>
-              <label for="guardarCliente" class="text-sm text-700 cursor-pointer">
-                {{ clienteYaRegistrado ? 'Actualizar los datos de este cliente en la cartera' : 'Guardar este cliente en la cartera' }}
-              </label>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- SECCIÓN 2: ITEMS -->
-        <div class="bg-white border-round-2xl shadow-1 p-4 border-1 surface-border">
-          <div class="flex flex-column sm:flex-row align-items-start sm:align-items-center justify-content-between gap-3 mb-4 border-bottom-1 surface-border pb-3">
-            <div class="flex align-items-center gap-3">
-              <div class="step-badge">2</div>
-              <div>
-                <span class="font-bold text-900 text-lg block line-height-1">Detalle de Cotización</span>
-                <span class="text-xs text-500 font-medium">Agrega productos del catálogo o escribe líneas libres</span>
-              </div>
-            </div>
-            <div class="flex gap-2 w-full sm:w-auto">
-              <button pButton icon="pi pi-plus" label="Ítem producto"
-                      class="p-button-outlined p-button-primary p-button-sm border-round-xl font-semibold flex-1 sm:flex-initial"
-                      (click)="agregarFila()">
-              </button>
-            </div>
-          </div>
-
-          <!-- TABLA DESKTOP -->
-          <div class="hidden md:block overflow-x-auto">
-            <p-table [value]="carrito" styleClass="p-datatable-sm p-fluid"
-                     [tableStyle]="{'min-width':'800px'}">
-              <ng-template pTemplate="header">
-                <tr>
-                  <th style="width:3rem" class="text-center">#</th>
-                  <th style="min-width:240px">Descripción del Producto / Servicio</th>
-                  <th style="width:90px">Unid.</th>
-                  <th style="width:110px">Cantidad</th>
-                  <th style="width:140px">P. Unitario</th>
-                  <th style="width:130px" class="text-right">Subtotal</th>
-                  <th style="width:3.5rem"></th>
-                </tr>
-              </ng-template>
-
-              <ng-template pTemplate="body" let-item let-i="rowIndex">
-                <tr>
-                  <td class="text-center text-500 font-bold">{{ i + 1 }}</td>
-                  <td>
-                    <p-autoComplete
-                      [(ngModel)]="item.descripcion"
-                      (ngModelChange)="alCambiarDescripcion(item)"
-                      [suggestions]="nombresProductosFiltrados"
-                      (completeMethod)="filtrarNombresProductos($event)"
-                      (onSelect)="alElegirProductoSugerido($event, item)"
-                      [dropdown]="true"
-                      placeholder="Buscar o escribir producto..."
-                      appendTo="body"
-                      styleClass="w-full"
-                      [maxlength]="100">
-                      <ng-template let-p pTemplate="item">
-                        <div class="flex align-items-center justify-content-between w-full py-1">
-                          <span class="font-semibold text-900">{{ p }}</span>
-                          <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-1 border-round">Catálogo</span>
-                        </div>
-                      </ng-template>
-                    </p-autoComplete>
-                  </td>
-                  <td>
-                    <input pInputText [(ngModel)]="item.unidad"
-                           (ngModelChange)="recalcularTodo()"
-                           class="w-full text-center font-medium" placeholder="UNID" />
-                  </td>
-                  <td>
-                    <p-inputNumber [(ngModel)]="item.cantidad"
-                                   [min]="0.01" [minFractionDigits]="0" [maxFractionDigits]="2" placeholder="0"
-                                   (ngModelChange)="recalcularItem(item)"
-                                   inputStyleClass="w-full text-center font-bold"></p-inputNumber>
-                  </td>
-                  <td>
-                    <p-inputNumber [(ngModel)]="item.precio_unitario"
-                                   mode="currency" currency="PEN" locale="es-PE"
-                                   (ngModelChange)="recalcularItem(item)"
-                                   inputStyleClass="w-full text-right font-semibold"></p-inputNumber>
-                  </td>
-                  <td class="text-right">
-                    <span class="font-bold text-base white-space-nowrap text-emerald-600">
-                      S/ {{ item.subtotal | number:'1.2-2' }}
-                    </span>
-                  </td>
-                  <td class="text-center">
-                    <button pButton icon="pi pi-trash"
-                            class="p-button-danger p-button-text p-button-rounded p-button-sm"
-                            pTooltip="Eliminar fila"
-                            (click)="eliminarItem(i)">
-                    </button>
-                  </td>
-                </tr>
-              </ng-template>
-
-              <ng-template pTemplate="emptymessage">
-                <tr>
-                  <td colspan="7">
-                    <div class="flex flex-column align-items-center py-6 text-500">
-                      <i class="pi pi-shopping-cart text-5xl mb-2 opacity-30"></i>
-                      <p class="m-0 font-medium text-sm">Tu cotización no tiene ítems agregados.</p>
-                      <button pButton icon="pi pi-plus" label="Agregar primer ítem"
-                              class="p-button-outlined p-button-primary p-button-sm mt-3 border-round-xl"
-                              (click)="agregarFila()"></button>
-                    </div>
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
-          </div>
-
-          <!-- CARDS MOBILE -->
-          <div class="flex flex-column gap-3 md:hidden">
-            <div *ngFor="let item of carrito; let i = index"
-                 class="border-1 surface-border border-round-2xl p-3 bg-white shadow-1 relative flex flex-column gap-3">
-
-              <div class="flex align-items-center justify-content-between border-bottom-1 surface-border pb-2 min-w-0">
-                <span class="font-bold text-sky-700 bg-sky-50 px-2 py-1 border-round-md text-sm">Ítem #{{ i + 1 }}</span>
-                <button pButton icon="pi pi-trash" type="button"
-                        class="p-button-danger p-button-text p-button-rounded p-button-sm w-2.5rem h-2.5rem"
-                        (click)="eliminarItem(i)">
-                </button>
-              </div>
-
-              <div class="grid p-fluid m-0">
-                <div class="col-12 p-1">
-                  <label class="text-xs font-bold text-700 uppercase mb-1 block">Descripción del Producto / Servicio</label>
-                  <p-autoComplete
-                    [(ngModel)]="item.descripcion"
-                    (ngModelChange)="alCambiarDescripcion(item)"
-                    [suggestions]="nombresProductosFiltrados"
-                    (completeMethod)="filtrarNombresProductos($event)"
-                    (onSelect)="alElegirProductoSugerido($event, item)"
-                    [dropdown]="true" appendTo="body"
-                    styleClass="w-full" [maxlength]="100"></p-autoComplete>
-                </div>
-                <div class="col-6 sm:col-4 p-1">
-                  <label class="text-xs font-bold text-700 uppercase mb-1 block">Unidad</label>
-                  <input pInputText [(ngModel)]="item.unidad"
-                         (ngModelChange)="recalcularTodo()"
-                         class="w-full text-center font-medium border-round-xl" placeholder="m3 / UNID" />
-                </div>
-                <div class="col-6 sm:col-4 p-1">
-                  <label class="text-xs font-bold text-700 uppercase mb-1 block">Cantidad</label>
-                  <p-inputNumber [(ngModel)]="item.cantidad" [min]="0.01" [minFractionDigits]="0" [maxFractionDigits]="2"
-                                 (ngModelChange)="recalcularItem(item)"
-                                 inputStyleClass="w-full text-center font-bold border-round-xl"></p-inputNumber>
-                </div>
-                <div class="col-12 sm:col-4 p-1">
-                  <label class="text-xs font-bold text-700 uppercase mb-1 block">P. Unitario</label>
-                  <p-inputNumber [(ngModel)]="item.precio_unitario"
-                                 mode="currency" currency="PEN" locale="es-PE"
-                                 (ngModelChange)="recalcularItem(item)"
-                                 inputStyleClass="w-full text-right font-semibold border-round-xl"></p-inputNumber>
-                </div>
-                <div class="col-12 p-2 mt-2 border-top-1 surface-border flex justify-content-between align-items-center bg-slate-50 border-round-xl min-w-0">
-                  <span class="text-xs font-bold text-700 uppercase">Subtotal</span>
-                  <span class="font-bold text-lg text-emerald-600 overflow-hidden text-overflow-ellipsis white-space-nowrap">
-                    S/ {{ item.subtotal | number:'1.2-2' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div *ngIf="carrito.length === 0"
-                 class="text-center py-6 text-500 bg-white border-round-2xl border-1 surface-border shadow-1 p-4">
-              <i class="pi pi-shopping-cart text-4xl mb-2 opacity-30 block"></i>
-              <p class="m-0 text-sm font-medium">Aún no hay ítems agregados</p>
-            </div>
-
-            <button pButton icon="pi pi-plus" label="Agregar ítem"
-                    class="p-button-outlined p-button-primary w-full border-round-xl font-bold py-2"
-                    (click)="agregarFila()">
-            </button>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- COLUMNA DERECHA (Pasos 3 & 4 - Panel Resumen Sticky) -->
-      <div class="col-12 lg:col p-0 flex flex-column gap-4">
-
-        <!-- SECCIÓN 3: CONFIG -->
-        <div class="bg-white border-round-2xl shadow-1 p-4 border-1 surface-border">
-          <div class="flex align-items-center gap-3 mb-4 border-bottom-1 surface-border pb-3">
-            <div class="step-badge">3</div>
-            <div>
-              <span class="font-bold text-900 text-lg block line-height-1">Condiciones del PDF</span>
-              <span class="text-xs text-500 font-medium">Configura impuestos y notas visibles</span>
-            </div>
-          </div>
-
-          <!-- IGV Toggle Card -->
-          <div class="flex align-items-center justify-content-between p-3 border-round-xl mb-3 transition-colors"
-               [class.bg-sky-50]="incluyeIgv"
-               [class.surface-ground]="!incluyeIgv"
-               style="border: 1px solid var(--glass-border)">
-            <div>
-              <p class="font-bold text-900 m-0 text-sm">Incluir IGV (18%)</p>
-              <p class="text-xs text-500 m-0 mt-1">
-                {{ incluyeIgv ? 'Los precios calculan impuesto' : 'Precios exonerados / sin IGV' }}
-              </p>
-            </div>
-            <p-toggleButton [(ngModel)]="incluyeIgv" [onLabel]="'Con IGV'" [offLabel]="'Sin IGV'" (onChange)="recalcularTodo()"></p-toggleButton>
-          </div>
-
-          <!-- Lugar de entrega (solo si la empresa definió opciones) -->
-          <div class="mb-3" *ngIf="opcionesLugar().length">
-            <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">Lugar de entrega</label>
-            <p-selectButton [options]="opcionesLugar()" [ngModel]="lugarSeleccionado"
-                            (ngModelChange)="lugarEntrega = $event"
-                            optionLabel="label" optionValue="value" styleClass="w-full flex-wrap"
-                            [allowEmpty]="false"></p-selectButton>
-          </div>
-
-          <!-- Switches PDF -->
-          <div class="surface-ground border-round-xl p-3 mb-3 border-1 surface-border">
-            <p class="font-bold text-xs uppercase tracking-wider text-700 mb-3 m-0">Opciones en el documento PDF</p>
-            <div class="flex flex-column gap-3">
-
-              <div class="flex align-items-center justify-content-between">
-                <span class="text-sm text-800 font-medium">Validez de la oferta</span>
-                <div class="flex align-items-center gap-2">
-                  <input *ngIf="condiciones.mostrarValidez" pInputText [(ngModel)]="condiciones.diasValidez"
-                         style="width:54px" class="text-center text-sm font-bold py-1 border-round-md" />
-                  <span *ngIf="condiciones.mostrarValidez" class="text-xs text-500">días</span>
-                  <p-toggleButton [(ngModel)]="condiciones.mostrarValidez" [onIcon]="'pi pi-check'" [offIcon]="'pi pi-times'" styleClass="p-button-sm"></p-toggleButton>
-                </div>
-              </div>
-
-              <div class="flex align-items-center justify-content-between">
-                <div>
-                  <span class="text-sm text-800 font-medium block">Cuentas bancarias</span>
-                  <span *ngIf="!empresaActiva?.mostrar_cuentas" class="text-xs text-amber-600 font-semibold">(Desactivado en empresa)</span>
-                </div>
-                <p-toggleButton [(ngModel)]="condiciones.mostrarCuentas" [onIcon]="'pi pi-check'" [offIcon]="'pi pi-times'" styleClass="p-button-sm"></p-toggleButton>
-              </div>
-
-              <div class="flex align-items-center justify-content-between">
-                <span class="text-sm text-800 font-medium">Mensaje de contacto</span>
-                <p-toggleButton [(ngModel)]="condiciones.mostrarContacto" [onIcon]="'pi pi-check'" [offIcon]="'pi pi-times'" styleClass="p-button-sm"></p-toggleButton>
-              </div>
-
-              <div class="flex align-items-center justify-content-between">
-                <span class="text-sm text-800 font-medium">Observaciones personalizadas</span>
-                <p-toggleButton [(ngModel)]="condiciones.mostrarObservaciones" [onIcon]="'pi pi-check'" [offIcon]="'pi pi-times'" styleClass="p-button-sm"></p-toggleButton>
-              </div>
-
-            </div>
-          </div>
-
-          <div *ngIf="condiciones.mostrarObservaciones">
-            <label class="font-semibold text-800 text-xs uppercase tracking-wider mb-2 block">Observaciones adicionales</label>
-            <textarea pInputTextarea [(ngModel)]="clienteObservaciones" rows="3" class="w-full border-round-xl text-sm"
-                      placeholder="Notas especiales para esta cotización...">
-            </textarea>
-          </div>
-
-        </div>
-
-        <!-- SECCIÓN 4: TOTALES (Sticky en Desktop) -->
-        <div class="bg-white border-round-2xl shadow-2 p-4 border-1 surface-border sticky top-3">
-          <div class="flex align-items-center gap-3 mb-4 border-bottom-1 surface-border pb-3">
-            <div class="step-badge">4</div>
-            <div>
-              <span class="font-bold text-900 text-lg block line-height-1">Resumen Total</span>
-              <span class="text-xs text-500 font-medium">Cálculo en tiempo real</span>
-            </div>
-          </div>
-
-          <div class="flex justify-content-between align-items-center mb-3">
-            <span class="text-600 font-medium text-sm">Subtotal</span>
-            <span class="font-semibold text-900">S/ {{ subtotalGeneral | number:'1.2-2' }}</span>
-          </div>
-
-          <div class="flex justify-content-between align-items-center mb-3" *ngIf="incluyeIgv">
-            <span class="text-600 font-medium text-sm flex align-items-center gap-2">
-              <span class="text-xs border-round-md px-2 py-1 font-bold bg-red-100 text-red-700">18%</span>
-              IGV
-            </span>
-            <span class="font-semibold text-red-600">+ S/ {{ igvTotal | number:'1.2-2' }}</span>
-          </div>
-
-          <div *ngIf="!incluyeIgv"
-               class="flex align-items-center gap-2 p-2 border-round-lg mb-3 text-xs bg-emerald-50 text-emerald-800 font-medium">
-            <i class="pi pi-info-circle"></i>
-            Operación exonerada o sin IGV aplicado
-          </div>
-
-          <div class="border-top-1 surface-border my-3"></div>
-
-          <div class="flex justify-content-between align-items-center mb-4">
-            <span class="font-bold text-900 text-lg">TOTAL FINAL</span>
-            <span class="font-bold text-2xl md:text-3xl text-sky-700"
-                  [style.color]="empresaActiva?.color || 'var(--p-primary-color)'">
-              S/ {{ totalFinal | number:'1.2-2' }}
-            </span>
-          </div>
-
-          <div class="flex align-items-center gap-2 text-xs text-500 mb-4 font-medium">
-            <i class="pi pi-list text-sky-600"></i>
-            <span>{{ carrito.length }} ítem{{ carrito.length !== 1 ? 's' : '' }} en el detalle</span>
-          </div>
-
-          <div *ngIf="!puedeGenerar" class="flex align-items-start gap-2 p-3 border-round-xl mb-3 text-xs bg-amber-50 text-amber-900 border-1 border-amber-200">
-            <i class="pi pi-exclamation-triangle mt-1 flex-shrink-0 text-amber-600"></i>
-            <span>Para generar el PDF, completa los datos del cliente (nombre y documento) y agrega al menos 1 ítem.</span>
-          </div>
-
-          <button pButton type="button"
-                  label="Guardar y descargar PDF"
-                  icon="pi pi-file-pdf"
-                  class="w-full p-button-lg font-bold border-round-xl shadow-3 transition-all transition-duration-200"
-                  [disabled]="!puedeGenerar || generandoPDF"
-                  [loading]="generandoPDF"
-                  [style.background]="empresaActiva?.color || 'var(--p-primary-color)'"
-                  [style.border-color]="empresaActiva?.color || 'var(--p-primary-color)'"
-                  (click)="generarPDF()">
-          </button>
-
-        </div>
-      </div>
-    </div>
-
+  </div>
+  <div *ngIf="borradorModo === 'duplicar' && borradorFolioPadre" class="aviso aviso-azul">
+    <i class="pi pi-copy"></i>
+    <div><strong>Copia de {{ borradorFolioPadre }}.</strong> Se guardará con un folio nuevo; la original no cambia.</div>
+  </div>
+  <div *ngIf="recuperadaDeSesion" class="aviso aviso-azul">
+    <i class="pi pi-history"></i>
+    <div class="flex-1">Recuperamos la cotización que estabas armando.</div>
+    <button pButton type="button" label="Descartar" class="p-button-text p-button-sm" (click)="descartarRecuperada()"></button>
   </div>
 
-</ng-container>
+  <!-- 1. Cliente -->
+  <section class="tarjeta" aria-labelledby="titulo-cliente">
+    <h2 id="titulo-cliente" class="tarjeta-titulo">Cliente</h2>
+
+    <!-- Buscador único -->
+    <ng-container *ngIf="!tieneCliente && !editandoCliente">
+      <div class="flex gap-2">
+        <p-autoComplete [(ngModel)]="busquedaCliente"
+                        [suggestions]="sugerenciasClientes"
+                        (completeMethod)="filtrarClientes($event)"
+                        (onSelect)="elegirCliente($event.value)"
+                        optionLabel="nombre_razon_social"
+                        inputId="buscar-cliente"
+                        placeholder="Nombre, RUC o DNI"
+                        [delay]="150"
+                        styleClass="flex-1 min-w-0" inputStyleClass="w-full"
+                        (keydown.enter)="alPresionarEnterBusqueda()">
+          <ng-template let-c pTemplate="item">
+            <div class="flex flex-column">
+              <span class="font-semibold text-900">{{ c.nombre_razon_social }}</span>
+              <span class="text-xs text-600">{{ c.documento_identidad }}</span>
+            </div>
+          </ng-template>
+        </p-autoComplete>
+        <button pButton type="button" icon="pi pi-search" label="SUNAT / RENIEC"
+                class="p-button-outlined flex-shrink-0 boton-sunat"
+                [loading]="buscandoDocumento"
+                [disabled]="!documentoBuscable"
+                pTooltip="Escribe un RUC de 11 dígitos o un DNI de 8" tooltipPosition="top"
+                (click)="buscarEnSunat()"></button>
+      </div>
+      <p class="text-sm text-600 m-0 mt-2">
+        Elige un cliente de tu cartera o escribe su RUC/DNI y búscalo en SUNAT.
+        <button type="button" class="enlace" (click)="ingresarManual()">Ingresar a mano</button>
+      </p>
+    </ng-container>
+
+    <!-- Cliente elegido -->
+    <ng-container *ngIf="tieneCliente && !editandoCliente">
+      <div class="flex align-items-start gap-3">
+        <div class="avatar-cliente" aria-hidden="true">{{ (clienteNombreTexto || '?').charAt(0) }}</div>
+        <div class="flex-1 min-w-0">
+          <p class="font-bold text-900 m-0 cliente-nombre">{{ clienteNombreTexto || 'Sin nombre' }}</p>
+          <p class="text-sm text-700 m-0 mt-1">
+            {{ clienteDocumentoTexto ? tipoDocumento + ' ' + clienteDocumentoTexto : 'Sin RUC/DNI' }}
+            <span *ngIf="origenCliente === 'sunat'" class="etiqueta etiqueta-verde ml-2">Datos de SUNAT/RENIEC</span>
+            <span *ngIf="origenCliente === 'cartera'" class="etiqueta etiqueta-gris ml-2">De tu cartera</span>
+          </p>
+          <p *ngIf="clienteDireccion" class="text-sm text-600 m-0 mt-1">{{ clienteDireccion }}</p>
+          <p *ngIf="contactoCliente" class="text-sm text-600 m-0 mt-1">{{ contactoCliente }}</p>
+        </div>
+        <div class="flex gap-1 flex-shrink-0">
+          <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm p-button-rounded"
+                  pTooltip="Editar datos" aria-label="Editar datos del cliente" (click)="editandoCliente = true"></button>
+          <button pButton type="button" icon="pi pi-times" class="p-button-text p-button-sm p-button-rounded p-button-secondary"
+                  pTooltip="Cambiar de cliente" aria-label="Cambiar de cliente" (click)="cambiarCliente()"></button>
+        </div>
+      </div>
+      <div class="flex align-items-center gap-2 mt-3">
+        <p-checkbox [(ngModel)]="guardarClienteEnCartera" [binary]="true" inputId="guardarCliente" (onChange)="marcarCambio()"></p-checkbox>
+        <label for="guardarCliente" class="text-sm text-700 cursor-pointer">
+          {{ clienteYaRegistrado ? 'Actualizar sus datos en mi cartera' : 'Guardar en mi cartera de clientes' }}
+        </label>
+      </div>
+    </ng-container>
+
+    <!-- Datos del cliente (a mano o editando) -->
+    <div *ngIf="editandoCliente" class="grid formgrid p-fluid m-0" (input)="marcarCambio()">
+      <div class="field col-12 md:col-8 px-0 md:pr-2">
+        <label for="clienteNombre" class="etiqueta-campo">Razón social o nombres <span class="text-red-500">*</span></label>
+        <input pInputText id="clienteNombre" [(ngModel)]="clienteNombre" placeholder="Constructora Andina SAC" />
+      </div>
+      <div class="field col-12 md:col-4 px-0 md:pl-2">
+        <label for="clienteDocumento" class="etiqueta-campo">RUC o DNI <span class="text-red-500">*</span></label>
+        <div class="flex gap-2">
+          <input pInputText id="clienteDocumento" [(ngModel)]="clienteDocumento" (ngModelChange)="alCambiarDocumentoInput()"
+                 placeholder="20512345678" inputmode="numeric" (keyup.enter)="buscarDocumento()" />
+          <button pButton type="button" icon="pi pi-search" class="p-button-outlined flex-shrink-0" style="width: 2.75rem"
+                  [loading]="buscandoDocumento" pTooltip="Buscar en SUNAT/RENIEC" aria-label="Buscar en SUNAT/RENIEC"
+                  (click)="buscarDocumento()"></button>
+        </div>
+      </div>
+      <div class="field col-12 md:col-4 px-0 md:pr-2">
+        <label for="clienteTelefono" class="etiqueta-campo">Teléfono</label>
+        <input pInputText id="clienteTelefono" [(ngModel)]="clienteTelefono" placeholder="987 654 321" inputmode="tel" />
+      </div>
+      <div class="field col-12 md:col-4 px-0 md:px-2">
+        <label for="clienteCorreo" class="etiqueta-campo">Correo</label>
+        <input pInputText id="clienteCorreo" [(ngModel)]="clienteCorreo" placeholder="compras@cliente.com" inputmode="email" />
+      </div>
+      <div class="field col-12 md:col-4 px-0 md:pl-2">
+        <label for="clienteDireccion" class="etiqueta-campo">Dirección</label>
+        <input pInputText id="clienteDireccion" [(ngModel)]="clienteDireccion" placeholder="Av. Principal 123, Lima" />
+      </div>
+      <div class="col-12 px-0 flex justify-content-end gap-2">
+        <button pButton type="button" label="Listo" icon="pi pi-check" class="p-button-sm"
+                (click)="terminarEdicionCliente()"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Ítems -->
+  <section class="tarjeta" aria-labelledby="titulo-items">
+    <div class="flex align-items-center justify-content-between mb-2">
+      <h2 id="titulo-items" class="tarjeta-titulo m-0">Detalle</h2>
+      <span class="text-sm text-600">{{ carrito.length }} ítem{{ carrito.length === 1 ? '' : 's' }}</span>
+    </div>
+
+    <!-- Escritorio -->
+    <div class="hidden md:block">
+      <table class="tabla-items">
+        <thead>
+          <tr>
+            <th style="width: 2rem">#</th>
+            <th>Producto o servicio</th>
+            <th style="width: 6rem">Unidad</th>
+            <th style="width: 7rem">Cantidad</th>
+            <th style="width: 9rem">Precio unit.</th>
+            <th style="width: 8rem" class="text-right">Importe</th>
+            <th style="width: 2.75rem"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of carrito; let i = index; trackBy: porIndice">
+            <td class="text-600">{{ i + 1 }}</td>
+            <td>
+              <p-autoComplete [(ngModel)]="item.descripcion"
+                              (ngModelChange)="alCambiarDescripcion(item)"
+                              [suggestions]="nombresProductosFiltrados"
+                              (completeMethod)="filtrarNombresProductos($event)"
+                              (onSelect)="alElegirProductoSugerido($event, item)"
+                              [inputId]="'item-desc-' + i"
+                              placeholder="Busca en el catálogo o escribe"
+                              appendTo="body" styleClass="w-full" inputStyleClass="w-full" [maxlength]="100"></p-autoComplete>
+            </td>
+            <td><input pInputText [(ngModel)]="item.unidad" (ngModelChange)="marcarCambio()" class="w-full text-center" placeholder="und" /></td>
+            <td>
+              <p-inputNumber [(ngModel)]="item.cantidad" (ngModelChange)="recalcularItem(item)"
+                             [min]="0" [maxFractionDigits]="2" placeholder="0"
+                             styleClass="w-full" inputStyleClass="w-full text-center"
+                             (keydown.enter)="alEnterEnFila(i)"></p-inputNumber>
+            </td>
+            <td>
+              <p-inputNumber [(ngModel)]="item.precio_unitario" (ngModelChange)="recalcularItem(item)"
+                             mode="decimal" [minFractionDigits]="2" [maxFractionDigits]="2" [min]="0" prefix="S/ "
+                             placeholder="S/ 0.00" styleClass="w-full" inputStyleClass="w-full text-right"
+                             (keydown.enter)="alEnterEnFila(i)"></p-inputNumber>
+            </td>
+            <td class="text-right font-semibold text-900 white-space-nowrap">S/ {{ item.subtotal | number:'1.2-2' }}</td>
+            <td class="text-center">
+              <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm p-button-rounded"
+                      [attr.aria-label]="'Quitar ítem ' + (i + 1)" (click)="eliminarItem(i)"></button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Celular -->
+    <div class="flex flex-column gap-2 md:hidden">
+      <div *ngFor="let item of carrito; let i = index; trackBy: porIndice" class="item-movil">
+        <div class="flex align-items-center justify-content-between mb-2">
+          <span class="text-sm font-semibold text-700">Ítem {{ i + 1 }}</span>
+          <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm p-button-rounded"
+                  [attr.aria-label]="'Quitar ítem ' + (i + 1)" (click)="eliminarItem(i)"></button>
+        </div>
+        <p-autoComplete [(ngModel)]="item.descripcion"
+                        (ngModelChange)="alCambiarDescripcion(item)"
+                        [suggestions]="nombresProductosFiltrados"
+                        (completeMethod)="filtrarNombresProductos($event)"
+                        (onSelect)="alElegirProductoSugerido($event, item)"
+                        [inputId]="'item-desc-m-' + i"
+                        placeholder="Producto o servicio"
+                        appendTo="body" styleClass="w-full" inputStyleClass="w-full" [maxlength]="100"></p-autoComplete>
+        <div class="grid m-0 mt-2">
+          <div class="col-4 p-0 pr-1">
+            <input pInputText [(ngModel)]="item.unidad" (ngModelChange)="marcarCambio()" class="w-full text-center" placeholder="und" aria-label="Unidad" />
+          </div>
+          <div class="col-4 p-0 px-1">
+            <p-inputNumber [(ngModel)]="item.cantidad" (ngModelChange)="recalcularItem(item)" [min]="0" [maxFractionDigits]="2"
+                           placeholder="Cant." styleClass="w-full" inputStyleClass="w-full text-center" ariaLabel="Cantidad"></p-inputNumber>
+          </div>
+          <div class="col-4 p-0 pl-1">
+            <p-inputNumber [(ngModel)]="item.precio_unitario" (ngModelChange)="recalcularItem(item)" mode="decimal"
+                           [minFractionDigits]="2" [maxFractionDigits]="2" [min]="0" placeholder="Precio"
+                           styleClass="w-full" inputStyleClass="w-full text-right" ariaLabel="Precio unitario"></p-inputNumber>
+          </div>
+        </div>
+        <div class="flex justify-content-end mt-2 text-sm">
+          <span class="text-600 mr-2">Importe</span>
+          <span class="font-semibold text-900">S/ {{ item.subtotal | number:'1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="agregar-item" (click)="agregarFilaYEnfocar()">
+      <i class="pi pi-plus"></i> Agregar ítem
+      <span class="hidden md:inline text-600 font-normal">· o Enter en el precio</span>
+    </button>
+  </section>
+
+  <!-- 3. Opciones del PDF (plegadas) -->
+  <section class="tarjeta">
+    <button type="button" class="opciones-cabecera" (click)="opcionesAbiertas = !opcionesAbiertas"
+            [attr.aria-expanded]="opcionesAbiertas" aria-controls="opciones-pdf">
+      <span class="font-semibold text-900 flex align-items-center gap-2"><i class="pi pi-sliders-h"></i> Opciones del PDF</span>
+      <span class="text-sm text-600 text-overflow-ellipsis overflow-hidden white-space-nowrap flex-1 text-right">{{ resumenOpciones }}</span>
+      <i [class]="opcionesAbiertas ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" class="text-600"></i>
+    </button>
+
+    <div *ngIf="opcionesAbiertas" id="opciones-pdf" class="opciones-cuerpo">
+      <div class="opcion">
+        <div>
+          <label for="incluyeIgv" class="font-semibold text-900 text-sm">Sumar IGV (18%)</label>
+          <p class="text-sm text-600 m-0">{{ incluyeIgv ? 'El total incluye IGV.' : 'Operación sin IGV.' }}</p>
+        </div>
+        <p-inputSwitch inputId="incluyeIgv" [(ngModel)]="incluyeIgv" (onChange)="recalcularTodo()"></p-inputSwitch>
+      </div>
+
+      <div class="opcion" *ngIf="opcionesLugar().length">
+        <div class="w-full">
+          <span class="font-semibold text-900 text-sm block mb-2">Lugar de entrega</span>
+          <p-selectButton [options]="opcionesLugar()" [ngModel]="lugarSeleccionado"
+                          (ngModelChange)="lugarEntrega = $event; marcarCambio()"
+                          optionLabel="label" optionValue="value" styleClass="flex-wrap"
+                          [allowEmpty]="false"></p-selectButton>
+        </div>
+      </div>
+
+      <div class="opcion">
+        <div>
+          <label for="mostrarValidez" class="font-semibold text-900 text-sm">Validez de la oferta</label>
+          <p class="text-sm text-600 m-0" *ngIf="!condiciones.mostrarValidez">No se imprime.</p>
+        </div>
+        <div class="flex align-items-center gap-2">
+          <ng-container *ngIf="condiciones.mostrarValidez">
+            <input pInputText [(ngModel)]="condiciones.diasValidez" (ngModelChange)="marcarCambio()" inputmode="numeric"
+                   class="text-center" style="width: 4rem" aria-label="Días de validez" />
+            <span class="text-sm text-600">días</span>
+          </ng-container>
+          <p-inputSwitch inputId="mostrarValidez" [(ngModel)]="condiciones.mostrarValidez" (onChange)="marcarCambio()"></p-inputSwitch>
+        </div>
+      </div>
+
+      <div class="opcion">
+        <div>
+          <label for="mostrarCuentas" class="font-semibold text-900 text-sm">Cuentas bancarias</label>
+          <p class="text-sm text-amber-700 m-0" *ngIf="empresaActiva?.mostrar_cuentas === false">Desactivadas en la ficha de la empresa.</p>
+        </div>
+        <p-inputSwitch inputId="mostrarCuentas" [(ngModel)]="condiciones.mostrarCuentas" (onChange)="marcarCambio()"></p-inputSwitch>
+      </div>
+
+      <div class="opcion">
+        <label for="mostrarContacto" class="font-semibold text-900 text-sm">Contacto de aprobación</label>
+        <p-inputSwitch inputId="mostrarContacto" [(ngModel)]="condiciones.mostrarContacto" (onChange)="marcarCambio()"></p-inputSwitch>
+      </div>
+
+      <div class="opcion">
+        <label for="mostrarObservaciones" class="font-semibold text-900 text-sm">Observaciones</label>
+        <p-inputSwitch inputId="mostrarObservaciones" [(ngModel)]="condiciones.mostrarObservaciones" (onChange)="marcarCambio()"></p-inputSwitch>
+      </div>
+      <textarea *ngIf="condiciones.mostrarObservaciones" pInputTextarea [(ngModel)]="clienteObservaciones" (ngModelChange)="marcarCambio()"
+                rows="3" class="w-full" placeholder="Precio puesto en obra. Entrega en 48 horas." aria-label="Observaciones"></textarea>
+    </div>
+  </section>
+
+  <!-- Total siempre visible -->
+  <div class="barra-total">
+    <div class="min-w-0">
+      <div class="text-xs text-600">{{ incluyeIgv ? 'Total con IGV' : 'Total sin IGV' }}</div>
+      <div class="total" [style.color]="empresaActiva?.color || null">S/ {{ totalFinal | number:'1.2-2' }}</div>
+      <div class="text-xs text-600" *ngIf="incluyeIgv && totalFinal > 0">
+        Subtotal S/ {{ subtotalGeneral | number:'1.2-2' }} · IGV S/ {{ igvTotal | number:'1.2-2' }}
+      </div>
+    </div>
+    <div class="flex flex-column align-items-end gap-1 min-w-0">
+      <button pButton type="button" label="Guardar y descargar PDF" icon="pi pi-file-pdf"
+              class="boton-guardar" [loading]="generandoPDF"
+              [style.background]="empresaActiva?.color || null" [style.border-color]="empresaActiva?.color || null"
+              (click)="generarPDF()"></button>
+      <span *ngIf="mostrarFaltantes && faltantes.length" class="text-xs text-amber-800 text-right" role="alert">
+        Falta {{ faltantes.join(' y ') }}.
+      </span>
+    </div>
+  </div>
+</div>
