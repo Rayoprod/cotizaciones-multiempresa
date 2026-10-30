@@ -1,0 +1,229 @@
+<!-- Detalle de la venta -->
+<p-dialog [(visible)]="detalleAbierto" [modal]="true" appendTo="body"
+          [draggable]="false" [resizable]="false" [dismissableMask]="true" [style]="{ width: '46rem' }">
+  <ng-template pTemplate="header">
+    <div *ngIf="detalle as v" class="min-w-0">
+      <div class="flex align-items-center flex-wrap gap-2">
+        <span class="font-bold text-lg text-900">{{ v.folio }}</span>
+        <p-tag [value]="etiquetaCobro(v)" [severity]="severidadDeCobro(v)" />
+        <p-tag *ngIf="v.estado === 'ACTIVA'" [value]="etiquetaEntrega(v)" [severity]="severidadDeEntrega(v)" />
+      </div>
+      <p class="ayuda mt-1 mb-0">{{ fechaCorta(v.fecha) }}<ng-container *ngIf="v.vendedor_nombre"> · {{ v.vendedor_nombre }}</ng-container></p>
+    </div>
+  </ng-template>
+
+  <div *ngIf="detalle as v" class="detalle">
+    <div *ngIf="v.estado === 'ANULADA'" class="aviso-anulada" role="status">
+      <i class="pi pi-times-circle" aria-hidden="true"></i>
+      <div>
+        <strong>Anulada<ng-container *ngIf="v.anulada_en"> el {{ fechaCorta(v.anulada_en) }}</ng-container><ng-container *ngIf="v.anulada_por_nombre"> por {{ v.anulada_por_nombre }}</ng-container>.</strong>
+        {{ v.motivo_anulacion }}
+      </div>
+    </div>
+
+    <div class="detalle-datos">
+      <div class="dato dato-ancho">
+        <span class="dato-etiqueta">Cliente</span>
+        <p class="dato-valor">{{ v.cliente_nombre }}</p>
+        <p class="ayuda m-0">{{ v.cliente_documento.length === 11 ? 'RUC' : 'DNI' }} {{ v.cliente_documento }}<ng-container *ngIf="v.cliente_telefono"> · {{ v.cliente_telefono }}</ng-container></p>
+      </div>
+      <div class="dato">
+        <span class="dato-etiqueta">Pago</span>
+        <p class="dato-valor">{{ textoCondicionPago(v) }}</p>
+      </div>
+      <div class="dato">
+        <span class="dato-etiqueta">Factura o boleta</span>
+        <p class="dato-valor">
+          {{ textoComprobante(v) ?? (v.estado === 'ACTIVA' ? '' : 'Sin anotar') }}
+          <button *ngIf="v.estado === 'ACTIVA'" type="button" class="enlace" (click)="abrirComprobante(v)">{{ v.comprobante_numero ? 'Cambiar' : 'Anotar' }}</button>
+        </p>
+      </div>
+      <div class="dato" *ngIf="v.lugar_entrega">
+        <span class="dato-etiqueta">Lugar de entrega</span>
+        <p class="dato-valor">{{ v.lugar_entrega }}</p>
+      </div>
+      <div class="dato" *ngIf="v.folio_cotizacion">
+        <span class="dato-etiqueta">Cotización</span>
+        <p class="dato-valor">{{ v.folio_cotizacion }}</p>
+      </div>
+      <div class="dato" *ngIf="registradaOtroDia(v)">
+        <span class="dato-etiqueta">Anotada el</span>
+        <p class="dato-valor">{{ fechaCorta(v.registrada_en) }}</p>
+      </div>
+      <div class="dato dato-ancho" *ngIf="v.observaciones">
+        <span class="dato-etiqueta">Observaciones</span>
+        <p class="dato-valor">{{ v.observaciones }}</p>
+      </div>
+      <div class="dato dato-ancho" *ngIf="v.estado === 'ACTIVA'">
+        <span class="dato-etiqueta mb-1">Entrega</span>
+        <div class="segmentos" role="group" aria-label="Entrega">
+          <button *ngFor="let e of opcionesEntrega" type="button" class="segmento"
+                  [class.segmento-activo]="v.estado_entrega === e.value"
+                  [attr.aria-pressed]="v.estado_entrega === e.value"
+                  [disabled]="cambiandoEntrega"
+                  (click)="marcarEntrega(v, e.value)">{{ e.label }}</button>
+        </div>
+      </div>
+    </div>
+
+    <section aria-label="Líneas">
+      <table class="tabla-lineas">
+        <thead>
+          <tr>
+            <th>Material o servicio</th>
+            <th class="text-right solo-grande">Cant.</th>
+            <th class="text-right solo-grande">Precio</th>
+            <th class="text-right">Importe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let i of v.venta_items">
+            <td class="linea-descripcion">
+              {{ i.descripcion }}
+              <span class="solo-celular">{{ i.cantidad | number:'1.0-2' }} {{ etiquetaUnidad(i.unidad) }} × {{ i.precio_unitario | number:'1.2-2' }}</span>
+            </td>
+            <td class="text-right solo-grande">{{ i.cantidad | number:'1.0-2' }} {{ etiquetaUnidad(i.unidad) }}</td>
+            <td class="text-right solo-grande">{{ i.precio_unitario | number:'1.2-2' }}</td>
+            <td class="text-right font-semibold">{{ i.importe | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="totales">
+        <ng-container *ngIf="lineasTotales(v) as filas">
+          <div *ngFor="let fila of filas.antes" class="fila-total">
+            <span>{{ fila[0] }}</span><span [class.text-red-600]="fila[1] < 0">{{ fila[1] | number:'1.2-2' }}</span>
+          </div>
+          <div class="fila-total fila-final"><span>Total</span><span>S/ {{ v.total | number:'1.2-2' }}</span></div>
+          <div *ngIf="filas.despues as fila" class="fila-total"><span>{{ fila[0] }}</span><span>{{ fila[1] | number:'1.2-2' }}</span></div>
+        </ng-container>
+        <ng-container *ngIf="v.estado === 'ACTIVA'">
+          <div class="fila-total"><span>Pagado</span><span>{{ v.pagado | number:'1.2-2' }}</span></div>
+          <div class="fila-total fila-final" [class.fila-debe]="v.saldo > 0"><span>Saldo</span><span>S/ {{ v.saldo | number:'1.2-2' }}</span></div>
+        </ng-container>
+      </div>
+    </section>
+
+    <section aria-label="Pagos">
+      <h3 class="seccion">Pagos</h3>
+      <p *ngIf="!v.pagos.length" class="ayuda m-0">Todavía no hay pagos.</p>
+      <ul class="lista">
+        <li *ngFor="let p of v.pagos" class="pago" [class.pago-anulado]="p.anulado">
+          <div class="min-w-0">
+            <p class="m-0">
+              <span class="pago-monto">{{ soles(p.monto) }}</span>
+              {{ etiquetaMetodo(p.metodo) }}<ng-container *ngIf="p.referencia"> · {{ p.referencia }}</ng-container>
+            </p>
+            <p class="ayuda m-0">{{ fechaCorta(p.fecha) }}<ng-container *ngIf="p.creado_por_nombre"> · {{ p.creado_por_nombre }}</ng-container></p>
+            <p *ngIf="p.nota" class="ayuda m-0">{{ p.nota }}</p>
+            <p *ngIf="p.anulado" class="ayuda text-red-700 m-0">Anulado<ng-container *ngIf="p.anulado_por_nombre"> por {{ p.anulado_por_nombre }}</ng-container>: {{ p.motivo_anulacion }}</p>
+          </div>
+          <button *ngIf="esAdmin && !p.anulado && v.estado === 'ACTIVA'" type="button" class="enlace enlace-peligro flex-shrink-0"
+                  (click)="pedirAnularPago(v, p)">Anular</button>
+        </li>
+      </ul>
+    </section>
+
+    <section *ngIf="v.venta_cambios?.length" aria-label="Historial">
+      <h3 class="seccion">Historial</h3>
+      <ul class="lista">
+        <li *ngFor="let c of v.venta_cambios" class="cambio">
+          <p class="m-0">{{ describirCambio(c) }}</p>
+          <p class="ayuda m-0">{{ fechaHora(c.fecha) }}<ng-container *ngIf="c.usuario_nombre"> · {{ c.usuario_nombre }}</ng-container></p>
+          <p *ngIf="c.motivo" class="ayuda m-0">Motivo: {{ c.motivo }}</p>
+        </li>
+      </ul>
+    </section>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div *ngIf="detalle as v" class="botones-detalle">
+      <button pButton type="button" icon="pi pi-file-pdf" label="Orden de venta" class="p-button-outlined"
+              [loading]="descargando" (click)="descargarPdf(v)"></button>
+      <span class="flex-1"></span>
+      <ng-container *ngIf="esAdmin && v.estado === 'ACTIVA'">
+        <button pButton type="button" label="Anular" class="p-button-text p-button-danger" (click)="pedirAnularVenta(v)"></button>
+        <button pButton type="button" icon="pi pi-pencil" label="Ajustar" class="p-button-outlined p-button-secondary" (click)="ajustar(v)"></button>
+      </ng-container>
+      <button *ngIf="puedePagar(v)" pButton type="button" icon="pi pi-wallet" label="Registrar pago" (click)="abrirPago(v)"></button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Registrar pago -->
+<p-dialog header="Registrar pago" [(visible)]="pagoAbierto" [modal]="true" appendTo="body"
+          [draggable]="false" [resizable]="false" [style]="{ width: '26rem' }">
+  <div *ngIf="ventaPago as v" class="flex flex-column gap-3">
+    <div>
+      <p class="font-semibold text-900 m-0">{{ v.cliente_nombre }}</p>
+      <p class="ayuda m-0">{{ v.folio }} · Saldo {{ soles(v.saldo) }}</p>
+    </div>
+    <div>
+      <label for="pago-monto" class="etiqueta-campo">Monto <span class="text-red-600">*</span></label>
+      <p-inputNumber inputId="pago-monto" [(ngModel)]="pago.monto" mode="decimal" [minFractionDigits]="2" [maxFractionDigits]="2" [min]="0"
+                     prefix="S/ " class="w-full" styleClass="w-full" inputStyleClass="w-full text-right"
+                     (keydown.enter)="$event.preventDefault()"></p-inputNumber>
+    </div>
+    <div>
+      <label for="pago-metodo" class="etiqueta-campo">Cómo se recibió <span class="text-red-600">*</span></label>
+      <select id="pago-metodo" class="campo-select" [(ngModel)]="pago.metodo">
+        <option [ngValue]="null" disabled>Elige</option>
+        <option *ngFor="let m of metodos" [ngValue]="m.value">{{ m.label }}</option>
+      </select>
+    </div>
+    <div>
+      <label for="pago-fecha" class="etiqueta-campo">Fecha del pago</label>
+      <input pInputText type="date" id="pago-fecha" class="w-full" [max]="hoy" [(ngModel)]="pago.fecha" />
+    </div>
+    <div>
+      <label for="pago-referencia" class="etiqueta-campo">Nro. de operación</label>
+      <input pInputText id="pago-referencia" class="w-full" maxlength="100" placeholder="Opcional" [(ngModel)]="pago.referencia" />
+    </div>
+    <div>
+      <label for="pago-nota" class="etiqueta-campo">Nota</label>
+      <input pInputText id="pago-nota" class="w-full" maxlength="500" placeholder="Opcional" [(ngModel)]="pago.nota" />
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <p *ngIf="mostrarFaltantesPago && faltantesPago.length" class="ayuda text-amber-800 text-left mt-0 mb-2" role="alert">Falta {{ faltantesPago.join(' y ') }}.</p>
+    <button pButton type="button" label="Cancelar" class="p-button-text p-button-secondary" (click)="cerrarPago()"></button>
+    <button pButton type="button" label="Registrar pago" icon="pi pi-check" [loading]="guardando" (click)="registrarPago()"></button>
+  </ng-template>
+</p-dialog>
+
+<!-- Factura o boleta -->
+<p-dialog header="Factura o boleta" [(visible)]="comprobanteAbierto" [modal]="true" appendTo="body"
+          [draggable]="false" [resizable]="false" [style]="{ width: '24rem' }">
+  <div *ngIf="ventaComprobante as v" class="flex flex-column gap-3">
+    <p class="ayuda m-0">{{ v.folio }}. Se emite en tu sistema de siempre; aquí solo se guarda el número, para ubicarla.</p>
+    <div class="segmentos w-full" role="group" aria-label="Tipo de comprobante">
+      <button type="button" class="segmento" [class.segmento-activo]="comprobante.tipo === 'FACTURA'" [attr.aria-pressed]="comprobante.tipo === 'FACTURA'" (click)="comprobante.tipo = 'FACTURA'">Factura</button>
+      <button type="button" class="segmento" [class.segmento-activo]="comprobante.tipo === 'BOLETA'" [attr.aria-pressed]="comprobante.tipo === 'BOLETA'" (click)="comprobante.tipo = 'BOLETA'">Boleta</button>
+    </div>
+    <div>
+      <label for="comprobante-numero" class="etiqueta-campo">Número</label>
+      <input pInputText id="comprobante-numero" class="w-full" maxlength="30" placeholder="F001-00001234" [(ngModel)]="comprobante.numero" />
+      <p *ngIf="v.comprobante_numero" class="ayuda mt-1 mb-0">Déjalo vacío para quitarlo.</p>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Cancelar" class="p-button-text p-button-secondary" (click)="cerrarComprobante()"></button>
+    <button pButton type="button" label="Guardar" icon="pi pi-check" [loading]="guardando" (click)="guardarComprobante()"></button>
+  </ng-template>
+</p-dialog>
+
+<!-- Motivo al anular -->
+<p-dialog [header]="pedido?.titulo" [(visible)]="motivoAbierto" [modal]="true" appendTo="body"
+          [draggable]="false" [resizable]="false" [style]="{ width: '26rem' }">
+  <div *ngIf="pedido as p" class="flex flex-column gap-3">
+    <p class="m-0 line-height-3">{{ p.mensaje }}</p>
+    <div>
+      <label for="motivo-anulacion" class="etiqueta-campo">Motivo <span class="text-red-600">*</span></label>
+      <textarea pInputTextarea id="motivo-anulacion" rows="2" class="w-full" maxlength="500" [(ngModel)]="motivo"></textarea>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Cancelar" class="p-button-text p-button-secondary" (click)="cerrarMotivo()"></button>
+    <button pButton type="button" [label]="pedido?.boton || 'Anular'" class="p-button-danger" [disabled]="!motivo.trim()" [loading]="guardando" (click)="confirmarMotivo()"></button>
+  </ng-template>
+</p-dialog>

@@ -1,0 +1,115 @@
+<app-acciones-venta #acciones (actualizada)="alActualizar($event)"></app-acciones-venta>
+
+<div class="p-3 md:p-4">
+
+  <!-- Encabezado -->
+  <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="text-2xl font-bold text-900 m-0">Por cobrar</h1>
+      <p class="text-600 text-sm mt-1 mb-0">{{ empresaActiva?.nombre_comercial }}</p>
+    </div>
+    <button pButton type="button" icon="pi pi-download" label="Exportar CSV"
+            class="p-button-outlined p-button-secondary p-button-sm"
+            (click)="exportarCSV()"></button>
+  </div>
+
+  <!-- Carga inicial: el esqueleto de la página, no un spinner -->
+  <div *ngIf="cargando" aria-busy="true">
+    <div class="grid mb-3">
+      <div class="col-6 lg:col-3" *ngFor="let _ of [1, 2, 3, 4]"><div class="esqueleto" style="height: 6rem"></div></div>
+    </div>
+    <div class="esqueleto" style="height: 22rem"></div>
+  </div>
+
+  <ng-container *ngIf="!cargando">
+    <!-- KPIs -->
+    <div class="grid mb-3">
+      <div class="col-6 lg:col-3">
+        <div class="kpi">
+          <span class="kpi-titulo">Por cobrar</span>
+          <p class="kpi-valor text-amber-700">S/ {{ totalPorCobrar | number:'1.2-2' }}</p>
+          <p class="kpi-nota">{{ deudas.length }} cliente{{ deudas.length === 1 ? '' : 's' }}</p>
+        </div>
+      </div>
+      <div class="col-6 lg:col-3">
+        <div class="kpi">
+          <span class="kpi-titulo">Vencido</span>
+          <p class="kpi-valor text-red-700">S/ {{ totalVencido | number:'1.2-2' }}</p>
+          <p class="kpi-nota">{{ clientesVencidos }} cliente{{ clientesVencidos === 1 ? '' : 's' }}</p>
+        </div>
+      </div>
+      <div class="col-6 lg:col-3">
+        <div class="kpi">
+          <span class="kpi-titulo">Entregado sin pagar</span>
+          <p class="kpi-valor text-slate-900">S/ {{ entregadoSinPagar | number:'1.2-2' }}</p>
+          <p class="kpi-nota">{{ ventasEntregadasSinPagar }} venta{{ ventasEntregadasSinPagar === 1 ? '' : 's' }}</p>
+        </div>
+      </div>
+      <div class="col-6 lg:col-3">
+        <div class="kpi">
+          <span class="kpi-titulo">Cobrado este mes</span>
+          <p class="kpi-valor text-emerald-700">S/ {{ cobradoEsteMes | number:'1.2-2' }}</p>
+          <p class="kpi-nota">por la fecha del pago</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="tarjeta-filtros filtros-deudas">
+      <div class="filtros-estado" role="group" aria-label="Filtrar clientes">
+        <button type="button" class="filtro" [class.filtro-activo]="!soloVencidas" [attr.aria-pressed]="!soloVencidas" (click)="soloVencidas && alternarVencidas()">
+          Todos <span class="filtro-cuenta">{{ deudas.length }}</span>
+        </button>
+        <button type="button" class="filtro" [class.filtro-activo]="soloVencidas" [attr.aria-pressed]="soloVencidas" (click)="!soloVencidas && alternarVencidas()">
+          Con vencidos <span class="filtro-cuenta">{{ clientesVencidos }}</span>
+        </button>
+      </div>
+      <div class="buscador-deudas">
+        <label for="buscarDeuda" class="etiqueta-filtro">Buscar</label>
+        <input pInputText id="buscarDeuda" [(ngModel)]="terminoBusqueda" (ngModelChange)="aplicarFiltros()"
+               placeholder="Cliente, RUC o DNI" class="w-full" />
+      </div>
+    </div>
+
+    <!-- Clientes -->
+    <div class="lista-deudas">
+      <article *ngFor="let d of deudasFiltradas; trackBy: porDocumento" class="deuda">
+        <button type="button" class="deuda-cabecera" [attr.aria-expanded]="abiertas.has(d.documento)" (click)="alternar(d.documento)">
+          <span class="deuda-cliente">
+            <span class="deuda-nombre">{{ d.nombre }}</span>
+            <span class="deuda-datos">
+              {{ d.documento.length === 11 ? 'RUC' : 'DNI' }} {{ d.documento }} · {{ d.ventas.length }} venta{{ d.ventas.length === 1 ? '' : 's' }}<ng-container *ngIf="d.telefono"> · {{ d.telefono }}</ng-container>
+            </span>
+          </span>
+          <span class="deuda-montos">
+            <span class="deuda-saldo">S/ {{ d.saldo | number:'1.2-2' }}</span>
+            <span *ngIf="d.vencido > 0" class="deuda-vencido">S/ {{ d.vencido | number:'1.2-2' }} vencido</span>
+          </span>
+          <i class="pi deuda-flecha" [class.pi-chevron-down]="!abiertas.has(d.documento)" [class.pi-chevron-up]="abiertas.has(d.documento)" aria-hidden="true"></i>
+        </button>
+
+        <ul *ngIf="abiertas.has(d.documento)" class="deuda-ventas">
+          <li *ngFor="let v of d.ventas" class="deuda-venta">
+            <div class="venta-datos">
+              <button type="button" class="folio folio-enlace" (click)="acciones.verDetalle(v)">{{ v.folio }}</button>
+              <span class="text-xs text-600">{{ fechaCorta(v.fecha) }}</span>
+              <p-tag [value]="etiquetaEntrega(v)" [severity]="severidadDeEntrega(v)" />
+              <p class="text-xs m-0 w-full" [class.text-red-700]="estaVencida(v)" [class.font-semibold]="estaVencida(v)" [class.text-600]="!estaVencida(v)">{{ textoVencimiento(v) }}</p>
+            </div>
+            <div class="venta-montos">
+              <span class="text-xs text-600">Total {{ v.total | number:'1.2-2' }}<ng-container *ngIf="v.pagado > 0"> · Pagado {{ v.pagado | number:'1.2-2' }}</ng-container></span>
+              <span class="font-bold text-900">Debe S/ {{ v.saldo | number:'1.2-2' }}</span>
+            </div>
+            <button pButton type="button" icon="pi pi-wallet" label="Registrar pago" class="p-button-outlined p-button-sm boton-tactil flex-shrink-0"
+                    (click)="acciones.abrirPago(v)"></button>
+          </li>
+        </ul>
+      </article>
+
+      <div *ngIf="deudasFiltradas.length === 0" class="text-center py-5 px-3">
+        <p class="font-semibold text-900 m-0">{{ deudas.length ? 'Ningún cliente con estos filtros' : 'Nadie debe nada' }}</p>
+        <p *ngIf="!deudas.length" class="ayuda mt-1 mb-0">Aquí aparece cada venta con saldo, agrupada por cliente.</p>
+      </div>
+    </div>
+  </ng-container>
+</div>

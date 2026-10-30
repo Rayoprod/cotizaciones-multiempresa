@@ -1,0 +1,204 @@
+<p-menu #menuAcciones [popup]="true" [model]="accionesMenu" appendTo="body" [style]="{ width: '15rem' }" />
+<app-acciones-venta #acciones (actualizada)="alActualizar($event)"></app-acciones-venta>
+
+<div class="p-3 md:p-4">
+
+  <!-- Encabezado -->
+  <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="text-2xl font-bold text-900 m-0">Ventas</h1>
+      <p class="text-600 text-sm mt-1 mb-0">{{ empresaActiva?.nombre_comercial }}</p>
+    </div>
+
+    <div class="flex align-items-center gap-2 flex-wrap">
+      <button pButton type="button" icon="pi pi-download" label="Exportar CSV"
+              class="p-button-outlined p-button-secondary p-button-sm"
+              (click)="exportarCSV()"></button>
+      <a pButton routerLink="/cotizador" [queryParams]="{ tipo: 'venta' }" icon="pi pi-plus" label="Nueva venta"
+         class="p-button-sm no-underline"></a>
+    </div>
+  </div>
+
+  <!-- Carga inicial: el esqueleto de la página, no un spinner -->
+  <div *ngIf="cargando" aria-busy="true">
+    <div class="grid mb-3">
+      <div class="col-6 lg:col-3" *ngFor="let _ of [1, 2, 3, 4]"><div class="esqueleto" style="height: 6rem"></div></div>
+    </div>
+    <div class="esqueleto" style="height: 22rem"></div>
+  </div>
+
+  <ng-container *ngIf="!cargando">
+    <!-- KPIs -->
+    <div class="grid mb-3">
+      <div class="col-6 lg:col-3">
+        <div class="kpi">
+          <span class="kpi-titulo">Vendido</span>
+          <p class="kpi-valor text-slate-900">S/ {{ totalVendido | number:'1.2-2' }}</p>
+          <p class="kpi-nota">{{ conteos.TODAS - conteos.ANULADAS }} venta{{ conteos.TODAS - conteos.ANULADAS === 1 ? '' : 's' }}</p>
+        </div>
+      </div>
+      <div class="col-6 lg:col-3">
+        <div class="kpi">
+          <span class="kpi-titulo">Cobrado</span>
+          <p class="kpi-valor text-emerald-700">S/ {{ totalCobrado | number:'1.2-2' }}</p>
+          <p class="kpi-nota">de esas ventas</p>
+        </div>
+      </div>
+      <div class="col-6 lg:col-3">
+        <div class="kpi">
+          <span class="kpi-titulo">Por cobrar</span>
+          <p class="kpi-valor text-amber-700">S/ {{ totalPorCobrar | number:'1.2-2' }}</p>
+          <p class="kpi-nota">{{ conteos.POR_COBRAR }} venta{{ conteos.POR_COBRAR === 1 ? '' : 's' }} · {{ conteos.VENCIDAS }} vencida{{ conteos.VENCIDAS === 1 ? '' : 's' }}</p>
+        </div>
+      </div>
+      <div class="col-6 lg:col-3">
+        <div class="kpi">
+          <span class="kpi-titulo">Por entregar</span>
+          <p class="kpi-valor text-acento">{{ conteos.POR_ENTREGAR }}</p>
+          <p class="kpi-nota">venta{{ conteos.POR_ENTREGAR === 1 ? '' : 's' }} sin completar</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="tarjeta-filtros">
+      <div class="filtros-estado" role="group" aria-label="Filtrar ventas">
+        <button *ngFor="let f of filtros" type="button" class="filtro"
+                [class.filtro-activo]="filtro === f.value"
+                [attr.aria-pressed]="filtro === f.value"
+                (click)="elegirFiltro(f.value)">
+          {{ f.label }} <span class="filtro-cuenta">{{ conteos[f.value] }}</span>
+        </button>
+      </div>
+
+      <div class="grid align-items-end mt-2">
+        <div class="col-12 md:col-6">
+          <label for="buscarVenta" class="etiqueta-filtro">Buscar</label>
+          <input pInputText id="buscarVenta" [(ngModel)]="terminoBusqueda" (ngModelChange)="aplicarFiltros()"
+                 placeholder="Folio, cliente, RUC, DNI o factura" class="w-full" />
+        </div>
+        <div class="col-6 md:col-3">
+          <label for="ventaDesde" class="etiqueta-filtro">Desde</label>
+          <input pInputText id="ventaDesde" type="date" [(ngModel)]="fechaDesde" (change)="aplicarFiltros()" class="w-full" />
+        </div>
+        <div class="col-6 md:col-3">
+          <label for="ventaHasta" class="etiqueta-filtro">Hasta</label>
+          <input pInputText id="ventaHasta" type="date" [(ngModel)]="fechaHasta" (change)="aplicarFiltros()" class="w-full" />
+        </div>
+        <div class="col-12 flex justify-content-end py-0" *ngIf="hayFiltros">
+          <button pButton type="button" icon="pi pi-filter-slash" label="Limpiar"
+                  class="p-button-text p-button-secondary p-button-sm" (click)="limpiarFiltros()"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Celular y tablet -->
+    <div class="lista-tarjetas lg:hidden mb-4">
+      <div *ngFor="let v of ventasFiltradas" class="tarjeta-fila" [class.fila-apagada]="v.estado === 'ANULADA'">
+        <div class="flex align-items-center justify-content-between gap-2">
+          <button type="button" class="folio folio-enlace" (click)="acciones.verDetalle(v)">{{ v.folio }}</button>
+          <span class="text-xs text-600 flex-shrink-0">{{ fechaCorta(v.fecha) }}</span>
+        </div>
+        <ng-container *ngTemplateOutlet="vinculos; context: { $implicit: v }"></ng-container>
+
+        <p class="font-bold text-900 m-0 mt-2 cliente-nombre">{{ v.cliente_nombre }}</p>
+        <p class="text-xs text-600 m-0">{{ v.cliente_documento }}</p>
+
+        <div class="flex align-items-center justify-content-between gap-2 mt-2">
+          <div class="flex flex-wrap gap-1">
+            <p-tag [value]="etiquetaCobro(v)" [severity]="severidadDeCobro(v)" />
+            <p-tag *ngIf="v.estado === 'ACTIVA'" [value]="etiquetaEntrega(v)" [severity]="severidadDeEntrega(v)" />
+          </div>
+          <p class="font-bold text-900 m-0 flex-shrink-0">S/ {{ v.total | number:'1.2-2' }}</p>
+        </div>
+        <p class="text-xs text-600 m-0 mt-1" *ngIf="detalleCobro(v) as detalle">{{ detalle }}</p>
+
+        <div class="flex justify-content-end gap-2 mt-2 pt-2 border-top-1 surface-border">
+          <button pButton type="button" icon="pi pi-file-pdf" label="PDF" class="p-button-outlined p-button-sm boton-tactil"
+                  (click)="acciones.descargarPdf(v)"></button>
+          <button pButton type="button" icon="pi pi-ellipsis-v" label="Acciones" class="p-button-outlined p-button-secondary p-button-sm boton-tactil"
+                  aria-haspopup="true" (click)="abrirAcciones($event, v, menuAcciones)"></button>
+        </div>
+      </div>
+
+      <ng-container *ngIf="ventasFiltradas.length === 0">
+        <ng-container *ngTemplateOutlet="vacio"></ng-container>
+      </ng-container>
+    </div>
+
+    <!-- Escritorio -->
+    <div class="hidden lg:block bg-white border-round-2xl overflow-hidden border-1 surface-border">
+      <p-table
+        [value]="ventasFiltradas"
+        [paginator]="ventasFiltradas.length > 15"
+        [rows]="15"
+        [rowsPerPageOptions]="[15, 30, 50]"
+        [tableStyle]="{ 'table-layout': 'fixed' }"
+        styleClass="p-datatable-sm">
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="fecha" style="width: 10rem">Venta <p-sortIcon field="fecha" /></th>
+            <th pSortableColumn="cliente_nombre">Cliente <p-sortIcon field="cliente_nombre" /></th>
+            <th pSortableColumn="total" class="text-right" style="width: 8rem">Total <p-sortIcon field="total" /></th>
+            <th pSortableColumn="saldo" style="width: 10rem">Cobro <p-sortIcon field="saldo" /></th>
+            <th style="width: 8.5rem">Entrega</th>
+            <th style="width: 6.75rem" aria-label="Acciones"></th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-v>
+          <tr [class.fila-apagada]="v.estado === 'ANULADA'">
+            <td>
+              <button type="button" class="folio folio-enlace" (click)="acciones.verDetalle(v)">{{ v.folio }}</button>
+              <p class="text-xs text-600 m-0">{{ fechaCorta(v.fecha) }}</p>
+              <ng-container *ngTemplateOutlet="vinculos; context: { $implicit: v }"></ng-container>
+            </td>
+            <td>
+              <div class="overflow-hidden">
+                <p class="font-semibold text-900 text-sm m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="v.cliente_nombre">{{ v.cliente_nombre }}</p>
+                <p class="text-xs text-600 m-0">{{ v.cliente_documento }}</p>
+              </div>
+            </td>
+            <td class="text-right white-space-nowrap font-bold text-900">S/ {{ v.total | number:'1.2-2' }}</td>
+            <td>
+              <p-tag [value]="etiquetaCobro(v)" [severity]="severidadDeCobro(v)" />
+              <p class="text-xs text-600 m-0 mt-1" *ngIf="detalleCobro(v) as detalle">{{ detalle }}</p>
+            </td>
+            <td>
+              <p-tag *ngIf="v.estado === 'ACTIVA'" [value]="etiquetaEntrega(v)" [severity]="severidadDeEntrega(v)" />
+            </td>
+            <td class="text-center white-space-nowrap">
+              <button pButton type="button" icon="pi pi-file-pdf" class="p-button-text p-button-sm p-button-rounded"
+                      pTooltip="Orden de venta" tooltipPosition="left" [attr.aria-label]="'Orden de venta ' + v.folio"
+                      (click)="acciones.descargarPdf(v)"></button>
+              <button pButton type="button" icon="pi pi-ellipsis-v" class="p-button-text p-button-secondary p-button-sm p-button-rounded"
+                      pTooltip="Más acciones" tooltipPosition="left" [attr.aria-label]="'Más acciones de ' + v.folio" aria-haspopup="true"
+                      (click)="abrirAcciones($event, v, menuAcciones)"></button>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="6"><ng-container *ngTemplateOutlet="vacio"></ng-container></td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </ng-container>
+</div>
+
+<!-- De dónde viene y qué comprobante tiene -->
+<ng-template #vinculos let-v>
+  <p *ngIf="v.folio_cotizacion" class="text-xs text-600 m-0">De {{ v.folio_cotizacion }}</p>
+  <p *ngIf="textoComprobante(v) as comprobante" class="text-xs text-600 m-0">{{ comprobante }}</p>
+</ng-template>
+
+<ng-template #vacio>
+  <div class="text-center py-5 px-3">
+    <p class="font-semibold text-900 m-0">{{ ventas.length ? 'Ninguna venta con estos filtros' : 'Todavía no hay ventas' }}</p>
+    <button *ngIf="hayFiltros" pButton type="button" label="Limpiar filtros" class="p-button-text p-button-sm mt-2" (click)="limpiarFiltros()"></button>
+    <p *ngIf="!ventas.length" class="ayuda mt-1 mb-0">Registra una en Nueva, o convierte una cotización desde Cotizaciones.</p>
+  </div>
+</ng-template>

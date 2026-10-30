@@ -20,13 +20,28 @@
       <h1 class="titulo">{{ tituloDocumento }}</h1>
       <p class="subtitulo">{{ empresaActiva?.nombre_comercial }}</p>
     </div>
-    <button *ngIf="tieneCliente || tieneItemsValidos" type="button" class="enlace enlace-discreto flex-shrink-0"
-            (click)="confirmarLimpiarFormulario()">
-      <i class="pi pi-refresh" aria-hidden="true"></i> Empezar de nuevo
-    </button>
+    <div class="encabezado-acciones">
+      <button *ngIf="tieneCliente || tieneItemsValidos" type="button" class="enlace enlace-discreto flex-shrink-0"
+              (click)="confirmarLimpiarFormulario()">
+        <i class="pi pi-refresh" aria-hidden="true"></i> Empezar de nuevo
+      </button>
+      <div *ngIf="puedeElegirTipo" class="segmentos" role="group" aria-label="Qué se registra">
+        <button *ngFor="let t of tiposRegistro" type="button" class="segmento"
+                [class.segmento-activo]="tipoRegistro === t.value"
+                [attr.aria-pressed]="tipoRegistro === t.value"
+                (click)="elegirTipo(t.value)">{{ t.label }}</button>
+      </div>
+    </div>
   </header>
 
   <!-- Avisos -->
+  <div *ngIf="esAjuste" class="aviso aviso-ambar">
+    <i class="pi pi-pencil" aria-hidden="true"></i>
+    <div>
+      El folio {{ borradorFolioPadre }} no cambia y el ajuste queda en su historial, con lo que había antes.
+      <ng-container *ngIf="pagadoDeLaVenta > 0">Ya tiene pagos por S/ {{ pagadoDeLaVenta | number:'1.2-2' }}: el total no puede bajar de eso.</ng-container>
+    </div>
+  </div>
   <div *ngIf="borradorModo === 'revision'" class="aviso aviso-ambar">
     <i class="pi pi-refresh" aria-hidden="true"></i>
     <div>Al guardar se crea un folio nuevo y {{ borradorFolioPadre }} pasa a Anulada. Si no guardas, la original sigue vigente.</div>
@@ -40,7 +55,7 @@
     <div>
       <strong>Cambiaste de cliente.</strong>
       {{ borradorFolioPadre }} era para el {{ documentoOrigen!.length === 11 ? 'RUC' : 'DNI' }} {{ documentoOrigen }} y se anulará igual al guardar.
-      Si es una cotización para otro cliente, usa Duplicar desde el Historial.
+      Si es una cotización para otro cliente, usa Duplicar desde Cotizaciones.
     </div>
   </div>
   <div *ngIf="lugarYaNoDisponible as lugar" class="aviso aviso-ambar">
@@ -53,7 +68,7 @@
   </div>
   <div *ngIf="recuperadaDeSesion" class="aviso aviso-acento">
     <i class="pi pi-history" aria-hidden="true"></i>
-    <div class="flex-1">Recuperamos la cotización que estabas armando.</div>
+    <div class="flex-1">Recuperamos lo que estabas armando.</div>
     <button type="button" class="enlace flex-shrink-0" (click)="descartarRecuperada()">Descartar</button>
   </div>
 
@@ -110,12 +125,12 @@
               </p>
               <p *ngIf="contactoCliente" class="ayuda m-0">{{ contactoCliente }}</p>
             </div>
-            <div class="cliente-acciones">
+            <div *ngIf="!esAjuste" class="cliente-acciones">
               <button type="button" class="enlace" (click)="editandoCliente = true">Editar</button>
               <button type="button" class="enlace" (click)="cambiarCliente()">Cambiar</button>
             </div>
           </div>
-          <div *ngIf="!clienteYaRegistrado" class="flex align-items-center gap-2 mt-3">
+          <div *ngIf="!clienteYaRegistrado && !esAjuste" class="flex align-items-center gap-2 mt-3">
             <p-checkbox [(ngModel)]="guardarClienteEnCartera" [binary]="true" inputId="guardarCliente" (onChange)="marcarCambio()"></p-checkbox>
             <label for="guardarCliente" class="ayuda cursor-pointer">Guardar en mi cartera de clientes</label>
           </div>
@@ -265,6 +280,11 @@
         </button>
       </section>
 
+      <!-- Lo que una venta pide además -->
+      <section *ngIf="esVenta" class="tarjeta" aria-label="Datos de la venta">
+        <app-datos-venta class="dos-columnas" [datos]="datosVenta" [total]="totalFinal" [soloCondiciones]="esAjuste" (cambio)="marcarCambio()"></app-datos-venta>
+      </section>
+
       <!-- Condiciones del PDF -->
       <section class="tarjeta" aria-label="Condiciones del PDF">
         <div class="condiciones">
@@ -289,7 +309,7 @@
             </div>
           </div>
 
-          <div class="opcion">
+          <div *ngIf="!esVenta" class="opcion">
             <div>
               <label for="mostrarValidez" class="etiqueta-campo m-0">Validez de la oferta</label>
               <p class="ayuda m-0" *ngIf="!condiciones.mostrarValidez">No se imprime.</p>
@@ -312,7 +332,7 @@
             <p-inputSwitch inputId="mostrarCuentas" [(ngModel)]="condiciones.mostrarCuentas" (onChange)="marcarCambio()"></p-inputSwitch>
           </div>
 
-          <div class="opcion">
+          <div *ngIf="!esVenta" class="opcion">
             <label for="mostrarContacto" class="etiqueta-campo m-0">Contacto de aprobación</label>
             <p-inputSwitch inputId="mostrarContacto" [(ngModel)]="condiciones.mostrarContacto" (onChange)="marcarCambio()"></p-inputSwitch>
           </div>
@@ -348,6 +368,12 @@
         <p *ngIf="!descuentoValido" class="ayuda text-red-600 mt-1 mb-0" role="alert">No puede superar el subtotal.</p>
       </div>
 
+      <div *ngIf="esAjuste" class="resumen-grupo">
+        <label for="motivoAjuste" class="etiqueta-campo">Motivo del ajuste <span class="text-red-600">*</span></label>
+        <input pInputText id="motivoAjuste" class="w-full" maxlength="500" placeholder="El cliente pidió 50 m³ más"
+               [(ngModel)]="motivoAjuste" (ngModelChange)="marcarCambio()" />
+      </div>
+
       <div class="resumen-totales">
         <div *ngFor="let fila of filasTotales.antes" class="fila-total">
           <span>{{ fila[0] }}</span>
@@ -361,8 +387,8 @@
           <span>{{ fila[0] }}</span>
           <span>{{ fila[1] | number:'1.2-2' }}</span>
         </div>
-        <button pButton type="button" icon="pi pi-file-pdf" label="Guardar y descargar PDF"
-                class="boton-guardar w-full mt-3" [loading]="generandoPDF" (click)="generarPDF()"></button>
+        <button pButton type="button" [icon]="iconoGuardar" [label]="textoGuardar"
+                class="boton-guardar w-full mt-3" [loading]="guardando" (click)="guardar()"></button>
         <p *ngIf="mostrarFaltantes && faltantes.length" class="faltantes" role="alert">Falta {{ faltantes.join(' y ') }}.</p>
       </div>
     </aside>
@@ -376,9 +402,9 @@
     </div>
     <div class="total-detalle text-xs text-600" *ngIf="detalleTotal">{{ detalleTotal }}</div>
     <div class="boton-bloque">
-      <button pButton type="button" icon="pi pi-file-pdf" class="boton-guardar" [loading]="generandoPDF" (click)="generarPDF()">
-        <span class="p-button-label hidden sm:inline">Guardar y descargar PDF</span>
-        <span class="p-button-label sm:hidden">Guardar PDF</span>
+      <button pButton type="button" [icon]="iconoGuardar" class="boton-guardar" [loading]="guardando" (click)="guardar()">
+        <span class="p-button-label hidden sm:inline">{{ textoGuardar }}</span>
+        <span class="p-button-label sm:hidden">{{ textoGuardarCorto }}</span>
       </button>
       <span *ngIf="mostrarFaltantes && faltantes.length" class="faltantes" role="alert">Falta {{ faltantes.join(' y ') }}.</span>
     </div>

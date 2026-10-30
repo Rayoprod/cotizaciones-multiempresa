@@ -1,5 +1,6 @@
 // src/app/models/cotizacion.model.ts
 import { EstadoCotizacion, ModoIgv } from './types';
+import type { IDatosVenta } from './venta.model';
 
 /** Debe coincidir con c_tasa_igv en crear_cotizacion(). */
 export const TASA_IGV = 0.18;
@@ -91,7 +92,7 @@ export interface INuevaCotizacion {
 export const CLAVE_BORRADOR_COTIZADOR = 'cotizador-borrador';
 
 export interface IBorradorCotizador {
-  modo: 'revision' | 'duplicar';
+  modo: 'revision' | 'duplicar' | 'ajuste';
   origen_id: string | null;
   folio_origen: string | null;
   cliente_nombre: string;
@@ -104,7 +105,10 @@ export interface IBorradorCotizador {
   modo_igv: ModoIgv;
   descuento: number;
   condiciones?: Partial<ICondicionesPdf>;
-  items: ICotizacionItem[];
+  items: Array<ICotizacionItem & { id?: string }>;
+  /** Solo al ajustar una venta: el total no puede quedar por debajo de lo pagado. */
+  pagado?: number;
+  datos_venta?: Pick<IDatosVenta, 'fecha' | 'condicionPago' | 'diasCredito'>;
 }
 
 /**

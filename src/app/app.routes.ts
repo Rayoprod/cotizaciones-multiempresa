@@ -48,6 +48,18 @@ export const routes: Routes = [
             .then(m => m.HistorialComponent)
       },
       {
+        path: 'ventas',
+        loadComponent: () =>
+          import('./components/ventas/ventas')
+            .then(m => m.VentasComponent)
+      },
+      {
+        path: 'por-cobrar',
+        loadComponent: () =>
+          import('./components/por-cobrar/por-cobrar')
+            .then(m => m.PorCobrarComponent)
+      },
+      {
         path: 'productos',
         loadComponent: () =>
           import('./components/productos/productos')

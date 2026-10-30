@@ -1,0 +1,129 @@
+.filtros-deudas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding-bottom: 0.9rem;
+}
+
+.buscador-deudas {
+  flex: 1 1 16rem;
+  max-width: 26rem;
+}
+
+.lista-deudas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.deuda {
+  background: #ffffff;
+  border: 1px solid var(--surface-border);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.deuda-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  min-height: 4rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover { background: var(--slate-50); }
+}
+
+.deuda-cliente {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.deuda-nombre {
+  display: block;
+  font-weight: 700;
+  color: var(--slate-900);
+  overflow-wrap: anywhere;
+}
+
+.deuda-datos {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--slate-600);
+  margin-top: 0.125rem;
+}
+
+.deuda-montos {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.deuda-saldo {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--slate-900);
+}
+
+.deuda-vencido {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--red-700);
+}
+
+.deuda-flecha {
+  font-size: 0.75rem;
+  color: var(--slate-500);
+  flex-shrink: 0;
+}
+
+.deuda-ventas {
+  list-style: none;
+  margin: 0;
+  padding: 0 1rem;
+  border-top: 1px solid var(--slate-100);
+}
+
+.deuda-venta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--slate-100);
+
+  &:first-child { border-top: none; }
+}
+
+.venta-datos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.625rem;
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.venta-montos {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 575px) {
+  .buscador-deudas { max-width: none; }
+
+  .deuda-venta .boton-tactil { width: 100%; justify-content: center; }
+}

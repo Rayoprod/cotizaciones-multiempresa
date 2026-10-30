@@ -90,13 +90,24 @@
   white-space: nowrap;
 }
 
+.folio-enlace {
+  display: inline-block;
+  min-height: 1.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+
+  &:hover { text-decoration: underline; }
+}
+
 .lista-tarjetas {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
   gap: 0.5rem;
 }
 
-.tarjeta-cotizacion {
+.tarjeta-fila {
   background: #ffffff;
   border: 1px solid var(--surface-border);
   border-radius: 1rem;
@@ -113,6 +124,10 @@
 
 .boton-tactil {
   min-height: 2.75rem;
+}
+
+:host ::ng-deep .p-tag {
+  white-space: nowrap;
 }
 
 /* Celdas más angostas que las del resto de tablas: aquí el cliente necesita el espacio */

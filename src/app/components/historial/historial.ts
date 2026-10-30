@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -6,8 +6,9 @@ import { Router } from '@angular/router';
 import { SupabaseService } from '../../services/supabase.service';
 import { PdfService } from '../../services/pdf.service';
 import { SessionContextService } from '../../services/session-context.service';
+import { descargarCsv } from '../../services/csv';
 import {
-  ICotizacion, IBorradorCotizador, CLAVE_BORRADOR_COTIZADOR, ModoIgv,
+  ICotizacion, IBorradorCotizador, IVenta, CLAVE_BORRADOR_COTIZADOR, ModoIgv,
   estaVencida, fechaDeCotizacion, modoIgvDe, venceEl,
   extraerNombreClienteTexto, extraerDocumentoClienteTexto
 } from '../../models';
@@ -20,11 +21,12 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { Menu, MenuModule } from 'primeng/menu';
+import { DialogoConvertirComponent } from '../ventas/dialogo-convertir';
 
 /** El estado como se muestra: una Pendiente con la validez pasada se ve como Vencida. */
 export type EstadoVisible = 'PENDIENTE' | 'VENCIDA' | 'APROBADA' | 'ANULADA';
 export type FiltroEstado = 'TODAS' | EstadoVisible;
-type EstadoDestino = 'PENDIENTE' | 'APROBADA' | 'ANULADA';
+type EstadoDestino = 'PENDIENTE' | 'ANULADA';
 
 const ETIQUETA_ESTADO: Record<EstadoVisible, string> = {
   PENDIENTE: 'Pendiente',
@@ -46,16 +48,9 @@ const CONFIRMACION_ESTADO: Record<EstadoDestino, {
   icono: string;
   claseBoton: string;
 }> = {
-  APROBADA: {
-    titulo: 'Marcar como Aprobada',
-    mensaje: folio => `${folio} contará como venta. Ya no se podrá revisar: solo duplicar o volver a Pendiente.`,
-    aceptar: 'Sí, aprobar',
-    icono: 'pi pi-check-circle',
-    claseBoton: 'p-button-success'
-  },
   PENDIENTE: {
     titulo: 'Volver a Pendiente',
-    mensaje: folio => `${folio} saldrá de "Vendido" y se podrá revisar de nuevo.`,
+    mensaje: folio => `${folio} saldrá de las aprobadas y se podrá revisar de nuevo.`,
     aceptar: 'Sí, volver a Pendiente',
     icono: 'pi pi-undo',
     claseBoton: 'p-button-warning'
@@ -86,13 +81,16 @@ export function estadoVisible(cot: ICotizacion, hoy: Date = new Date()): EstadoV
     TagModule,
     TooltipModule,
     ConfirmDialogModule,
-    MenuModule
+    MenuModule,
+    DialogoConvertirComponent
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './historial.html',
-  styleUrls: ['./historial.scss']
+  styleUrls: ['../listas.scss']
 })
 export class HistorialComponent implements OnInit {
+  @ViewChild(DialogoConvertirComponent, { static: true }) dialogoConvertir!: DialogoConvertirComponent;
+
   cotizaciones: ICotizacion[] = [];
   cotizacionesFiltradas: ICotizacion[] = [];
   empresaActiva: any = null;
@@ -105,6 +103,8 @@ export class HistorialComponent implements OnInit {
 
   /** id de la cotización original → folio de la revisión que la reemplazó. */
   private reemplazos = new Map<string, string>();
+  /** id de la cotización → su venta activa. */
+  private ventas = new Map<string, Pick<IVenta, 'id' | 'folio'>>();
 
   terminoBusqueda = '';
   fechaDesde = '';
@@ -120,8 +120,8 @@ export class HistorialComponent implements OnInit {
   ];
   conteos: Record<FiltroEstado, number> = { TODAS: 0, PENDIENTE: 0, VENCIDA: 0, APROBADA: 0, ANULADA: 0 };
 
-  totalVendido = 0;
-  totalPorCobrar = 0;
+  totalAprobado = 0;
+  totalPorCerrar = 0;
   tasaConversion = 0;
 
   /** Acciones de la cotización cuyo menú está abierto. */
@@ -150,7 +150,11 @@ export class HistorialComponent implements OnInit {
         return;
       }
       // Siempre todas: así se sabe cuántas ocultas hay sin otro pedido.
-      const data = await this.supabase.getHistorial(this.empresaActiva.id, true);
+      const [data, ventas] = await Promise.all([
+        this.supabase.getHistorial(this.empresaActiva.id, true),
+        this.supabase.getVentasDeCotizaciones(this.empresaActiva.id)
+      ]);
+      this.ventas = new Map(ventas.map(v => [v.cotizacion_id!, v]));
       this.cotizaciones = (data || []).map((c: ICotizacion) => ({ ...c, oculta: c.oculta ?? false }));
       this.reemplazos = new Map(
         this.cotizaciones
@@ -235,7 +239,7 @@ export class HistorialComponent implements OnInit {
     }
 
     // Conteos y KPIs no dependen del filtro de estado: elegir "Aprobadas" no
-    // debe dejar en cero lo que hay por cobrar.
+    // debe dejar en cero lo que hay por cerrar.
     this.calcularKPIs(base);
     this.cotizacionesFiltradas = this.filtroEstado === 'TODAS'
       ? base
@@ -245,17 +249,17 @@ export class HistorialComponent implements OnInit {
 
   private calcularKPIs(base: ICotizacion[]) {
     const conteos: Record<FiltroEstado, number> = { TODAS: base.length, PENDIENTE: 0, VENCIDA: 0, APROBADA: 0, ANULADA: 0 };
-    let vendido = 0;
-    let porCobrar = 0;
+    let aprobado = 0;
+    let porCerrar = 0;
     for (const cot of base) {
       const estado = estadoVisible(cot);
       conteos[estado]++;
-      if (estado === 'APROBADA') vendido += cot.total || 0;
-      if (estado === 'PENDIENTE') porCobrar += cot.total || 0;
+      if (estado === 'APROBADA') aprobado += cot.total || 0;
+      if (estado === 'PENDIENTE') porCerrar += cot.total || 0;
     }
     this.conteos = conteos;
-    this.totalVendido = vendido;
-    this.totalPorCobrar = porCobrar;
+    this.totalAprobado = aprobado;
+    this.totalPorCerrar = porCerrar;
     const noAnuladas = base.length - conteos.ANULADA;
     this.tasaConversion = noAnuladas > 0 ? (conteos.APROBADA / noAnuladas) * 100 : 0;
   }
@@ -281,16 +285,11 @@ export class HistorialComponent implements OnInit {
       this.getEstadoLabel(cot),
       cot.vendedor_nombre || cot.vendedor || ''
     ]);
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `cotizaciones_${this.empresaActiva?.nombre_comercial || 'export'}_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    descargarCsv(
+      `cotizaciones_${this.empresaActiva?.nombre_comercial || 'export'}_${new Date().toISOString().slice(0, 10)}.csv`,
+      headers,
+      rows
+    );
   }
 
   // ─── Acciones por cotización ──────────────────────────────────────────────
@@ -302,23 +301,31 @@ export class HistorialComponent implements OnInit {
   }
 
   /**
-   * Solo se revisa lo Pendiente; Aprobada y Anulada se duplican. Pendiente pasa
-   * a Aprobada o Anulada, Aprobada vuelve a Pendiente o pasa a Anulada, y Anulada
-   * es definitivo. crear_cotizacion() y el trigger de estados aplican lo mismo.
+   * Solo se revisa lo Pendiente; Aprobada y Anulada se duplican. Aprobar es
+   * convertir en venta, en un solo paso. Con una venta activa el estado no cambia:
+   * primero se anula la venta. Anulada es definitivo. crear_cotizacion() y el
+   * trigger de estados aplican lo mismo.
    */
   accionesDe(cot: ICotizacion): MenuItem[] {
     const acciones: MenuItem[] = [];
+    const venta = this.ventaDe(cot);
+    if (venta) {
+      acciones.push({ label: 'Ver venta', icon: 'pi pi-shopping-cart', command: () => this.verVenta(venta.id) });
+    }
     if (cot.estado === 'PENDIENTE' && !this.reemplazadaPor(cot)) {
       acciones.push({ label: 'Revisar', icon: 'pi pi-pencil', command: () => this.abrirEnCotizador(cot, 'revision') });
     }
     acciones.push({ label: 'Duplicar', icon: 'pi pi-copy', command: () => this.abrirEnCotizador(cot, 'duplicar') });
 
-    const estados: EstadoDestino[] =
-      cot.estado === 'PENDIENTE' ? ['APROBADA', 'ANULADA'] :
-      cot.estado === 'APROBADA' ? ['PENDIENTE', 'ANULADA'] : [];
-    if (estados.length) {
+    if (!venta && cot.estado !== 'ANULADA') {
       acciones.push({ separator: true });
-      for (const destino of estados) {
+      acciones.push({
+        label: cot.estado === 'PENDIENTE' ? 'Convertir en venta' : 'Registrar venta',
+        icon: 'pi pi-shopping-cart',
+        command: () => this.dialogoConvertir.abrir(cot)
+      });
+      const destinos: EstadoDestino[] = cot.estado === 'APROBADA' ? ['PENDIENTE', 'ANULADA'] : ['ANULADA'];
+      for (const destino of destinos) {
         const config = CONFIRMACION_ESTADO[destino];
         acciones.push({
           label: destino === 'ANULADA' ? 'Anular' : config.titulo,
@@ -363,6 +370,20 @@ export class HistorialComponent implements OnInit {
       });
       await this.cargarDatos();
     }
+  }
+
+  /** La venta activa de esta cotización, si ya se convirtió. */
+  ventaDe(cot: ICotizacion): Pick<IVenta, 'id' | 'folio'> | null {
+    return (cot.id && this.ventas.get(cot.id)) || null;
+  }
+
+  verVenta(id: string) {
+    this.router.navigate(['/ventas'], { queryParams: { venta: id } });
+  }
+
+  alConvertir(venta: IVenta) {
+    this.msg.add({ severity: 'success', summary: `Venta ${venta.folio} registrada` });
+    this.verVenta(venta.id);
   }
 
   /** Folio de la revisión que reemplazó a esta cotización, si la hay. */

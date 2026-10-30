@@ -35,6 +35,7 @@ describe('HistorialComponent - Revisiones y estados', () => {
   const revision = { ...original, id: 'rev-1', folio: 'VDC-00000046', estado: 'PENDIENTE', cotizacion_origen_id: 'orig-1', tipo_origen: 'revision', folio_origen: 'VDC-00000045' };
   const vencida = { ...original, id: 'ven-1', folio: 'VDC-00000030', estado: 'PENDIENTE', fecha: hace(40), total: 50 };
   const aprobada = { ...original, id: 'apr-1', folio: 'VDC-00000020', estado: 'APROBADA', total: 200 };
+  const conVenta = { ...original, id: 'ven-2', folio: 'VDC-00000021', estado: 'APROBADA', total: 300 };
   const oculta = { ...original, id: 'ocu-1', folio: 'VDC-00000010', estado: 'PENDIENTE', total: 900, oculta: true };
   let supabase: any;
   let router: any;
@@ -52,7 +53,8 @@ describe('HistorialComponent - Revisiones y estados', () => {
       removeItem: (k: string) => { almacen.delete(k); }
     });
     supabase = {
-      getHistorial: vi.fn(async () => [original, revision, vencida, aprobada, oculta]),
+      getHistorial: vi.fn(async () => [original, revision, vencida, aprobada, conVenta, oculta]),
+      getVentasDeCotizaciones: vi.fn(async () => [{ id: 'venta-1', folio: 'VDC-V-00000001', cotizacion_id: 'ven-2' }]),
       actualizarEstado: vi.fn(async (id: string, estado: string) => ({ id, estado, estado_cambiado_por_nombre: 'Ana Quispe', estado_cambiado_en: hace(0) })),
       actualizarVisibilidadCotizacion: vi.fn(async () => {})
     };
@@ -73,16 +75,33 @@ describe('HistorialComponent - Revisiones y estados', () => {
     expect(comp.reemplazadaPor(revision)).toBeNull();
   });
 
-  it('solo se revisa lo Pendiente; Aprobada y Anulada solo se duplican', () => {
-    expect(etiquetas(revision)).toEqual(['Revisar', 'Duplicar', 'Marcar como Aprobada', 'Anular', 'Ocultar']);
-    expect(etiquetas(aprobada)).toEqual(['Duplicar', 'Volver a Pendiente', 'Anular', 'Ocultar']);
+  it('solo se revisa lo Pendiente; aprobar es convertir en venta', () => {
+    expect(etiquetas(revision)).toEqual(['Revisar', 'Duplicar', 'Convertir en venta', 'Anular', 'Ocultar']);
+    expect(etiquetas(aprobada)).toEqual(['Duplicar', 'Registrar venta', 'Volver a Pendiente', 'Anular', 'Ocultar']);
     expect(etiquetas(original)).toEqual(['Duplicar', 'Ocultar']);
   });
 
-  it('una vencida sigue siendo Pendiente: se puede aprobar o revisar', () => {
+  it('con una venta activa solo se ve la venta: el estado no se toca', () => {
+    expect(comp.ventaDe(conVenta)).toEqual(expect.objectContaining({ folio: 'VDC-V-00000001' }));
+    expect(etiquetas(conVenta)).toEqual(['Ver venta', 'Duplicar', 'Ocultar']);
+
+    comp.accionesDe(conVenta).find((a: any) => a.label === 'Ver venta').command();
+    expect(router.navigate).toHaveBeenCalledWith(['/ventas'], { queryParams: { venta: 'venta-1' } });
+  });
+
+  it('convertir abre la ventana, y al terminar lleva a la venta', () => {
+    comp.dialogoConvertir = { abrir: vi.fn() };
+    comp.accionesDe(revision).find((a: any) => a.label === 'Convertir en venta').command();
+    expect(comp.dialogoConvertir.abrir).toHaveBeenCalledWith(revision);
+
+    comp.alConvertir({ id: 'venta-2', folio: 'VDC-V-00000002' });
+    expect(router.navigate).toHaveBeenCalledWith(['/ventas'], { queryParams: { venta: 'venta-2' } });
+  });
+
+  it('una vencida sigue siendo Pendiente: se puede vender o revisar', () => {
     expect(comp.getEstadoLabel(vencida)).toBe('Vencida');
     expect(etiquetas(vencida)).toContain('Revisar');
-    expect(etiquetas(vencida)).toContain('Marcar como Aprobada');
+    expect(etiquetas(vencida)).toContain('Convertir en venta');
     expect(comp.detalleEstado(vencida)).toMatch(/^Venció el /);
     expect(comp.detalleEstado(revision)).toMatch(/^Vence el /);
   });
@@ -117,21 +136,21 @@ describe('HistorialComponent - Revisiones y estados', () => {
 
   it('muestra el motivo si el servidor rechaza el cambio de estado', async () => {
     supabase.actualizarEstado.mockRejectedValueOnce({ code: 'P0001', message: 'La cotización VDC-1 está anulada y no se puede reactivar.' });
-    await comp.cambiarEstado(revision, 'APROBADA');
+    await comp.cambiarEstado(revision, 'ANULADA');
     expect(mensajes.add).toHaveBeenCalledWith(expect.objectContaining({ detail: 'La cotización VDC-1 está anulada y no se puede reactivar.' }));
     expect(supabase.getHistorial).toHaveBeenCalledTimes(2);
   });
 
-  it('por cobrar no cuenta vencidas ni ocultas, y el filtro de estado no cambia los KPI', () => {
-    expect(comp.conteos).toEqual({ TODAS: 4, PENDIENTE: 1, VENCIDA: 1, APROBADA: 1, ANULADA: 1 });
-    expect(comp.totalPorCobrar).toBe(118);
-    expect(comp.totalVendido).toBe(200);
+  it('por cerrar no cuenta vencidas ni ocultas, y el filtro de estado no cambia los KPI', () => {
+    expect(comp.conteos).toEqual({ TODAS: 5, PENDIENTE: 1, VENCIDA: 1, APROBADA: 2, ANULADA: 1 });
+    expect(comp.totalPorCerrar).toBe(118);
+    expect(comp.totalAprobado).toBe(500);
 
     comp.elegirFiltroEstado('VENCIDA');
 
     expect(comp.cotizacionesFiltradas.map((c: any) => c.id)).toEqual(['ven-1']);
-    expect(comp.totalPorCobrar).toBe(118);
-    expect(comp.conteos.TODAS).toBe(4);
+    expect(comp.totalPorCerrar).toBe(118);
+    expect(comp.conteos.TODAS).toBe(5);
   });
 
   it('ocultar no pide confirmación y se puede ver después', async () => {

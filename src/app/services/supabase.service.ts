@@ -3,7 +3,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 import {
   IEmpresa, ICotizacion, ICuentaBancaria, INuevaCotizacion, IProfile,
-  IAsignacionEmpresa, RolGlobal
+  IAsignacionEmpresa, RolGlobal, ICondicionesPdf, IDatosVenta, IVenta, IVentaCambio,
+  EstadoEntrega, MetodoPago, ModoIgv, TipoComprobante, adelantoDe
 } from '../models';
 
 @Injectable({ providedIn: 'root' })
@@ -274,6 +275,166 @@ export class SupabaseService {
       .update({ oculta })
       .eq('id', id);
     if (error) throw error;
+  }
+
+  // ─── VENTAS Y PAGOS ───────────────────────────────────────────────────────
+  // Las escrituras van todas por funciones de Postgres: cada una valida permisos
+  // y reglas, y devuelve la venta completa, con sus líneas, pagos e historial.
+
+  async getVentas(empresaId: string): Promise<IVenta[]> {
+    const { data, error } = await this.client
+      .from('ventas')
+      .select('*, venta_items(*), pagos(*)')
+      .eq('empresa_id', empresaId)
+      .order('fecha', { ascending: false })
+      .order('registrada_en', { ascending: false })
+      .order('orden', { referencedTable: 'venta_items' })
+      .order('registrado_en', { referencedTable: 'pagos' });
+    if (error) throw error;
+    return (data ?? []) as IVenta[];
+  }
+
+  async getCambiosVenta(ventaId: string): Promise<IVentaCambio[]> {
+    const { data, error } = await this.client
+      .from('venta_cambios')
+      .select('*')
+      .eq('venta_id', ventaId)
+      .order('fecha', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as IVentaCambio[];
+  }
+
+  /** De cada cotización convertida, su venta activa. */
+  async getVentasDeCotizaciones(empresaId: string): Promise<Array<Pick<IVenta, 'id' | 'folio' | 'cotizacion_id'>>> {
+    const { data, error } = await this.client
+      .from('ventas')
+      .select('id, folio, cotizacion_id')
+      .eq('empresa_id', empresaId)
+      .eq('estado', 'ACTIVA')
+      .not('cotizacion_id', 'is', null);
+    if (error) throw error;
+    return data ?? [];
+  }
+
+  async crearVenta(datos: {
+    empresaId: string;
+    cliente: INuevaCotizacion['cliente'];
+    items: INuevaCotizacion['items'];
+    modoIgv: ModoIgv;
+    descuento: number;
+    lugarEntrega: string | null;
+    observaciones: string | null;
+    condiciones: Pick<ICondicionesPdf, 'mostrarCuentas'>;
+    datosVenta: IDatosVenta;
+    guardarCliente: boolean;
+  }): Promise<IVenta> {
+    const { data, error } = await this.client.rpc('crear_venta', {
+      p_empresa_id: datos.empresaId,
+      p_cliente: datos.cliente,
+      p_items: datos.items,
+      p_incluye_igv: datos.modoIgv !== 'sin_igv',
+      p_precios_con_igv: datos.modoIgv === 'incluido',
+      p_descuento: datos.descuento,
+      p_lugar_entrega: datos.lugarEntrega,
+      p_observaciones: datos.observaciones,
+      p_condiciones: datos.condiciones,
+      p_condicion_pago: datos.datosVenta.condicionPago,
+      p_dias_credito: datos.datosVenta.diasCredito,
+      p_fecha: datos.datosVenta.fecha,
+      p_adelanto: adelantoDe(datos.datosVenta),
+      p_estado_entrega: datos.datosVenta.estadoEntrega,
+      p_guardar_cliente: datos.guardarCliente
+    });
+    if (error) throw error;
+    return data as IVenta;
+  }
+
+  /** La cotización pasa a Aprobada en la misma transacción. */
+  async convertirCotizacionEnVenta(cotizacionId: string, datosVenta: IDatosVenta, documento: string | null): Promise<IVenta> {
+    const { data, error } = await this.client.rpc('convertir_cotizacion_en_venta', {
+      p_cotizacion_id: cotizacionId,
+      p_condicion_pago: datosVenta.condicionPago,
+      p_dias_credito: datosVenta.diasCredito,
+      p_fecha: datosVenta.fecha,
+      p_adelanto: adelantoDe(datosVenta),
+      p_estado_entrega: datosVenta.estadoEntrega,
+      p_documento: documento
+    });
+    if (error) throw error;
+    return data as IVenta;
+  }
+
+  async ajustarVenta(datos: {
+    ventaId: string;
+    items: Array<INuevaCotizacion['items'][number] & { id?: string | null }>;
+    modoIgv: ModoIgv;
+    descuento: number;
+    lugarEntrega: string | null;
+    observaciones: string | null;
+    datosVenta: Pick<IDatosVenta, 'fecha' | 'condicionPago' | 'diasCredito'>;
+    motivo: string;
+  }): Promise<IVenta> {
+    const { data, error } = await this.client.rpc('ajustar_venta', {
+      p_venta_id: datos.ventaId,
+      p_items: datos.items,
+      p_incluye_igv: datos.modoIgv !== 'sin_igv',
+      p_precios_con_igv: datos.modoIgv === 'incluido',
+      p_descuento: datos.descuento,
+      p_lugar_entrega: datos.lugarEntrega,
+      p_observaciones: datos.observaciones,
+      p_condicion_pago: datos.datosVenta.condicionPago,
+      p_dias_credito: datos.datosVenta.diasCredito,
+      p_motivo: datos.motivo,
+      p_fecha: datos.datosVenta.fecha
+    });
+    if (error) throw error;
+    return data as IVenta;
+  }
+
+  async anularVenta(ventaId: string, motivo: string): Promise<IVenta> {
+    const { data, error } = await this.client.rpc('anular_venta', { p_venta_id: ventaId, p_motivo: motivo });
+    if (error) throw error;
+    return data as IVenta;
+  }
+
+  async marcarEntregaVenta(ventaId: string, estado: EstadoEntrega): Promise<IVenta> {
+    const { data, error } = await this.client.rpc('marcar_entrega_venta', { p_venta_id: ventaId, p_estado: estado });
+    if (error) throw error;
+    return data as IVenta;
+  }
+
+  /** Sin número, quita el comprobante. */
+  async guardarComprobanteVenta(ventaId: string, tipo: TipoComprobante, numero: string): Promise<IVenta> {
+    const { data, error } = await this.client.rpc('guardar_comprobante_venta', {
+      p_venta_id: ventaId, p_tipo: tipo, p_numero: numero
+    });
+    if (error) throw error;
+    return data as IVenta;
+  }
+
+  async registrarPago(ventaId: string, pago: {
+    monto: number;
+    metodo: MetodoPago;
+    fecha: string;
+    referencia?: string | null;
+    nota?: string | null;
+  }): Promise<IVenta> {
+    const { data, error } = await this.client.rpc('registrar_pago', {
+      p_venta_id: ventaId,
+      p_monto: pago.monto,
+      p_metodo: pago.metodo,
+      p_fecha: pago.fecha,
+      p_referencia: pago.referencia ?? null,
+      p_nota: pago.nota ?? null
+    });
+    if (error) throw error;
+    return data as IVenta;
+  }
+
+  async anularPago(pagoId: string, motivo: string): Promise<IVenta> {
+    const { data, error } = await this.client.rpc('anular_pago', { p_pago_id: pagoId, p_motivo: motivo });
+    if (error) throw error;
+    return data as IVenta;
   }
 
   // ─── CUENTAS BANCARIAS ────────────────────────────────────────────────────

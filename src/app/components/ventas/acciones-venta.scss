@@ -1,0 +1,167 @@
+.detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.aviso-anulada {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--red-200);
+  background: var(--red-50);
+  color: var(--red-900);
+  font-size: 0.875rem;
+  line-height: 1.45;
+
+  > i { margin-top: 0.1875rem; }
+}
+
+.detalle-datos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1.25rem;
+}
+
+.dato-ancho {
+  grid-column: 1 / -1;
+}
+
+.dato-etiqueta {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--slate-500);
+}
+
+.dato-valor {
+  margin: 0;
+  color: var(--slate-900);
+  overflow-wrap: anywhere;
+}
+
+.tabla-lineas {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  color: var(--slate-800);
+
+  th {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: left;
+    color: var(--slate-500);
+    padding: 0 0.375rem 0.375rem;
+    border-bottom: 1px solid var(--surface-border);
+  }
+
+  th.text-right { text-align: right; }
+
+  td {
+    padding: 0.5rem 0.375rem;
+    border-bottom: 1px solid var(--slate-100);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    vertical-align: top;
+  }
+
+  .linea-descripcion {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+.solo-celular { display: none; }
+
+.totales {
+  width: min(100%, 16rem);
+  margin: 0.75rem 0 0 auto;
+}
+
+.fila-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.875rem;
+  color: var(--slate-600);
+  font-variant-numeric: tabular-nums;
+}
+
+.fila-final {
+  font-weight: 700;
+  color: var(--slate-900);
+}
+
+.fila-debe {
+  color: var(--red-700);
+}
+
+.seccion {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--slate-900);
+  margin: 0 0 0.5rem;
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pago,
+.cambio {
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--slate-100);
+  font-size: 0.875rem;
+  color: var(--slate-700);
+
+  &:first-child { border-top: none; padding-top: 0; }
+}
+
+.pago {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pago-monto {
+  font-weight: 700;
+  color: var(--slate-900);
+  font-variant-numeric: tabular-nums;
+  margin-right: 0.25rem;
+}
+
+.pago-anulado .pago-monto {
+  text-decoration: line-through;
+  color: var(--slate-500);
+}
+
+.botones-detalle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+
+  button { margin: 0; }
+}
+
+@media (max-width: 575px) {
+  .detalle-datos { grid-template-columns: minmax(0, 1fr); }
+
+  /* Cuatro columnas no entran: la cantidad y el precio van bajo la descripción */
+  .solo-grande { display: none; }
+
+  .solo-celular {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--slate-500);
+  }
+
+  .botones-detalle .flex-1 { display: none; }
+}

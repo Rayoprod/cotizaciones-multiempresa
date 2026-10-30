@@ -1,0 +1,31 @@
+<p-dialog [header]="cotizacion?.estado === 'PENDIENTE' ? 'Convertir en venta' : 'Registrar venta'"
+          [(visible)]="abierto" [modal]="true" appendTo="body"
+          [draggable]="false" [resizable]="false" [style]="{ width: '26rem' }">
+  <div *ngIf="cotizacion as cot" class="flex flex-column gap-3">
+    <div>
+      <p class="font-semibold text-900 m-0">{{ cot.cliente_nombre }}</p>
+      <p class="ayuda m-0">{{ cot.folio }} · {{ soles(cot.total) }}</p>
+      <p class="ayuda mt-2 mb-0">
+        Se vende lo que dice la cotización.
+        <ng-container *ngIf="cot.estado === 'PENDIENTE'">Pasará a Aprobada.</ng-container>
+      </p>
+    </div>
+
+    <div *ngIf="necesitaDocumento">
+      <label for="convertir-documento" class="etiqueta-campo">RUC o DNI del cliente <span class="text-red-600">*</span></label>
+      <input pInputText id="convertir-documento" class="w-full" inputmode="numeric" maxlength="11"
+             placeholder="20512345678" [(ngModel)]="documento" />
+      <p class="ayuda mt-1 mb-0">
+        La cotización {{ cot.cliente_documento ? 'dice "' + cot.cliente_documento + '"' : 'no lo tiene' }}. Una venta necesita uno válido.
+      </p>
+    </div>
+
+    <app-datos-venta prefijo="convertir" [datos]="datos" [total]="cot.total"></app-datos-venta>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p *ngIf="mostrarFaltantes && faltantes.length" class="ayuda text-amber-800 text-left mt-0 mb-2" role="alert">Falta {{ faltantes.join(' y ') }}.</p>
+    <button pButton type="button" label="Cancelar" class="p-button-text p-button-secondary" (click)="cerrar()"></button>
+    <button pButton type="button" label="Registrar venta" icon="pi pi-check" [loading]="guardando" (click)="convertir()"></button>
+  </ng-template>
+</p-dialog>

@@ -1,0 +1,55 @@
+<div class="campo">
+  <label [for]="prefijo + '-fecha'" class="etiqueta-campo">Fecha de la venta</label>
+  <input pInputText type="date" [id]="prefijo + '-fecha'" class="w-full" [max]="hoy"
+         [(ngModel)]="datos.fecha" (ngModelChange)="cambio.emit()" />
+  <p *ngIf="datos.fecha && datos.fecha < hoy" class="ayuda mt-1 mb-0">Sirve para cargar ventas pasadas. La app guarda aparte cuándo se anotó.</p>
+</div>
+
+<div class="campo">
+  <span class="etiqueta-campo">Pago</span>
+  <div class="segmentos w-full" role="group" aria-label="Condición de pago">
+    <button *ngFor="let c of condicionesPago" type="button" class="segmento"
+            [class.segmento-activo]="datos.condicionPago === c.value"
+            [attr.aria-pressed]="datos.condicionPago === c.value"
+            (click)="elegirCondicion(c.value)">{{ c.label }}</button>
+  </div>
+  <div *ngIf="datos.condicionPago === 'CREDITO'" class="mt-2">
+    <label [for]="prefijo + '-dias'" class="etiqueta-campo">Días de crédito</label>
+    <p-inputNumber [inputId]="prefijo + '-dias'" [(ngModel)]="datos.diasCredito" (ngModelChange)="cambio.emit()"
+                   [min]="0" [max]="365" [useGrouping]="false" placeholder="30"
+                   class="w-full" styleClass="w-full" inputStyleClass="w-full"
+                   (keydown.enter)="$event.preventDefault()"></p-inputNumber>
+    <p class="ayuda mt-1 mb-0">{{ venceEl ? 'Vence el ' + venceEl : 'Sin días no tiene fecha de vencimiento.' }}</p>
+  </div>
+</div>
+
+<div *ngIf="!soloCondiciones" class="campo">
+  <div class="flex align-items-baseline justify-content-between gap-2">
+    <label [for]="prefijo + '-recibido'" class="etiqueta-campo">Recibido ahora</label>
+    <button type="button" class="enlace" [disabled]="total <= 0" (click)="recibirTodo()">Todo</button>
+  </div>
+  <p-inputNumber [inputId]="prefijo + '-recibido'" [(ngModel)]="datos.adelantoMonto" (ngModelChange)="cambio.emit()"
+                 mode="decimal" [minFractionDigits]="2" [maxFractionDigits]="2" [min]="0" prefix="S/ " placeholder="S/ 0.00"
+                 class="w-full" styleClass="w-full" inputStyleClass="w-full text-right"
+                 (keydown.enter)="$event.preventDefault()"></p-inputNumber>
+  <ng-container *ngIf="hayAdelanto">
+    <label [for]="prefijo + '-metodo'" class="etiqueta-campo mt-2">Cómo se recibió</label>
+    <select [id]="prefijo + '-metodo'" class="campo-select" [(ngModel)]="datos.adelantoMetodo" (ngModelChange)="cambio.emit()">
+      <option [ngValue]="null" disabled>Elige</option>
+      <option *ngFor="let m of metodos" [ngValue]="m.value">{{ m.label }}</option>
+    </select>
+    <label [for]="prefijo + '-referencia'" class="etiqueta-campo mt-2">Nro. de operación</label>
+    <input pInputText [id]="prefijo + '-referencia'" class="w-full" maxlength="100" placeholder="Opcional"
+           [(ngModel)]="datos.adelantoReferencia" (ngModelChange)="cambio.emit()" />
+  </ng-container>
+</div>
+
+<div *ngIf="!soloCondiciones" class="campo">
+  <span class="etiqueta-campo">Entrega</span>
+  <div class="segmentos w-full" role="group" aria-label="Entrega">
+    <button *ngFor="let e of entregas" type="button" class="segmento"
+            [class.segmento-activo]="datos.estadoEntrega === e.value"
+            [attr.aria-pressed]="datos.estadoEntrega === e.value"
+            (click)="elegirEntrega(e.value)">{{ e.label }}</button>
+  </div>
+</div>

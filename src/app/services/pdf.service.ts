@@ -4,6 +4,7 @@ import { SupabaseService } from './supabase.service';
 import { extraerNombreClienteTexto, extraerDocumentoClienteTexto } from '../models/cliente.model';
 import { modoIgvDe } from '../models/cotizacion.model';
 import { ModoIgv } from '../models/types';
+import { IVenta, textoComprobante, textoCondicionPago } from '../models/venta.model';
 
 const AVISO_IMPUESTOS: Record<ModoIgv, string> = {
   sumar: 'El total incluye IGV (18%)',
@@ -35,11 +36,13 @@ export function condicionesPdf(
 /**
  * Líneas "• Etiqueta: valor" de la caja de condiciones comerciales, en orden.
  * El lugar de entrega es el texto que se guardó con la cotización y solo
- * aparece si la empresa usa lugares de entrega.
+ * aparece si la empresa usa lugares de entrega. `extras` son las líneas propias
+ * de una venta.
  */
 export function lineasCondicionesComerciales(
   cotizacion: Pick<ICotizacion, 'lugar_entrega' | 'incluye_igv' | 'precios_con_igv' | 'igv' | 'tipo_origen' | 'folio_origen' | 'vendedor_nombre' | 'observaciones'>,
-  condiciones: ICondicionesPdf
+  condiciones: ICondicionesPdf,
+  extras: Array<[string, string]> = []
 ): Array<[string, string]> {
   const lineas: Array<[string, string]> = [];
   const lugar = cotizacion.lugar_entrega?.trim();
@@ -48,6 +51,7 @@ export function lineasCondicionesComerciales(
   lineas.push(['Impuestos', AVISO_IMPUESTOS[modoIgvDe(cotizacion)]]);
 
   if (condiciones.mostrarValidez) lineas.push(['Validez', `${condiciones.diasValidez} días calendario`]);
+  lineas.push(...extras);
   if (cotizacion.tipo_origen === 'revision' && cotizacion.folio_origen) lineas.push(['Reemplaza a', cotizacion.folio_origen]);
   if (cotizacion.vendedor_nombre) lineas.push(['Vendedor', cotizacion.vendedor_nombre]);
   if (cotizacion.observaciones) lineas.push(['Observaciones', cotizacion.observaciones]);
@@ -78,6 +82,37 @@ export function avisoAnulada(
   if (cotizacion.estado !== 'ANULADA') return null;
   return reemplazadaPor ? `COTIZACIÓN ANULADA · Reemplazada por ${reemplazadaPor}` : 'COTIZACIÓN ANULADA';
 }
+
+/** Las líneas que una orden de venta agrega a las condiciones comerciales. */
+export function lineasDeVenta(venta: IVenta): Array<[string, string]> {
+  const lineas: Array<[string, string]> = [['Condición de pago', textoCondicionPago(venta)]];
+  if (venta.folio_cotizacion) lineas.push(['Cotización', venta.folio_cotizacion]);
+  const comprobante = textoComprobante(venta);
+  if (comprobante) lineas.push(['Comprobante', comprobante]);
+  return lineas;
+}
+
+/** Lo pagado y el saldo bajo el total. Sin pagos no hacen falta: el total es lo que se debe. */
+export function filasCobroVenta(venta: Pick<IVenta, 'estado' | 'pagado' | 'saldo'>): Array<[string, number]> {
+  if (venta.estado === 'ANULADA' || Number(venta.pagado) <= 0) return [];
+  return [['Pagado', Number(venta.pagado)], ['Saldo', Number(venta.saldo)]];
+}
+
+export const NOTA_ORDEN_DE_VENTA = 'Este documento no es un comprobante de pago. La factura o boleta se emite por separado.';
+
+/** Lo que cambia entre una cotización y una orden de venta. */
+interface IOpcionesDocumento {
+  titulo: string;
+  condiciones: ICondicionesPdf;
+  lineasCondiciones: Array<[string, string]>;
+  aviso: string | null;
+  filasCobro: Array<[string, number]>;
+  nota: string | null;
+}
+
+type DatosDocumento = Pick<ICotizacion,
+  'folio' | 'fecha' | 'items' | 'total' | 'subtotal' | 'descuento_global' | 'igv' | 'incluye_igv' | 'precios_con_igv' |
+  'cliente_nombre' | 'cliente_documento' | 'cliente_direccion' | 'cliente_telefono' | 'cliente_correo'>;
 
 @Injectable({ providedIn: 'root' })
 export class PdfService {
@@ -158,7 +193,7 @@ export class PdfService {
     return value < 0 ? `- S/ ${this.formatNumber(-value)}` : `S/ ${this.formatNumber(value)}`;
   }
 
-  // ── Método principal ─────────────────────────────────────────────────────
+  // ── Documentos ───────────────────────────────────────────────────────────
 
   async generarYDescargarCotizacion(
     data: ICotizacion,
@@ -168,6 +203,36 @@ export class PdfService {
   ) {
     if (!datosEmpresa) return;
     const condiciones = condicionesPdf(data, datosEmpresa, ajustes);
+    await this.generarDocumento(data, datosEmpresa, {
+      titulo: 'COTIZACIÓN',
+      condiciones,
+      lineasCondiciones: lineasCondicionesComerciales(data, condiciones),
+      aviso: avisoAnulada(data, reemplazadaPor),
+      filasCobro: [],
+      nota: null
+    });
+  }
+
+  async generarYDescargarOrdenVenta(venta: IVenta, datosEmpresa: any) {
+    if (!datosEmpresa) return;
+    // Ni la validez ni el contacto de aprobación tienen sentido en algo ya vendido.
+    const condiciones = condicionesPdf(venta, datosEmpresa, { mostrarValidez: false, mostrarContacto: false });
+    const items = venta.venta_items.map(i => ({
+      sku: i.sku ?? undefined, descripcion: i.descripcion, unidad: i.unidad,
+      cantidad: Number(i.cantidad), precio_unitario: Number(i.precio_unitario), subtotal: Number(i.importe)
+    }));
+    await this.generarDocumento({ ...venta, items }, datosEmpresa, {
+      titulo: 'ORDEN DE VENTA',
+      condiciones,
+      lineasCondiciones: lineasCondicionesComerciales(venta, condiciones, lineasDeVenta(venta)),
+      aviso: venta.estado === 'ANULADA' ? 'VENTA ANULADA' : null,
+      filasCobro: filasCobroVenta(venta),
+      nota: NOTA_ORDEN_DE_VENTA
+    });
+  }
+
+  private async generarDocumento(data: DatosDocumento, datosEmpresa: any, opciones: IOpcionesDocumento) {
+    const { condiciones, aviso } = opciones;
 
     // Todo en paralelo: cada pedido tarda cientos de ms. Las cuentas se piden
     // frescas porque son los datos de pago que verá el cliente.
@@ -214,7 +279,7 @@ export class PdfService {
               {
                 width: '*',
                 stack: [
-                  { text: `COTIZACIÓN`, fontSize: 10, color: '#6b7280', alignment: 'right', margin: [0, 0, 0, 1] },
+                  { text: opciones.titulo, fontSize: 10, color: '#6b7280', alignment: 'right', margin: [0, 0, 0, 1] },
                   { text: data.folio, fontSize: 16, bold: true, color: colorEmpresa, alignment: 'right' },
                   {
                     text: datosEmpresa.razon_social || datosEmpresa.nombre_comercial,
@@ -319,7 +384,11 @@ export class PdfService {
               ...(totales.despues ? [[
                 { text: totales.despues[0], fontSize: 9, color: '#6b7280', border: sinBorde, margin: [0, 0, 0, 2] },
                 { text: this.formatSoles(totales.despues[1]), fontSize: 9, color: '#6b7280', alignment: 'right', border: sinBorde, margin: [0, 0, 0, 2] }
-              ]] : [])
+              ]] : []),
+              ...opciones.filasCobro.map(([etiqueta, monto]) => [
+                { text: etiqueta, fontSize: 9, bold: etiqueta === 'Saldo', color: '#374151', border: sinBorde, margin: [0, 2, 0, 2] },
+                { text: this.formatSoles(monto), fontSize: 9, bold: etiqueta === 'Saldo', color: '#374151', alignment: 'right', border: sinBorde, margin: [0, 2, 0, 2] }
+              ])
             ]
           },
           layout: { hLineWidth: (i: number) => i === 0 ? 0 : 0.5, vLineWidth: () => 0, hLineColor: () => '#e5e7eb' }
@@ -338,7 +407,7 @@ export class PdfService {
     // Columna izquierda: condiciones de entrega/impuestos
     const colCondiciones: any[] = [
       { text: 'CONDICIONES COMERCIALES', fontSize: 8, bold: true, color: colorEmpresa, margin: [0, 0, 0, 6] },
-      ...lineasCondicionesComerciales(data, condiciones).map(([etiqueta, valor]) => (
+      ...opciones.lineasCondiciones.map(([etiqueta, valor]) => (
         { text: [{ text: `• ${etiqueta}: `, bold: true, fontSize: 7.5 }, { text: valor, fontSize: 7.5 }], margin: [0, 0, 0, 3] }
       ))
     ];
@@ -465,7 +534,6 @@ export class PdfService {
     };
 
     // ── Documento completo ───────────────────────────────────────────────
-    const aviso = avisoAnulada(data, reemplazadaPor);
     const docDefinition: any = {
       pageSize: 'A4',
       pageMargins: [40, 125, 40, 40],
@@ -476,6 +544,7 @@ export class PdfService {
       content: [
         ...(aviso ? [{ text: aviso, fontSize: 10, bold: true, color: '#b91c1c', alignment: 'center', margin: [0, 0, 0, 10] }] : []),
         cajaCliente,
+        ...(opciones.nota ? [{ text: opciones.nota, fontSize: 8, italics: true, color: '#6b7280', alignment: 'center', margin: [0, -6, 0, 10] }] : []),
         {
           table: {
             headerRows: 1,

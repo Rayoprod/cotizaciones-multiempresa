@@ -24,7 +24,7 @@ Es el prototipo multiempresa de SIGO-WM.
 api/                      Función de Vercel: consulta DNI/RUC con sesión y límite por usuario
 scripts/generar-tema.mjs  Genera src/theme/lara-acento.css; volver a correrlo al actualizar PrimeNG
 src/app/
-  components/             Pantallas (cotizador, historial, clientes, productos, empresas, usuarios…)
+  components/             Pantallas (cotizador, historial, ventas, por-cobrar, clientes, productos, empresas, usuarios…)
   guards/                 Acceso por sesión y rol; verifican que la cuenta siga activa
   layout/                 Marco de la app: un solo menú lateral para todos los roles
   models/                 Tipos y lógica pura (p. ej. cálculo de totales)
@@ -110,11 +110,12 @@ Funciones auxiliares de las políticas: `es_superadmin()`,
   cotización admite una sola revisión. Si cambia el RUC o DNI, el cotizador avisa.
 - **Duplicado**: copia los datos dentro de la misma empresa, desde cualquier
   estado; la original no cambia.
-- **Estados**: Pendiente pasa a Aprobada o Anulada; Aprobada vuelve a Pendiente o
-  pasa a Anulada; Anulada es definitivo (el PDF sale con marca de agua). Lo aplica
-  un trigger, que además guarda quién hizo el último cambio y cuándo.
+- **Estados**: aprobar es convertir en venta, en un solo paso. Aprobada vuelve a
+  Pendiente o pasa a Anulada, salvo que tenga una venta activa: entonces primero se
+  anula la venta. Anulada es definitivo (el PDF sale con marca de agua). Lo aplica un
+  trigger, que además guarda quién hizo el último cambio y cuándo.
 - **Vencida** no es un estado: es una Pendiente con la validez pasada, y se calcula
-  al mostrarla (`estaVencida`). No suma en "Por cobrar" y se puede aprobar o
+  al mostrarla (`estaVencida`). No suma en "Por cerrar" y se puede vender o
   revisar. Las cotizaciones que no guardaron sus condiciones asumen 15 días.
 - **IGV**, en tres modos (`incluye_igv` y `precios_con_igv`). Cada empresa define
   con cuál abre el cotizador (`empresas.modo_igv`), y se puede cambiar en cada
@@ -138,6 +139,36 @@ Funciones auxiliares de las políticas: `es_superadmin()`,
   campo no aparece.
 - El cotizador muestra los totales con el mismo cálculo que el servidor
   (`calcularTotales` en `models/cotizacion.model.ts`).
+
+## Ventas y cobros
+
+- Una venta nace directa (selector Cotización / Venta directa en Nueva) o desde una
+  cotización (`convertir_cotizacion_en_venta`), que pasa a Aprobada en la misma
+  transacción. Una cotización solo puede tener una venta activa. Lleva su propia
+  serie: `PREFIJO-V-00000001`.
+- Siempre con **RUC o DNI válido**. Si la cotización no lo tiene, se pide al convertir.
+- **Fecha**: puede ser anterior a hoy, para cargar ventas y deudas pasadas; el
+  vencimiento se cuenta desde esa fecha y `registrada_en` guarda cuándo se anotó.
+- **Cobro**: contado o crédito, con o sin días. Una venta se paga en una o varias
+  partes y cada pago es de una sola venta. No se puede pagar más que el saldo.
+  `pagado` lo mantienen las funciones; `saldo` es una columna calculada.
+  "Vencida" y "Pagada" no se guardan: se calculan (`estadoCobro`).
+- **Entrega**: Por entregar, Parcial o Entregada, a mano. Se calculará sola cuando
+  existan las salidas.
+- **Factura o boleta**: se emite en el sistema de siempre; aquí solo se guarda el
+  número. Es una por venta. El PDF de la venta es una orden de venta y aclara que no
+  es comprobante de pago.
+- **Quién puede qué**: cualquiera de la empresa registra ventas y pagos, marca la
+  entrega y anota la factura. Solo el admin anula pagos, ajusta y anula ventas, y
+  siempre con motivo. Lo aplica el servidor.
+- **Ajustar**: a diferencia de las cotizaciones, una venta se ajusta sin cambiar de
+  folio (cantidades, precios, IGV, descuento, fecha y crédito; no el cliente), porque
+  vive semanas. Guarda en `venta_cambios` cómo estaba antes. El total no puede quedar
+  por debajo de lo pagado. Las líneas conservan su `id` para ligar las salidas.
+- **Anular**: una venta con pagos vigentes no se anula; primero se anulan los pagos,
+  que no se borran. Si venía de una cotización, esta vuelve a Pendiente.
+- Se escribe solo por funciones (`crear_venta`, `registrar_pago`, `ajustar_venta`…);
+  `authenticated` únicamente lee. `supabase/pruebas_ventas.sql` prueba estas reglas.
 
 ## Color de la empresa
 

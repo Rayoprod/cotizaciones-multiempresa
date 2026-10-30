@@ -1,12 +1,13 @@
 <p-confirmDialog appendTo="body" styleClass="max-w-28rem border-round-2xl" />
 <p-menu #menuAcciones [popup]="true" [model]="accionesMenu" appendTo="body" [style]="{ width: '14rem' }" />
+<app-dialogo-convertir (convertida)="alConvertir($event)"></app-dialogo-convertir>
 
 <div class="p-3 md:p-4">
 
   <!-- Encabezado -->
   <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
     <div>
-      <h1 class="text-2xl font-bold text-900 m-0">Historial</h1>
+      <h1 class="text-2xl font-bold text-900 m-0">Cotizaciones</h1>
       <p class="text-600 text-sm mt-1 mb-0">{{ empresaActiva?.nombre_comercial }}</p>
     </div>
 
@@ -35,15 +36,15 @@
     <div class="grid mb-3">
       <div class="col-6 lg:col-3">
         <div class="kpi">
-          <span class="kpi-titulo">Vendido</span>
-          <p class="kpi-valor text-emerald-700">S/ {{ totalVendido | number:'1.2-2' }}</p>
+          <span class="kpi-titulo">Aprobado</span>
+          <p class="kpi-valor text-emerald-700">S/ {{ totalAprobado | number:'1.2-2' }}</p>
           <p class="kpi-nota">{{ conteos.APROBADA }} aprobada{{ conteos.APROBADA === 1 ? '' : 's' }}</p>
         </div>
       </div>
       <div class="col-6 lg:col-3">
         <div class="kpi">
-          <span class="kpi-titulo">Por cobrar</span>
-          <p class="kpi-valor text-amber-700">S/ {{ totalPorCobrar | number:'1.2-2' }}</p>
+          <span class="kpi-titulo">Por cerrar</span>
+          <p class="kpi-valor text-amber-700">S/ {{ totalPorCerrar | number:'1.2-2' }}</p>
           <p class="kpi-nota">{{ conteos.PENDIENTE }} vigente{{ conteos.PENDIENTE === 1 ? '' : 's' }} · {{ conteos.VENCIDA }} vencida{{ conteos.VENCIDA === 1 ? '' : 's' }}</p>
         </div>
       </div>
@@ -100,7 +101,7 @@
 
     <!-- Celular y tablet -->
     <div class="lista-tarjetas lg:hidden mb-4">
-      <div *ngFor="let cot of cotizacionesFiltradas" class="tarjeta-cotizacion" [class.fila-apagada]="cot.oculta">
+      <div *ngFor="let cot of cotizacionesFiltradas" class="tarjeta-fila" [class.fila-apagada]="cot.oculta">
         <div class="flex align-items-center justify-content-between gap-2">
           <span class="folio">{{ cot.folio }}</span>
           <span class="text-xs text-600 flex-shrink-0">{{ formatearFecha(cot.fecha) }}</span>
@@ -209,6 +210,9 @@
   <p *ngIf="cot.tipo_origen === 'revision' && cot.folio_origen" class="text-xs text-600 m-0 mt-1">Rev. de {{ cot.folio_origen }}</p>
   <p *ngIf="cot.tipo_origen === 'duplicado' && cot.folio_origen" class="text-xs text-600 m-0 mt-1">Copia de {{ cot.folio_origen }}</p>
   <p *ngIf="reemplazadaPor(cot) as revision" class="text-xs text-amber-800 font-semibold m-0 mt-1">Reemplazada por {{ revision }}</p>
+  <p *ngIf="ventaDe(cot) as venta" class="m-0 mt-1">
+    <button type="button" class="enlace text-xs text-left" (click)="verVenta(venta.id)">Venta {{ venta.folio }}</button>
+  </p>
 </ng-template>
 
 <ng-template #vacio>

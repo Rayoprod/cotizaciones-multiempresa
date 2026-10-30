@@ -495,3 +495,176 @@ describe('CotizadorComponent - Unidad y catálogo', () => {
     expect(comp.filasTotales).toEqual({ antes: [], despues: ['Incluye IGV (18%):', 152.54] });
   });
 });
+
+
+describe('CotizadorComponent - Venta directa y ajuste', () => {
+  const empresa = { id: 'VDC', nombre_comercial: 'VDC', mostrar_cuentas: true };
+
+  function crear() {
+    const supabase = {
+      crearCotizacion: vi.fn(),
+      crearVenta: vi.fn(async () => ({ id: 'v1', folio: 'VDC-V-00000001' })),
+      ajustarVenta: vi.fn(async () => ({ id: 'v1', folio: 'VDC-V-00000001' })),
+      getClientes: vi.fn(async () => [])
+    };
+    const router = { navigate: vi.fn() };
+    const mensajes = { add: vi.fn() };
+    const pdf = { generarYDescargarCotizacion: vi.fn(async () => {}) };
+    const comp: any = new CotizadorComponent(
+      { markForCheck: () => {} } as any,
+      supabase as any, pdf as any, router as any, mensajes as any, {} as any, {} as any,
+      { empresaActiva: () => empresa } as any
+    );
+    comp.empresaActiva = empresa;
+    comp.clienteNombre = 'CLIENTE SAC';
+    comp.clienteDocumento = '20123456789';
+    comp.carrito = [{ sku: null, descripcion: 'Arena', unidad: 'm3', cantidad: 10, precio_unitario: 100, subtotal: 1000 }];
+    comp.modoIgv = 'sin_igv';
+    comp.recalcularTodo();
+    return { comp, supabase, router, mensajes, pdf };
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal('sessionStorage', almacenamientoEnMemoria());
+    vi.stubGlobal('navigator', { onLine: true });
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('registra la venta y lleva a su detalle, sin generar PDF', async () => {
+    const { comp, supabase, router, pdf } = crear();
+    comp.elegirTipo('venta');
+    expect(comp.tituloDocumento).toBe('Nueva venta');
+    expect(comp.textoGuardar).toBe('Registrar venta');
+
+    comp.datosVenta.condicionPago = 'CREDITO';
+    comp.datosVenta.diasCredito = 30;
+    comp.datosVenta.adelantoMonto = 200;
+    comp.datosVenta.adelantoMetodo = 'TRANSFERENCIA';
+    await comp.guardar();
+
+    const enviado = supabase.crearVenta.mock.calls[0][0];
+    expect(enviado.items).toEqual([{ sku: null, descripcion: 'Arena', unidad: 'm3', cantidad: 10, precio_unitario: 100 }]);
+    expect(enviado.datosVenta).toMatchObject({ condicionPago: 'CREDITO', diasCredito: 30, adelantoMonto: 200 });
+    expect(enviado.condiciones).toEqual({ mostrarCuentas: true });
+    expect(supabase.crearCotizacion).not.toHaveBeenCalled();
+    expect(pdf.generarYDescargarCotizacion).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/ventas'], { queryParams: { venta: 'v1' } });
+    expect(comp.clienteNombre).toBe('');
+    expect(comp.datosVenta.adelantoMonto).toBeNull();
+  });
+
+  it('una venta exige un RUC o DNI válido; una cotización no', async () => {
+    const { comp, supabase } = crear();
+    comp.clienteDocumento = '123';
+    expect(comp.faltantes).toEqual([]);
+
+    comp.elegirTipo('venta');
+    expect(comp.faltantes).toEqual(['un RUC de 11 dígitos o un DNI de 8']);
+
+    await comp.guardar();
+    expect(supabase.crearVenta).not.toHaveBeenCalled();
+    expect(comp.mostrarFaltantes).toBe(true);
+  });
+
+  it('el adelanto no puede superar el total y necesita cómo se recibió', () => {
+    const { comp } = crear();
+    comp.elegirTipo('venta');
+    comp.datosVenta.adelantoMonto = 1000.01;
+    comp.datosVenta.adelantoMetodo = 'EFECTIVO';
+    expect(comp.faltantes).toEqual(['un monto recibido que no supere el total']);
+    comp.datosVenta.adelantoMonto = 100;
+    comp.datosVenta.adelantoMetodo = null;
+    expect(comp.faltantes).toEqual(['cómo se recibió el pago']);
+  });
+
+  it('en una venta no salen validez ni contacto de aprobación', () => {
+    const { comp } = crear();
+    comp.condiciones = { mostrarValidez: true, diasValidez: '15', mostrarCuentas: false, mostrarContacto: true, mostrarObservaciones: false };
+    expect(comp.condicionesActivas.map((c: any) => c.texto)).toEqual(['Validez 15 días', 'Contacto de aprobación']);
+    comp.elegirTipo('venta');
+    expect(comp.condicionesActivas).toEqual([]);
+  });
+
+  it('si el servidor rechaza la venta, muestra su motivo y no borra nada', async () => {
+    const { comp, supabase, mensajes, router } = crear();
+    supabase.crearVenta.mockRejectedValueOnce({ code: '22023', message: 'La fecha de la venta no puede ser futura.' });
+    comp.elegirTipo('venta');
+    await comp.guardar();
+
+    expect(mensajes.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error', detail: 'La fecha de la venta no puede ser futura.' }));
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(comp.clienteNombre).toBe('CLIENTE SAC');
+    expect(comp.guardando).toBe(false);
+  });
+
+  describe('ajuste', () => {
+    function conAjuste() {
+      const creado = crear();
+      sessionStorage.setItem(CLAVE_BORRADOR_COTIZADOR, JSON.stringify({
+        modo: 'ajuste', origen_id: 'v1', folio_origen: 'VDC-V-00000001',
+        cliente_nombre: 'CLIENTE SAC', cliente_documento: '20123456789',
+        modo_igv: 'sin_igv', descuento: 0, pagado: 300,
+        datos_venta: { fecha: '2026-10-01', condicionPago: 'CREDITO', diasCredito: 30 },
+        items: [{ id: 'linea-1', sku: 'PRD-0001', descripcion: 'Arena', unidad: 'm3', cantidad: 10, precio_unitario: 100, subtotal: 1000 }]
+      }));
+      creado.comp['cargarBorradorSiExiste']();
+      return creado;
+    }
+
+    it('abre como venta, sin selector, con el folio en el título y lo pagado', () => {
+      const { comp } = conAjuste();
+      expect(comp.esVenta).toBe(true);
+      expect(comp.puedeElegirTipo).toBe(false);
+      expect(comp.tituloDocumento).toBe('Ajustar VDC-V-00000001');
+      expect(comp.textoGuardar).toBe('Guardar ajuste');
+      expect(comp.pagadoDeLaVenta).toBe(300);
+      expect(comp.datosVenta).toMatchObject({ fecha: '2026-10-01', condicionPago: 'CREDITO', diasCredito: 30 });
+    });
+
+    it('pide motivo y no deja bajar de lo pagado', () => {
+      const { comp } = conAjuste();
+      expect(comp.faltantes).toEqual(['el motivo del ajuste']);
+      comp.motivoAjuste = 'Pidió menos';
+      comp.carrito[0].cantidad = 2;
+      comp.recalcularItem(comp.carrito[0]);
+      expect(comp.faltantes).toEqual(['un total de al menos S/ 300.00, lo que ya se pagó']);
+    });
+
+    it('conserva el id de las líneas que siguen y vuelve a la venta', async () => {
+      const { comp, supabase, router } = conAjuste();
+      comp.motivoAjuste = 'Pidió 5 m³ más';
+      comp.carrito[0].cantidad = 15;
+      comp.recalcularItem(comp.carrito[0]);
+      comp.agregarFila();
+      Object.assign(comp.carrito[1], { descripcion: 'Flete', cantidad: 1, precio_unitario: 50 });
+
+      await comp.guardar();
+
+      const enviado = supabase.ajustarVenta.mock.calls[0][0];
+      expect(enviado.ventaId).toBe('v1');
+      expect(enviado.motivo).toBe('Pidió 5 m³ más');
+      expect(enviado.items.map((i: any) => i.id)).toEqual(['linea-1', null]);
+      expect(enviado.datosVenta.fecha).toBe('2026-10-01');
+      expect(router.navigate).toHaveBeenCalledWith(['/ventas'], { queryParams: { venta: 'v1' } });
+      // El formulario queda limpio para lo siguiente, y como cotización
+      expect(comp.esVenta).toBe(false);
+      expect(comp.borradorModo).toBeNull();
+      expect(comp.pagadoDeLaVenta).toBe(0);
+    });
+  });
+
+  it('lo que se estaba armando se recupera con su tipo y sus datos de venta', () => {
+    const { comp } = crear();
+    comp.elegirTipo('venta');
+    comp.datosVenta.diasCredito = 45;
+    comp.datosVenta.condicionPago = 'CREDITO';
+    comp['guardarEnCurso']();
+
+    comp.tipoRegistro = 'cotizacion';
+    comp.datosVenta = {};
+    expect(comp['recuperarEnCurso']()).toBe(true);
+    expect(comp.tipoRegistro).toBe('venta');
+    expect(comp.datosVenta).toMatchObject({ condicionPago: 'CREDITO', diasCredito: 45 });
+  });
+});

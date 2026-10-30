@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { avisoAnulada, condicionesPdf, lineasCondicionesComerciales, lineasTotales } from './pdf.service';
+import { avisoAnulada, condicionesPdf, filasCobroVenta, lineasCondicionesComerciales, lineasDeVenta, lineasTotales } from './pdf.service';
 
 describe('lineasCondicionesComerciales', () => {
   const condiciones = { mostrarValidez: true, diasValidez: 30, mostrarCuentas: true, mostrarContacto: false };
@@ -93,5 +93,31 @@ describe('condicionesPdf', () => {
 
   it('los ajustes explícitos ganan sobre lo guardado', () => {
     expect(condicionesPdf({ condiciones: { mostrarValidez: true } }, null, { mostrarValidez: false }).mostrarValidez).toBe(false);
+  });
+});
+
+describe('orden de venta', () => {
+  const venta: any = { estado: 'ACTIVA', condicion_pago: 'CREDITO', dias_credito: 30, vence_el: '2026-11-30', pagado: 300, saldo: 880 };
+
+  it('dice cómo se paga, de qué cotización viene y su comprobante', () => {
+    expect(lineasDeVenta(venta)).toEqual([['Condición de pago', 'Crédito a 30 días, vence el 30/11/2026']]);
+    expect(lineasDeVenta({ ...venta, condicion_pago: 'CONTADO', folio_cotizacion: 'WM-00000021', comprobante_tipo: 'FACTURA', comprobante_numero: 'F001-9' })).toEqual([
+      ['Condición de pago', 'Contado'], ['Cotización', 'WM-00000021'], ['Comprobante', 'Factura F001-9']
+    ]);
+  });
+
+  it('las líneas de la venta van después de los impuestos', () => {
+    const lineas = lineasCondicionesComerciales(
+      { igv: 0, incluye_igv: false, vendedor_nombre: 'Ana Quispe' },
+      { mostrarValidez: false, diasValidez: 15, mostrarCuentas: true, mostrarContacto: false },
+      [['Condición de pago', 'Contado']]
+    );
+    expect(lineas.map(l => l[0])).toEqual(['Impuestos', 'Condición de pago', 'Vendedor']);
+  });
+
+  it('bajo el total van lo pagado y el saldo; sin pagos no hace falta', () => {
+    expect(filasCobroVenta(venta)).toEqual([['Pagado', 300], ['Saldo', 880]]);
+    expect(filasCobroVenta({ ...venta, pagado: 0, saldo: 1180 })).toEqual([]);
+    expect(filasCobroVenta({ ...venta, estado: 'ANULADA' })).toEqual([]);
   });
 });

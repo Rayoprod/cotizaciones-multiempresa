@@ -450,6 +450,92 @@ p-toast .p-toast-message *,
   animation: fadeInSoft 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.etiqueta-campo {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--slate-700);
+  margin-bottom: 0.375rem;
+}
+
+.ayuda {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--slate-500);
+}
+
+.enlace {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--acento);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover { text-decoration: underline; }
+  &:disabled { color: var(--slate-500); cursor: default; text-decoration: none; }
+}
+
+.enlace-discreto {
+  color: var(--slate-600);
+  font-weight: 500;
+}
+
+.enlace-peligro { color: var(--red-700); }
+
+/* Selector de pocas opciones: Contado o Crédito, Cotización o Venta */
+.segmentos {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 0.1875rem;
+  border-radius: 0.625rem;
+  background: var(--slate-100);
+}
+
+.segmento {
+  flex: 1 1 auto;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.75rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--slate-700);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { color: var(--slate-900); }
+  &:disabled { cursor: default; }
+}
+
+.segmento-activo,
+.segmento-activo:hover:not(:disabled) {
+  background: #ffffff;
+  color: var(--acento);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+/* Lista nativa con el aspecto de un campo de texto */
+.campo-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  font-size: 1rem;
+  color: var(--slate-800);
+  border: 1px solid #d1d5db;
+  border-radius: 0.625rem;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  appearance: none;
+  cursor: pointer;
+
+  &:focus { outline: none; border-color: var(--acento); box-shadow: 0 0 0 3px var(--acento-anillo); }
+}
+
 /* Dialog Polish & Mobile Adaptability */
 .p-dialog {
   border-radius: 1.25rem !important;

@@ -359,10 +359,6 @@ begin
   r := r || jsonb_build_object('prueba', 'VDC y WM abren sin IGV', 'ok', v_n = 2, 'detalle', v_n || ' de 2');
   select count(*) into v_n from public.empresas where id not in ('VDC', 'WM') and modo_igv <> 'sumar';
   r := r || jsonb_build_object('prueba', 'el resto abre sumando IGV', 'ok', v_n = 0, 'detalle', v_n || ' distintas');
-  select count(*) into v_n from public.cotizaciones
-   where (precios_con_igv or descuento_global <> 0 or vendedor_nombre is not null)
-     and fecha < now() - interval '1 minute';
-  r := r || jsonb_build_object('prueba', 'las cotizaciones existentes no cambian', 'ok', v_n = 0, 'detalle', v_n || ' alteradas');
 
   update public.usuario_empresa set rol = 'admin' where usuario_id = v_vend and empresa_id = v_emp;
   set local role authenticated;

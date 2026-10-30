@@ -22,18 +22,25 @@ import { SessionContextService } from '../../services/session-context.service';
 import {
   extraerNombreClienteTexto, extraerDocumentoClienteTexto,
   calcularTotales, redondear2, CLAVE_BORRADOR_COTIZADOR, MODOS_IGV, UNIDADES_COMUNES,
-  IBorradorCotizador, INuevaCotizacion, ModoIgv, siguienteSkuProducto, unidadMasUsada
+  IBorradorCotizador, IDatosVenta, INuevaCotizacion, ModoIgv, siguienteSkuProducto, unidadMasUsada,
+  datosVentaIniciales, esDocumentoValido, faltantesDatosVenta, soles
 } from '../../models';
+import { DatosVentaComponent } from '../ventas/datos-venta';
 
 /** sessionStorage: la cotización que se está armando (sobrevive a una recarga). */
 const CLAVE_EN_CURSO = 'cotizador-en-curso';
 
-/** Lo que se guarda de la cotización en curso, para no perderla al recargar. */
-interface IEnCurso extends Omit<IBorradorCotizador, 'modo'> {
+type TipoRegistro = 'cotizacion' | 'venta';
+
+/** Lo que se guarda de lo que se está armando, para no perderlo al recargar. */
+interface IEnCurso extends Omit<IBorradorCotizador, 'modo' | 'datos_venta'> {
   modo: IBorradorCotizador['modo'] | null;
   guardar_cliente: boolean;
   documento_origen: string | null;
   origen_cliente: 'cartera' | 'sunat' | 'manual' | null;
+  tipo_registro: TipoRegistro;
+  datos_venta: Partial<IDatosVenta>;
+  motivo_ajuste: string;
 }
 
 @Component({
@@ -43,7 +50,7 @@ interface IEnCurso extends Omit<IBorradorCotizador, 'modo'> {
     CommonModule, FormsModule, RouterModule,
     ButtonModule, InputNumberModule, InputTextModule, InputSwitchModule,
     SelectButtonModule, RadioButtonModule, AutoCompleteModule, TooltipModule, InputTextareaModule,
-    ProgressSpinnerModule, ConfirmDialogModule, CheckboxModule
+    ProgressSpinnerModule, ConfirmDialogModule, CheckboxModule, DatosVentaComponent
   ],
   templateUrl: './cotizador.html',
   styleUrl: './cotizador.scss',
@@ -53,6 +60,18 @@ export class CotizadorComponent implements OnInit, OnDestroy {
 
   // ── Estado de empresa ─────────────────────────────────────────────────────
   empresaActiva: any = null;
+
+  // ── Cotización o venta directa ────────────────────────────────────────────
+  // Cliente y líneas son los mismos; la venta pide además fecha, pago y entrega.
+  readonly tiposRegistro: Array<{ value: TipoRegistro; label: string }> = [
+    { value: 'cotizacion', label: 'Cotización' },
+    { value: 'venta', label: 'Venta directa' }
+  ];
+  tipoRegistro: TipoRegistro = 'cotizacion';
+  datosVenta: IDatosVenta = datosVentaIniciales();
+  /** Solo al ajustar una venta. */
+  motivoAjuste = '';
+  pagadoDeLaVenta = 0;
 
   // ── Condiciones PDF ───────────────────────────────────────────────────────
   // Se guardan con la cotización (salvo mostrarObservaciones, que solo
@@ -117,8 +136,8 @@ export class CotizadorComponent implements OnInit, OnDestroy {
   igvTotal: number = 0;
   totalFinal: number = 0;
 
-  // ── Revisión / duplicado abierto desde el historial ──────────────────────
-  borradorModo: 'revision' | 'duplicar' | null = null;
+  // ── Revisión / duplicado abierto desde el historial, o ajuste de una venta ─
+  borradorModo: IBorradorCotizador['modo'] | null = null;
   borradorOrigenId: string | null = null;
   borradorFolioPadre: string | null = null;
   /** RUC/DNI de la cotización que se revisa, para avisar si cambia de cliente. */
@@ -128,7 +147,7 @@ export class CotizadorComponent implements OnInit, OnDestroy {
 
   // ── Estado de la vista ────────────────────────────────────────────────────
   cargando = true;
-  generandoPDF = false;
+  guardando = false;
   buscandoDocumento = false;
   /** Tras intentar guardar con datos incompletos se muestra qué falta. */
   mostrarFaltantes = false;
@@ -163,6 +182,9 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     this.modoIgv = this.modoIgvDeLaEmpresa;
 
     const borradorCargado = this.cargarBorradorSiExiste() || this.recuperarEnCurso();
+    if (this.puedeElegirTipo && this.router.parseUrl(this.router.url).queryParams['tipo'] === 'venta') {
+      this.tipoRegistro = 'venta';
+    }
     if (!borradorCargado && this.carrito.length === 0) {
       this.agregarFila();
     }
@@ -201,11 +223,25 @@ export class CotizadorComponent implements OnInit, OnDestroy {
 
   get puedeGenerar(): boolean {
     const empresa = this.empresaActiva || this.session.empresaActiva();
-    return !!this.clienteNombreTexto &&
-      !!this.clienteDocumentoTexto &&
-      this.tieneItemsValidos &&
-      this.descuentoValido &&
-      !!empresa?.id;
+    return this.faltantes.length === 0 && !!empresa?.id;
+  }
+
+  get esVenta(): boolean {
+    return this.tipoRegistro === 'venta';
+  }
+
+  /** Una revisión sigue siendo cotización y un ajuste sigue siendo venta. */
+  get puedeElegirTipo(): boolean {
+    return this.borradorModo !== 'revision' && this.borradorModo !== 'ajuste';
+  }
+
+  get esAjuste(): boolean {
+    return this.borradorModo === 'ajuste';
+  }
+
+  elegirTipo(tipo: TipoRegistro) {
+    this.tipoRegistro = tipo;
+    this.marcarCambio();
   }
 
   get descuentoValido(): boolean {
@@ -223,6 +259,14 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     if (!this.clienteNombreTexto || !this.clienteDocumentoTexto) falta.push('el cliente (nombre y RUC/DNI)');
     if (!this.tieneItemsValidos) falta.push('al menos un ítem con cantidad y precio');
     if (!this.descuentoValido) falta.push('un descuento que no supere el subtotal');
+    if (this.esVenta) {
+      if (this.clienteDocumentoTexto && !esDocumentoValido(this.clienteDocumentoTexto)) falta.push('un RUC de 11 dígitos o un DNI de 8');
+      falta.push(...faltantesDatosVenta(this.datosVenta, this.totalFinal));
+    }
+    if (this.esAjuste) {
+      if (this.totalFinal < this.pagadoDeLaVenta) falta.push(`un total de al menos ${soles(this.pagadoDeLaVenta)}, lo que ya se pagó`);
+      if (!this.motivoAjuste.trim()) falta.push('el motivo del ajuste');
+    }
     return falta;
   }
 
@@ -601,8 +645,6 @@ export class CotizadorComponent implements OnInit, OnDestroy {
 
   /** Lo que compone el total, en una línea, bajo la cifra de la barra inferior. */
   get detalleTotal(): string {
-    const soles = (monto: number) =>
-      `S/ ${monto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     if (this.totalFinal <= 0 && this.descuentoAplicado <= 0) return '';
     const partes: string[] = [];
     if (this.modoIgv === 'sumar' || this.descuentoAplicado > 0) partes.push(`Subtotal ${soles(this.subtotalGeneral)}`);
@@ -613,9 +655,24 @@ export class CotizadorComponent implements OnInit, OnDestroy {
   }
 
   get tituloDocumento(): string {
+    if (this.esAjuste) return `Ajustar ${this.borradorFolioPadre}`;
     if (this.borradorModo === 'revision') return `Revisión de ${this.borradorFolioPadre}`;
     if (this.borradorModo === 'duplicar' && this.borradorFolioPadre) return `Copia de ${this.borradorFolioPadre}`;
-    return 'Nueva cotización';
+    return this.esVenta ? 'Nueva venta' : 'Nueva cotización';
+  }
+
+  get textoGuardar(): string {
+    if (this.esAjuste) return 'Guardar ajuste';
+    return this.esVenta ? 'Registrar venta' : 'Guardar y descargar PDF';
+  }
+
+  get textoGuardarCorto(): string {
+    if (this.esAjuste) return 'Guardar';
+    return this.esVenta ? 'Registrar' : 'Guardar PDF';
+  }
+
+  get iconoGuardar(): string {
+    return this.esVenta ? 'pi pi-check' : 'pi pi-file-pdf';
   }
 
   get filasTotales() {
@@ -638,24 +695,80 @@ export class CotizadorComponent implements OnInit, OnDestroy {
   get condicionesActivas(): Array<{ icono: string; texto: string }> {
     const activas: Array<{ icono: string; texto: string }> = [];
     if (this.lugarSeleccionado) activas.push({ icono: 'pi pi-map-marker', texto: this.lugarSeleccionado });
-    if (this.condiciones.mostrarValidez) activas.push({ icono: 'pi pi-clock', texto: `Validez ${this.condiciones.diasValidez} días` });
+    if (this.condiciones.mostrarValidez && !this.esVenta) activas.push({ icono: 'pi pi-clock', texto: `Validez ${this.condiciones.diasValidez} días` });
     if (this.condiciones.mostrarCuentas && this.empresaActiva?.mostrar_cuentas !== false) {
       activas.push({ icono: 'pi pi-building', texto: 'Cuentas bancarias' });
     }
-    if (this.condiciones.mostrarContacto) activas.push({ icono: 'pi pi-user', texto: 'Contacto de aprobación' });
+    if (this.condiciones.mostrarContacto && !this.esVenta) activas.push({ icono: 'pi pi-user', texto: 'Contacto de aprobación' });
     if (this.condiciones.mostrarObservaciones) activas.push({ icono: 'pi pi-comment', texto: 'Observaciones' });
     return activas;
   }
 
-  // ── Guardar y generar PDF ─────────────────────────────────────────────────
+  // ── Guardar ───────────────────────────────────────────────────────────────
 
-  async generarPDF() {
-    if (this.generandoPDF) return;
+  guardar() {
+    if (this.esAjuste) return this.guardarAjuste();
+    return this.esVenta ? this.registrarVenta() : this.generarPDF();
+  }
+
+  /** Lo común a guardar cualquier documento: que no falte nada y que haya conexión. */
+  private listoParaGuardar(): boolean {
+    if (this.guardando) return false;
     if (!this.puedeGenerar) {
       this.mostrarFaltantes = true;
       this.cdr.markForCheck();
-      return;
+      return false;
     }
+    if (!navigator.onLine) {
+      this.messageService.add({
+        severity: 'error', summary: 'Sin conexión', detail: 'Conéctate a internet para guardar.'
+      });
+      return false;
+    }
+    this.empresaActiva = this.empresaActiva || this.session.empresaActiva();
+    return true;
+  }
+
+  private get clienteParaGuardar(): INuevaCotizacion['cliente'] {
+    return {
+      nombre: this.clienteNombreTexto,
+      documento: this.clienteDocumentoTexto,
+      telefono: this.clienteTelefono?.trim() || null,
+      direccion: this.clienteDireccion?.trim() || null,
+      correo: this.clienteCorreo?.trim() || null
+    };
+  }
+
+  private lineaParaGuardar(item: any) {
+    return {
+      sku: item.sku || null,
+      descripcion: String(item.descripcion).trim(),
+      unidad: String(item.unidad ?? '').trim() || this.unidadPorDefecto,
+      cantidad: Number(item.cantidad),
+      precio_unitario: Number(item.precio_unitario)
+    };
+  }
+
+  private get lineasValidas(): any[] {
+    return this.carrito.filter(item => this.esItemValido(item));
+  }
+
+  private get observacionesParaGuardar(): string | null {
+    return this.condiciones.mostrarObservaciones ? (this.clienteObservaciones?.trim() || null) : null;
+  }
+
+  /** Los rechazos de las funciones de Postgres ya vienen en español. */
+  private avisarRechazo(resumen: string, error: any, siNoHayMotivo: string) {
+    console.error(resumen, error);
+    const esDelServidor = ['22023', 'P0001', '42501'].includes(error?.code) && error?.message;
+    this.messageService.add({
+      severity: 'error', summary: resumen, life: 8000,
+      detail: esDelServidor ? error.message : siNoHayMotivo
+    });
+  }
+
+  async generarPDF() {
+    if (!this.listoParaGuardar()) return;
 
     const diasValidez = Number(this.condiciones.diasValidez);
     if (this.condiciones.mostrarValidez && !(Number.isInteger(diasValidez) && diasValidez >= 1 && diasValidez <= 365)) {
@@ -666,44 +779,14 @@ export class CotizadorComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!navigator.onLine) {
-      this.messageService.add({
-        severity: 'error', summary: 'Sin conexión', detail: 'Conéctate a internet para guardar la cotización.'
-      });
-      return;
-    }
-
-    const empresa = this.empresaActiva || this.session.empresaActiva();
-    if (!empresa?.id) {
-      this.messageService.add({
-        severity: 'error', summary: 'Empresa no seleccionada', detail: 'Por favor selecciona una empresa activa.'
-      });
-      return;
-    }
-    this.empresaActiva = empresa;
-
     const nueva: INuevaCotizacion = {
-      empresaId: empresa.id,
-      cliente: {
-        nombre: this.clienteNombreTexto,
-        documento: this.clienteDocumentoTexto,
-        telefono: this.clienteTelefono?.trim() || null,
-        direccion: this.clienteDireccion?.trim() || null,
-        correo: this.clienteCorreo?.trim() || null
-      },
-      items: this.carrito
-        .filter(item => this.esItemValido(item))
-        .map(item => ({
-          sku: item.sku || null,
-          descripcion: String(item.descripcion).trim(),
-          unidad: String(item.unidad ?? '').trim() || this.unidadPorDefecto,
-          cantidad: Number(item.cantidad),
-          precio_unitario: Number(item.precio_unitario)
-        })),
+      empresaId: this.empresaActiva.id,
+      cliente: this.clienteParaGuardar,
+      items: this.lineasValidas.map(item => this.lineaParaGuardar(item)),
       modoIgv: this.modoIgv,
       descuento: this.descuentoAplicado,
       lugarEntrega: this.lugarSeleccionado,
-      observaciones: this.condiciones.mostrarObservaciones ? (this.clienteObservaciones?.trim() || null) : null,
+      observaciones: this.observacionesParaGuardar,
       condiciones: {
         mostrarValidez: this.condiciones.mostrarValidez,
         diasValidez: this.condiciones.mostrarValidez ? diasValidez : 15,
@@ -716,23 +799,15 @@ export class CotizadorComponent implements OnInit, OnDestroy {
       guardarCliente: this.guardarClienteEnCartera
     };
 
-    this.generandoPDF = true;
+    this.guardando = true;
     this.cdr.markForCheck();
 
     let guardada;
     try {
       guardada = await this.supabaseSvc.crearCotizacion(nueva);
     } catch (error: any) {
-      console.error('Error al guardar la cotización:', error);
-      // Los errores de validación de crear_cotizacion() ya vienen en español.
-      const esDelServidor = ['22023', 'P0001', '42501'].includes(error?.code) && error?.message;
-      this.messageService.add({
-        severity: 'error',
-        summary: 'No se guardó la cotización',
-        detail: esDelServidor ? error.message : 'Revisa tu conexión e inténtalo de nuevo. No se generó ningún folio.',
-        life: 8000
-      });
-      this.generandoPDF = false;
+      this.avisarRechazo('No se guardó la cotización', error, 'Revisa tu conexión e inténtalo de nuevo. No se generó ningún folio.');
+      this.guardando = false;
       this.cdr.markForCheck();
       return;
     }
@@ -747,25 +822,86 @@ export class CotizadorComponent implements OnInit, OnDestroy {
       this.messageService.add({
         severity: 'warn',
         summary: `Cotización ${guardada.folio} guardada`,
-        detail: 'No se pudo generar el PDF. Descárgalo desde el Historial.',
+        detail: 'No se pudo generar el PDF. Descárgalo desde Cotizaciones.',
         life: 8000
       });
     }
 
     if (nueva.guardarCliente) {
-      this.supabaseSvc.getClientes(empresa.id)
+      this.supabaseSvc.getClientes(this.empresaActiva.id)
         .then(clientes => { this.clientesBD = clientes || []; })
         .catch(() => { /* la lista se recarga al volver a entrar */ });
     }
 
     this.resetearFormulario();
-    this.generandoPDF = false;
+    this.guardando = false;
     this.cdr.markForCheck();
+  }
+
+  async registrarVenta() {
+    if (!this.listoParaGuardar()) return;
+
+    this.guardando = true;
+    this.cdr.markForCheck();
+    try {
+      const venta = await this.supabaseSvc.crearVenta({
+        empresaId: this.empresaActiva.id,
+        cliente: this.clienteParaGuardar,
+        items: this.lineasValidas.map(item => this.lineaParaGuardar(item)),
+        modoIgv: this.modoIgv,
+        descuento: this.descuentoAplicado,
+        lugarEntrega: this.lugarSeleccionado,
+        observaciones: this.observacionesParaGuardar,
+        condiciones: { mostrarCuentas: this.condiciones.mostrarCuentas },
+        datosVenta: this.datosVenta,
+        guardarCliente: this.guardarClienteEnCartera
+      });
+      this.resetearFormulario();
+      this.messageService.add({ severity: 'success', summary: `Venta ${venta.folio} registrada` });
+      this.router.navigate(['/ventas'], { queryParams: { venta: venta.id } });
+    } catch (error: any) {
+      this.avisarRechazo('No se registró la venta', error, 'Revisa tu conexión e inténtalo de nuevo. No se generó ningún folio.');
+    } finally {
+      this.guardando = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  async guardarAjuste() {
+    if (!this.listoParaGuardar() || !this.borradorOrigenId) return;
+
+    this.guardando = true;
+    this.cdr.markForCheck();
+    try {
+      const venta = await this.supabaseSvc.ajustarVenta({
+        ventaId: this.borradorOrigenId,
+        // Las líneas que siguen conservan su id: las salidas se ligarán a ellas.
+        items: this.lineasValidas.map(item => ({ id: item.id ?? null, ...this.lineaParaGuardar(item) })),
+        modoIgv: this.modoIgv,
+        descuento: this.descuentoAplicado,
+        lugarEntrega: this.lugarSeleccionado,
+        observaciones: this.observacionesParaGuardar,
+        datosVenta: this.datosVenta,
+        motivo: this.motivoAjuste.trim()
+      });
+      this.resetearFormulario();
+      this.messageService.add({ severity: 'success', summary: `Venta ${venta.folio} ajustada` });
+      this.router.navigate(['/ventas'], { queryParams: { venta: venta.id } });
+    } catch (error: any) {
+      this.avisarRechazo('No se guardó el ajuste', error, 'Revisa tu conexión e inténtalo de nuevo. La venta no cambió.');
+    } finally {
+      this.guardando = false;
+      this.cdr.markForCheck();
+    }
   }
 
   private resetearFormulario() {
     sessionStorage.removeItem(CLAVE_BORRADOR_COTIZADOR);
     this.limpiarEnCurso();
+    if (this.esAjuste) this.tipoRegistro = 'cotizacion';
+    this.datosVenta              = datosVentaIniciales();
+    this.motivoAjuste            = '';
+    this.pagadoDeLaVenta         = 0;
     this.busquedaCliente         = '';
     this.clienteNombre           = '';
     this.clienteDocumento        = '';
@@ -831,7 +967,11 @@ export class CotizadorComponent implements OnInit, OnDestroy {
       origen_cliente: this.origenCliente,
       condiciones: { ...this.condiciones, diasValidez: Number(this.condiciones.diasValidez) || 15 },
       items: this.carrito,
-      guardar_cliente: this.guardarClienteEnCartera
+      guardar_cliente: this.guardarClienteEnCartera,
+      tipo_registro: this.tipoRegistro,
+      datos_venta: this.datosVenta,
+      motivo_ajuste: this.motivoAjuste,
+      pagado: this.pagadoDeLaVenta
     };
     try {
       sessionStorage.setItem(this.claveEnCurso, JSON.stringify(enCurso));
@@ -913,6 +1053,7 @@ export class CotizadorComponent implements OnInit, OnDestroy {
 
     if (b.items?.length) {
       this.carrito = b.items.map(item => ({
+        ...(item.id ? { id: item.id } : {}),
         // Los códigos VAR-/MAQ- eran aleatorios, no de un producto real.
         sku:             item.sku && !/^(VAR|MAQ)-/.test(item.sku) ? item.sku : null,
         descripcion:     item.descripcion     || '',
@@ -927,6 +1068,10 @@ export class CotizadorComponent implements OnInit, OnDestroy {
     this.borradorOrigenId   = b.origen_id ?? null;
     this.borradorFolioPadre = b.folio_origen ?? null;
     this.documentoOrigen    = b.documento_origen ?? (b.modo === 'revision' ? b.cliente_documento ?? null : null);
+    this.tipoRegistro       = b.modo === 'ajuste' ? 'venta' : b.tipo_registro ?? 'cotizacion';
+    this.motivoAjuste       = b.motivo_ajuste ?? '';
+    this.pagadoDeLaVenta    = b.pagado ?? 0;
+    if (b.datos_venta) this.datosVenta = { ...datosVentaIniciales(), ...b.datos_venta };
 
     this.recalcularTodo();
   }
@@ -936,7 +1081,7 @@ export class CotizadorComponent implements OnInit, OnDestroy {
       this.confirmationSvc.confirm({
         message: this.borradorModo
           ? `Se descarta lo que armaste y ${this.borradorFolioPadre} no cambia.`
-          : 'Se borrarán el cliente y los ítems de esta cotización.',
+          : 'Se borrarán el cliente y los ítems.',
         header: '¿Empezar de nuevo?',
         icon: 'pi pi-refresh',
         acceptLabel: 'Sí, empezar de nuevo',
