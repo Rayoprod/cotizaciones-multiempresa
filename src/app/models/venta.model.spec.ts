@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
-  IVenta, adelantoDe, cobradoEnElMes, datosVentaIniciales, describirCambio, deudasPorCliente, diasDeAtraso,
-  esDocumentoValido, estadoCobro, estaVencidaVenta, faltantesDatosVenta, fechaIso, textoComprobante, textoCondicionPago
+  IVenta, IVentaComprobante, adelantoDe, cobradoEnElMes, cobradoSinFacturar, comprobanteDesdeArchivo, datosVentaIniciales,
+  describirCambio, deudasPorCliente, diasDeAtraso, esDocumentoValido, estadoCobro, estaVencidaVenta, facturadoDe, faltaFacturar,
+  faltantesDatosVenta, fechaIso, montoSugeridoFactura, resumenComprobantes, resumenFacturado, textoComprobantes, textoCondicionPago
 } from './venta.model';
 
 const hoy = new Date(2026, 9, 30, 15, 30);
@@ -11,7 +12,7 @@ function venta(extra: Partial<IVenta> = {}): IVenta {
     id: 'v1', folio: 'WM-V-00000001', fecha: '2026-10-01', empresa_id: 'WM', estado: 'ACTIVA', estado_entrega: 'PENDIENTE',
     cliente_nombre: 'CLIENTE SAC', cliente_documento: '20123456789', subtotal: 100, descuento_global: 0, igv: 18, total: 118,
     incluye_igv: true, precios_con_igv: false, pagado: 0, saldo: 118, condicion_pago: 'CONTADO',
-    venta_items: [], pagos: [], ...extra
+    venta_items: [], pagos: [], venta_comprobantes: [], ...extra
   };
 }
 
@@ -92,12 +93,6 @@ describe('textos', () => {
       .toBe('Crédito a 30 días, vence el 30/11/2026');
   });
 
-  it('el comprobante dice si es factura o boleta', () => {
-    expect(textoComprobante(venta())).toBeNull();
-    expect(textoComprobante(venta({ comprobante_tipo: 'FACTURA', comprobante_numero: 'F001-1' }))).toBe('Factura F001-1');
-    expect(textoComprobante(venta({ comprobante_tipo: 'BOLETA', comprobante_numero: 'B001-9' }))).toBe('Boleta B001-9');
-  });
-
   it('el historial cuenta qué cambió', () => {
     expect(describirCambio({ tipo: 'AJUSTE', detalle: { antes: { total: 1180 }, despues: { total: 2200 } } }))
       .toBe('Ajuste: total de S/ 1,180.00 a S/ 2,200.00');
@@ -107,6 +102,80 @@ describe('textos', () => {
     expect(describirCambio({ tipo: 'COMPROBANTE', detalle: { despues: { tipo: 'FACTURA', numero: 'F001-1' } } })).toBe('Comprobante: Factura F001-1');
     expect(describirCambio({ tipo: 'COMPROBANTE', detalle: { despues: { tipo: null, numero: null } } })).toBe('Se quitó el comprobante');
     expect(describirCambio({ tipo: 'PAGO_ANULADO', detalle: { monto: 400 } })).toBe('Pago de S/ 400.00 anulado');
+    expect(describirCambio({ tipo: 'COMPROBANTE_ANULADO', detalle: { tipo: 'BOLETA', numero: 'B001-9', monto: 40 } })).toBe('Boleta B001-9 anulada');
+  });
+});
+
+describe('facturas de una venta', () => {
+  const comprobante = (monto: number, extra: Partial<IVentaComprobante> = {}): IVentaComprobante => ({
+    id: 'c', venta_id: 'v1', empresa_id: 'WM', tipo: 'FACTURA', numero: 'F001-1', fecha: '2026-10-01', monto, registrado_en: '', anulado: false, ...extra
+  });
+  // Total 28,000 con IGV: adelanto de 10,000 cobrado y aún sin facturar
+  const base = { total: 28000, pagado: 10000, saldo: 18000 };
+
+  it('lo facturado suma lo vigente, no lo anulado', () => {
+    expect(facturadoDe(venta())).toBe(0);
+    expect(facturadoDe(venta({ venta_comprobantes: [comprobante(10000), comprobante(500.5), comprobante(999, { anulado: true })] }))).toBe(10500.5);
+  });
+
+  it('una factura por el adelanto: falta el resto y ya no hay cobrado sin facturar', () => {
+    const v = venta({ ...base, venta_comprobantes: [comprobante(10000)] });
+    expect(faltaFacturar(v)).toBe(18000);
+    expect(cobradoSinFacturar(v)).toBe(0);
+    expect(resumenFacturado(v)).toBe('Facturado S/ 10,000.00 de S/ 28,000.00. Falta S/ 18,000.00');
+  });
+
+  it('sin facturas avisa lo cobrado sin facturar y lo que falta', () => {
+    const v = venta(base);
+    expect(cobradoSinFacturar(v)).toBe(10000);
+    expect(resumenFacturado(v)).toBe('Falta facturar S/ 28,000.00');
+  });
+
+  it('propone facturar primero lo cobrado y, si no hay, lo que falta', () => {
+    expect(montoSugeridoFactura(venta(base))).toBe(10000);
+    expect(montoSugeridoFactura(venta({ ...base, venta_comprobantes: [comprobante(10000)] }))).toBe(18000);
+    expect(montoSugeridoFactura(venta({ ...base, venta_comprobantes: [comprobante(28000)] }))).toBeNull();
+  });
+
+  it('completa o de más lo dice, sin marcarlo como error', () => {
+    expect(resumenFacturado(venta({ ...base, venta_comprobantes: [comprobante(28000)] }))).toBe('Facturado S/ 28,000.00: completo');
+    const deMas = venta({ ...base, venta_comprobantes: [comprobante(28000), comprobante(1000)] });
+    expect(faltaFacturar(deMas)).toBe(0);
+    expect(resumenFacturado(deMas)).toBe('Facturado S/ 29,000.00: S/ 1,000.00 más que el total');
+  });
+
+  it('en una venta sin IGV no se calcula lo que falta: la factura puede llevarlo encima', () => {
+    const sinIgv = venta({ ...base, incluye_igv: false });
+    expect(faltaFacturar(sinIgv)).toBeNull();
+    expect(cobradoSinFacturar(sinIgv)).toBeNull();
+    expect(montoSugeridoFactura(sinIgv)).toBeNull();
+    expect(resumenFacturado(sinIgv)).toBeNull();
+    expect(resumenFacturado({ ...sinIgv, venta_comprobantes: [comprobante(11800)] })).toBe('Facturado S/ 11,800.00');
+  });
+
+  it('una venta anulada ya no tiene nada por facturar', () => {
+    expect(faltaFacturar(venta({ ...base, estado: 'ANULADA' }))).toBeNull();
+    expect(cobradoSinFacturar(venta({ ...base, estado: 'ANULADA' }))).toBeNull();
+  });
+
+  it('una fila muestra el número o cuántos son; el PDF y el CSV, todos', () => {
+    const una = venta({ venta_comprobantes: [comprobante(10), comprobante(5, { numero: 'F001-9', anulado: true })] });
+    expect(resumenComprobantes(venta())).toBeNull();
+    expect(resumenComprobantes(una)).toBe('Factura F001-1');
+    const dos = venta({ venta_comprobantes: [comprobante(10), comprobante(5, { tipo: 'BOLETA', numero: 'B001-2' })] });
+    expect(resumenComprobantes(dos)).toBe('2 comprobantes');
+    expect(textoComprobantes(dos)).toBe('Factura F001-1, Boleta B001-2');
+    expect(textoComprobantes(venta())).toBeNull();
+  });
+
+  it('saca el número del nombre del archivo, si lo trae', () => {
+    expect(comprobanteDesdeArchivo('20512345678-01-F001-00001234.pdf')).toEqual({ tipo: 'FACTURA', numero: 'F001-00001234' });
+    expect(comprobanteDesdeArchivo('20512345678-03-B001-77.pdf')).toEqual({ tipo: 'BOLETA', numero: 'B001-77' });
+    expect(comprobanteDesdeArchivo('Factura F002 123.pdf')).toEqual({ tipo: 'FACTURA', numero: 'F002-123' });
+    expect(comprobanteDesdeArchivo('e001_55.jpg')).toEqual({ tipo: 'FACTURA', numero: 'E001-55' });
+    expect(comprobanteDesdeArchivo('EB01-5.pdf')).toEqual({ tipo: 'BOLETA', numero: 'EB01-5' });
+    expect(comprobanteDesdeArchivo('foto de la factura.jpg')).toBeNull();
+    expect(comprobanteDesdeArchivo('FACT-123.pdf')).toBeNull();
   });
 });
 

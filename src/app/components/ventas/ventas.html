@@ -189,10 +189,10 @@
   </ng-container>
 </div>
 
-<!-- De dónde viene y qué comprobante tiene -->
+<!-- De dónde viene y qué comprobantes tiene -->
 <ng-template #vinculos let-v>
   <p *ngIf="v.folio_cotizacion" class="text-xs text-600 m-0">De {{ v.folio_cotizacion }}</p>
-  <p *ngIf="textoComprobante(v) as comprobante" class="text-xs text-600 m-0">{{ comprobante }}</p>
+  <p *ngIf="resumenComprobantes(v) as comprobantes" class="text-xs text-600 m-0">{{ comprobantes }}</p>
 </ng-template>
 
 <ng-template #vacio>

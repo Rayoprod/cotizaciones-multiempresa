@@ -4,7 +4,7 @@ import { SupabaseService } from './supabase.service';
 import { extraerNombreClienteTexto, extraerDocumentoClienteTexto } from '../models/cliente.model';
 import { modoIgvDe } from '../models/cotizacion.model';
 import { ModoIgv } from '../models/types';
-import { IVenta, textoComprobante, textoCondicionPago } from '../models/venta.model';
+import { IVenta, comprobantesVigentes, textoComprobantes, textoCondicionPago } from '../models/venta.model';
 
 const AVISO_IMPUESTOS: Record<ModoIgv, string> = {
   sumar: 'El total incluye IGV (18%)',
@@ -87,8 +87,8 @@ export function avisoAnulada(
 export function lineasDeVenta(venta: IVenta): Array<[string, string]> {
   const lineas: Array<[string, string]> = [['Condición de pago', textoCondicionPago(venta)]];
   if (venta.folio_cotizacion) lineas.push(['Cotización', venta.folio_cotizacion]);
-  const comprobante = textoComprobante(venta);
-  if (comprobante) lineas.push(['Comprobante', comprobante]);
+  const comprobantes = textoComprobantes(venta);
+  if (comprobantes) lineas.push([comprobantesVigentes(venta).length > 1 ? 'Comprobantes' : 'Comprobante', comprobantes]);
   return lineas;
 }
 

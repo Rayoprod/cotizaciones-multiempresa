@@ -332,7 +332,8 @@ p-toast,
 .p-toast-bottom-right,
 .p-toast-bottom-left,
 .p-toast-bottom-center {
-  z-index: 1100 !important;
+  /* Encima de cualquier ventana (se apilan desde 1101): un error dentro de una debe leerse */
+  z-index: 3000 !important;
   pointer-events: none !important;
 }
 

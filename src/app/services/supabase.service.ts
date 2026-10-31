@@ -3,7 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 import {
   IEmpresa, ICotizacion, ICuentaBancaria, INuevaCotizacion, IProfile,
-  IAsignacionEmpresa, RolGlobal, ICondicionesPdf, IDatosVenta, IVenta, IVentaCambio,
+  IAsignacionEmpresa, RolGlobal, ICondicionesPdf, IDatosVenta, IVenta, IVentaCambio, IVentaComprobante,
   EstadoEntrega, MetodoPago, ModoIgv, TipoComprobante, adelantoDe
 } from '../models';
 
@@ -284,12 +284,15 @@ export class SupabaseService {
   async getVentas(empresaId: string): Promise<IVenta[]> {
     const { data, error } = await this.client
       .from('ventas')
-      .select('*, venta_items(*), pagos(*)')
+      .select('*, venta_items(*), pagos(*), venta_comprobantes(*)')
       .eq('empresa_id', empresaId)
       .order('fecha', { ascending: false })
       .order('registrada_en', { ascending: false })
       .order('orden', { referencedTable: 'venta_items' })
-      .order('registrado_en', { referencedTable: 'pagos' });
+      .order('fecha', { referencedTable: 'pagos' })
+      .order('registrado_en', { referencedTable: 'pagos' })
+      .order('fecha', { referencedTable: 'venta_comprobantes' })
+      .order('registrado_en', { referencedTable: 'venta_comprobantes' });
     if (error) throw error;
     return (data ?? []) as IVenta[];
   }
@@ -403,10 +406,56 @@ export class SupabaseService {
     return data as IVenta;
   }
 
-  /** Sin número, quita el comprobante. */
-  async guardarComprobanteVenta(ventaId: string, tipo: TipoComprobante, numero: string): Promise<IVenta> {
-    const { data, error } = await this.client.rpc('guardar_comprobante_venta', {
-      p_venta_id: ventaId, p_tipo: tipo, p_numero: numero
+  async agregarComprobanteVenta(ventaId: string, comprobante: {
+    tipo: TipoComprobante;
+    numero: string;
+    monto: number;
+    fecha: string;
+  }): Promise<IVenta> {
+    const { data, error } = await this.client.rpc('agregar_comprobante_venta', {
+      p_venta_id: ventaId,
+      p_tipo: comprobante.tipo,
+      p_numero: comprobante.numero,
+      p_monto: comprobante.monto,
+      p_fecha: comprobante.fecha
+    });
+    if (error) throw error;
+    return data as IVenta;
+  }
+
+  /** Sube el archivo al bucket privado `comprobantes` y devuelve su ruta; falta ligarlo. */
+  async subirArchivoComprobante(
+    comprobante: Pick<IVentaComprobante, 'id' | 'empresa_id' | 'venta_id'>,
+    contenido: Blob,
+    extension: string
+  ): Promise<string> {
+    const ruta = `${comprobante.empresa_id}/${comprobante.venta_id}/${comprobante.id}-${Date.now()}.${extension}`;
+    const { error } = await this.client.storage.from('comprobantes').upload(ruta, contenido, {
+      contentType: contenido.type,
+      upsert: false
+    });
+    if (error) throw error;
+    return ruta;
+  }
+
+  async adjuntarArchivoComprobante(comprobanteId: string, ruta: string, nombre: string): Promise<IVenta> {
+    const { data, error } = await this.client.rpc('adjuntar_archivo_comprobante', {
+      p_comprobante_id: comprobanteId, p_ruta: ruta, p_nombre: nombre
+    });
+    if (error) throw error;
+    return data as IVenta;
+  }
+
+  /** El bucket es privado: se ve con un enlace que dura 5 minutos. */
+  async urlArchivoComprobante(ruta: string): Promise<string> {
+    const { data, error } = await this.client.storage.from('comprobantes').createSignedUrl(ruta, 300);
+    if (error) throw error;
+    return data.signedUrl;
+  }
+
+  async anularComprobanteVenta(comprobanteId: string, motivo: string): Promise<IVenta> {
+    const { data, error } = await this.client.rpc('anular_comprobante_venta', {
+      p_comprobante_id: comprobanteId, p_motivo: motivo
     });
     if (error) throw error;
     return data as IVenta;

@@ -24,6 +24,8 @@ declare
   v_n       int;
   v_estado  text;
   v_sec     int;
+  v_comp    uuid;
+  v_otra    uuid;
 begin
   -- ── Contexto (como postgres) ─────────────────────────────────────────────
   select p.id, ue.empresa_id into v_vend, v_emp
@@ -206,13 +208,109 @@ begin
   exception when others then
     r := r || jsonb_build_object('prueba', 'rechaza un estado de entrega desconocido', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
   end;
-  v := public.guardar_comprobante_venta(v_id, 'FACTURA', ' f001-123 ');
-  r := r || jsonb_build_object('prueba', 'vendedor anota la factura', 'ok', v->>'comprobante_tipo' = 'FACTURA' and v->>'comprobante_numero' = 'F001-123', 'detalle', v->>'comprobante_numero');
+
+  -- Facturas y boletas: una venta admite varias
+  v := public.agregar_comprobante_venta(v_id, 'FACTURA', ' f001-123 ', 300);
+  r := r || jsonb_build_object('prueba', 'vendedor agrega la factura de un adelanto',
+         'ok', jsonb_array_length(v->'venta_comprobantes') = 1 and v->'venta_comprobantes'->0->>'numero' = 'F001-123'
+               and (v->'venta_comprobantes'->0->>'monto')::numeric = 300 and (v->'venta_comprobantes'->0->>'fecha')::date = v_hoy
+               and v->'venta_comprobantes'->0->>'creado_por_nombre' = 'Vendedora Prueba' and not (v->'venta_comprobantes'->0->>'anulado')::boolean,
+         'detalle', v->'venta_comprobantes'->0->>'numero');
+  v_comp := (v->'venta_comprobantes'->0->>'id')::uuid;
+  v := public.agregar_comprobante_venta(v_id, 'BOLETA', 'B001-7', 400, v_hoy - 1);
+  r := r || jsonb_build_object('prueba', 'una venta admite varias, cada una con su fecha',
+         'ok', jsonb_array_length(v->'venta_comprobantes') = 2 and v->'venta_comprobantes'->0->>'numero' = 'B001-7' and (v->'venta_comprobantes'->0->>'fecha')::date = v_hoy - 1,
+         'detalle', jsonb_array_length(v->'venta_comprobantes') || ' comprobantes');
   begin
-    perform public.guardar_comprobante_venta(v_id, 'RECIBO', 'R-1');
+    perform public.agregar_comprobante_venta(v_id, 'FACTURA', 'f001-123', 10);
+    r := r || jsonb_build_object('prueba', 'rechaza repetir un número en la misma venta', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'rechaza repetir un número en la misma venta', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.agregar_comprobante_venta(v_id, 'RECIBO', 'R-1', 10);
     r := r || jsonb_build_object('prueba', 'rechaza un comprobante que no es factura ni boleta', 'ok', false, 'detalle', 'no falló');
   exception when others then
     r := r || jsonb_build_object('prueba', 'rechaza un comprobante que no es factura ni boleta', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.agregar_comprobante_venta(v_id, 'FACTURA', '   ', 10);
+    r := r || jsonb_build_object('prueba', 'rechaza un comprobante sin número', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'rechaza un comprobante sin número', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.agregar_comprobante_venta(v_id, 'FACTURA', 'F001-9', 0);
+    r := r || jsonb_build_object('prueba', 'rechaza un comprobante sin monto', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'rechaza un comprobante sin monto', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.agregar_comprobante_venta(v_id, 'FACTURA', 'F001-9', 10, v_hoy + 1);
+    r := r || jsonb_build_object('prueba', 'rechaza un comprobante con fecha futura', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'rechaza un comprobante con fecha futura', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+  w := public.crear_venta(v_emp, v_cliente, v_item, false);
+  v_otra := (w->>'id')::uuid;
+  w := public.agregar_comprobante_venta(v_otra, 'FACTURA', 'F001-123', 99999);
+  r := r || jsonb_build_object('prueba', 'el mismo número se acepta en otra venta, y facturar de más no se bloquea',
+         'ok', (w->'venta_comprobantes'->0->>'monto')::numeric = 99999 and (w->>'total')::numeric = 1000, 'detalle', w->'venta_comprobantes'->0->>'monto');
+
+  -- El archivo: bucket privado, carpeta de la empresa y de la venta
+  begin
+    perform public.adjuntar_archivo_comprobante(v_comp, v_emp || '/' || v_id || '/no-existe.pdf', 'x.pdf');
+    r := r || jsonb_build_object('prueba', 'no liga un archivo que no se subió', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'no liga un archivo que no se subió', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+  insert into storage.objects (bucket_id, name) values ('comprobantes', v_emp || '/' || v_id || '/f001-123.pdf');
+  insert into storage.objects (bucket_id, name) values ('comprobantes', v_emp || '/' || v_otra || '/de-otra-venta.pdf');
+  select count(*) into v_n from storage.objects where bucket_id = 'comprobantes' and name like v_emp || '/%';
+  r := r || jsonb_build_object('prueba', 'el vendedor sube y ve archivos en la carpeta de su empresa', 'ok', v_n = 2, 'detalle', v_n || ' archivos');
+  begin
+    perform public.adjuntar_archivo_comprobante(v_comp, v_emp || '/' || v_otra || '/de-otra-venta.pdf', 'x.pdf');
+    r := r || jsonb_build_object('prueba', 'no liga el archivo de otra venta', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'no liga el archivo de otra venta', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+  v := public.adjuntar_archivo_comprobante(v_comp, v_emp || '/' || v_id || '/f001-123.pdf', ' Factura 123.pdf ');
+  r := r || jsonb_build_object('prueba', 'liga el archivo subido y guarda su nombre',
+         'ok', exists (select 1 from jsonb_array_elements(v->'venta_comprobantes') c where c->>'id' = v_comp::text and c->>'archivo_ruta' like '%/f001-123.pdf' and c->>'archivo_nombre' = 'Factura 123.pdf'),
+         'detalle', v_comp::text);
+  begin
+    perform public.adjuntar_archivo_comprobante(v_comp, v_emp || '/' || v_id || '/f001-123.pdf', 'otro.pdf');
+    r := r || jsonb_build_object('prueba', 'un archivo ligado no se reemplaza', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'un archivo ligado no se reemplaza', 'ok', sqlstate = 'P0001', 'detalle', sqlerrm);
+  end;
+  update storage.objects set name = name || '.cambiado' where bucket_id = 'comprobantes' and name like v_emp || '/%';
+  get diagnostics v_n = row_count;
+  r := r || jsonb_build_object('prueba', 'nadie cambia un archivo subido', 'ok', v_n = 0, 'detalle', v_n || ' filas');
+  begin
+    delete from storage.objects where bucket_id = 'comprobantes' and name like v_emp || '/%';
+    get diagnostics v_n = row_count;
+    r := r || jsonb_build_object('prueba', 'nadie borra un archivo subido', 'ok', v_n = 0, 'detalle', v_n || ' filas');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'nadie borra un archivo subido', 'ok', true, 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.anular_comprobante_venta(v_comp, 'error');
+    r := r || jsonb_build_object('prueba', 'un vendedor no anula facturas', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'un vendedor no anula facturas', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
+  end;
+  begin
+    insert into public.venta_comprobantes (venta_id, empresa_id, tipo, numero, fecha, monto) values (v_id, v_emp, 'FACTURA', 'F-DIRECTA', v_hoy, 1);
+    r := r || jsonb_build_object('prueba', 'insert directo de factura bloqueado', 'ok', false, 'detalle', 'se pudo');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'insert directo de factura bloqueado', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
+  end;
+  begin
+    update public.venta_comprobantes set monto = 1 where id = v_comp;
+    r := r || jsonb_build_object('prueba', 'no se puede cambiar una factura directamente', 'ok', false, 'detalle', 'se pudo');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'no se puede cambiar una factura directamente', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
   end;
   begin
     perform public.anular_pago(v_pago, 'error');
@@ -366,6 +464,33 @@ begin
     r := r || jsonb_build_object('prueba', 'un pago no se anula dos veces', 'ok', sqlstate = 'P0001', 'detalle', sqlerrm);
   end;
 
+  -- Anular una factura
+  begin
+    perform public.anular_comprobante_venta(v_comp, ' ');
+    r := r || jsonb_build_object('prueba', 'anular una factura exige motivo', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'anular una factura exige motivo', 'ok', sqlstate = '22023', 'detalle', sqlerrm);
+  end;
+  v := public.anular_comprobante_venta(v_comp, 'Se emitió mal');
+  r := r || jsonb_build_object('prueba', 'la factura anulada se queda, con archivo y rastro',
+         'ok', exists (select 1 from jsonb_array_elements(v->'venta_comprobantes') c where c->>'id' = v_comp::text and (c->>'anulado')::boolean and c->>'motivo_anulacion' = 'Se emitió mal' and c->>'archivo_ruta' is not null)
+               and v->'venta_cambios'->0->>'tipo' = 'COMPROBANTE_ANULADO' and v->'venta_cambios'->0->'detalle'->>'numero' = 'F001-123',
+         'detalle', v->'venta_cambios'->0->>'tipo');
+  begin
+    perform public.anular_comprobante_venta(v_comp, 'otra vez');
+    r := r || jsonb_build_object('prueba', 'una factura no se anula dos veces', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'una factura no se anula dos veces', 'ok', sqlstate = 'P0001', 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.adjuntar_archivo_comprobante(v_comp, v_emp || '/' || v_id || '/f001-123.pdf', 'x.pdf');
+    r := r || jsonb_build_object('prueba', 'una factura anulada no recibe archivo', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'una factura anulada no recibe archivo', 'ok', sqlstate = 'P0001', 'detalle', sqlerrm);
+  end;
+  v := public.agregar_comprobante_venta(v_id, 'FACTURA', 'F001-123', 300);
+  r := r || jsonb_build_object('prueba', 'anulada, su número se puede volver a usar', 'ok', jsonb_array_length(v->'venta_comprobantes') = 3, 'detalle', jsonb_array_length(v->'venta_comprobantes') || ' comprobantes');
+
   -- Ajustar
   begin
     perform public.ajustar_venta(v_id, v_item, true, false, 0, null, null, 'CONTADO', null, '');
@@ -439,6 +564,12 @@ begin
   exception when others then
     r := r || jsonb_build_object('prueba', 'una venta anulada no se ajusta', 'ok', sqlstate = 'P0001', 'detalle', sqlerrm);
   end;
+  begin
+    perform public.agregar_comprobante_venta(v_id, 'FACTURA', 'F001-200', 10);
+    r := r || jsonb_build_object('prueba', 'una venta anulada no recibe facturas', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'una venta anulada no recibe facturas', 'ok', sqlstate = 'P0001', 'detalle', sqlerrm);
+  end;
 
   -- Anular la venta reabre la cotización
   v_cot := public.crear_cotizacion(v_emp, v_cliente, v_item);
@@ -459,6 +590,9 @@ begin
   values ('00000000-0000-4000-8000-0000000000aa', 'AJENA-1', v_hoy, v_ajena, 'Otro cliente', '12345678', 100, 0, 100, false);
   insert into public.pagos (id, venta_id, empresa_id, fecha, monto, metodo)
   values ('00000000-0000-4000-8000-0000000000ab', '00000000-0000-4000-8000-0000000000aa', v_ajena, v_hoy, 10, 'EFECTIVO');
+  insert into public.venta_comprobantes (id, venta_id, empresa_id, tipo, numero, fecha, monto)
+  values ('00000000-0000-4000-8000-0000000000ac', '00000000-0000-4000-8000-0000000000aa', v_ajena, 'FACTURA', 'F001-1', v_hoy, 10);
+  insert into storage.objects (bucket_id, name) values ('comprobantes', v_ajena || '/00000000-0000-4000-8000-0000000000aa/ajena.pdf');
   v_cot := null;
   insert into public.cotizaciones (folio, empresa_id, cliente_nombre, cliente_documento, subtotal, igv, total, items)
   values ('AJENA-COT-1', v_ajena, 'Otro cliente', '12345678', 100, 0, 100, '[{"descripcion":"x","cantidad":1,"precio_unitario":100}]')
@@ -486,6 +620,34 @@ begin
     r := r || jsonb_build_object('prueba', 'no marca entregas de otra empresa', 'ok', false, 'detalle', 'no falló');
   exception when others then
     r := r || jsonb_build_object('prueba', 'no marca entregas de otra empresa', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
+  end;
+  select count(*) into v_n from public.venta_comprobantes where empresa_id = v_ajena;
+  r := r || jsonb_build_object('prueba', 'no ve facturas de otra empresa', 'ok', v_n = 0, 'detalle', v_n || ' filas');
+  select count(*) into v_n from storage.objects where bucket_id = 'comprobantes' and name like v_ajena || '/%';
+  r := r || jsonb_build_object('prueba', 'no ve archivos de otra empresa', 'ok', v_n = 0, 'detalle', v_n || ' archivos');
+  begin
+    insert into storage.objects (bucket_id, name) values ('comprobantes', v_ajena || '/x/intruso.pdf');
+    r := r || jsonb_build_object('prueba', 'no sube archivos a otra empresa', 'ok', false, 'detalle', 'se pudo');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'no sube archivos a otra empresa', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.agregar_comprobante_venta('00000000-0000-4000-8000-0000000000aa', 'FACTURA', 'F001-2', 1);
+    r := r || jsonb_build_object('prueba', 'no agrega facturas a otra empresa', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'no agrega facturas a otra empresa', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.adjuntar_archivo_comprobante('00000000-0000-4000-8000-0000000000ac', v_ajena || '/00000000-0000-4000-8000-0000000000aa/ajena.pdf', 'x.pdf');
+    r := r || jsonb_build_object('prueba', 'no liga archivos en otra empresa', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'no liga archivos en otra empresa', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
+  end;
+  begin
+    perform public.anular_comprobante_venta('00000000-0000-4000-8000-0000000000ac', 'x');
+    r := r || jsonb_build_object('prueba', 'no anula facturas de otra empresa', 'ok', false, 'detalle', 'no falló');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'no anula facturas de otra empresa', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
   end;
   begin
     perform public.convertir_cotizacion_en_venta(v_cot.id);
@@ -517,6 +679,18 @@ begin
   exception when others then
     r := r || jsonb_build_object('prueba', 'anónimo no lee ventas', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
   end;
+  begin
+    perform 1 from public.venta_comprobantes limit 1;
+    r := r || jsonb_build_object('prueba', 'anónimo no lee facturas', 'ok', false, 'detalle', 'se pudo');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'anónimo no lee facturas', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
+  end;
+  begin
+    select count(*) into v_n from storage.objects where bucket_id = 'comprobantes';
+    r := r || jsonb_build_object('prueba', 'anónimo no ve archivos de facturas', 'ok', v_n = 0, 'detalle', v_n || ' archivos');
+  exception when others then
+    r := r || jsonb_build_object('prueba', 'anónimo no ve archivos de facturas', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
+  end;
 
   reset role;
   update public.profiles set activo = false where id = v_vend;
@@ -529,6 +703,10 @@ begin
     r := r || jsonb_build_object('prueba', 'usuario desactivado no puede', 'ok', sqlstate = '42501', 'detalle', sqlerrm);
   end;
   reset role;
+
+  select count(*) into v_n from storage.buckets
+   where id = 'comprobantes' and not public and file_size_limit = 10485760 and 'application/pdf' = any (allowed_mime_types);
+  r := r || jsonb_build_object('prueba', 'el bucket de facturas es privado y limita peso y tipo', 'ok', v_n = 1, 'detalle', v_n || ' bucket');
 
   perform set_config('pruebas.resultado', r::text, true);
 end;

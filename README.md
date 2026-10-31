@@ -155,19 +155,25 @@ Funciones auxiliares de las políticas: `es_superadmin()`,
   "Vencida" y "Pagada" no se guardan: se calculan (`estadoCobro`).
 - **Entrega**: Por entregar, Parcial o Entregada, a mano. Se calculará sola cuando
   existan las salidas.
-- **Factura o boleta**: se emite en el sistema de siempre; aquí solo se guarda el
-  número. Es una por venta. El PDF de la venta es una orden de venta y aclara que no
-  es comprobante de pago.
+- **Facturas y boletas**: se emiten en el sistema de siempre; aquí se guardan para
+  ubicarlas. Una venta puede tener varias, por ejemplo una por cada adelanto y otra
+  por el saldo. Cada una lleva número, fecha, monto y, si ya se tiene, su archivo: un
+  PDF o una foto de hasta 10 MB en el bucket privado `comprobantes`, que se abre con
+  un enlace temporal y no se reemplaza ni se borra.
+- **Lo facturado**: la venta muestra cuánto falta facturar y lo cobrado sin facturar,
+  salvo si va sin IGV: ahí la factura puede llevarlo encima del total y los montos no
+  se comparan. Facturar más que el total se avisa, no se bloquea.
+- El PDF de la venta es una **orden de venta** y aclara que no es comprobante de pago.
 - **Quién puede qué**: cualquiera de la empresa registra ventas y pagos, marca la
-  entrega y anota la factura. Solo el admin anula pagos, ajusta y anula ventas, y
-  siempre con motivo. Lo aplica el servidor.
+  entrega y agrega facturas y sus archivos. Solo el admin anula pagos y facturas,
+  ajusta y anula ventas, y siempre con motivo. Lo aplica el servidor.
 - **Ajustar**: a diferencia de las cotizaciones, una venta se ajusta sin cambiar de
   folio (cantidades, precios, IGV, descuento, fecha y crédito; no el cliente), porque
   vive semanas. Guarda en `venta_cambios` cómo estaba antes. El total no puede quedar
   por debajo de lo pagado. Las líneas conservan su `id` para ligar las salidas.
 - **Anular**: una venta con pagos vigentes no se anula; primero se anulan los pagos,
   que no se borran. Si venía de una cotización, esta vuelve a Pendiente.
-- Se escribe solo por funciones (`crear_venta`, `registrar_pago`, `ajustar_venta`…);
+- Se escribe solo por funciones (`crear_venta`, `registrar_pago`, `agregar_comprobante_venta`…);
   `authenticated` únicamente lee. `supabase/pruebas_ventas.sql` prueba estas reglas.
 
 ## Color de la empresa
@@ -196,7 +202,8 @@ supabase db query --linked -f supabase/pruebas_cotizaciones.sql
 
 Hay migraciones que dependen del frontend. `20261029030000_cotizaciones_solo_por_funcion.sql`,
 por ejemplo, se aplica después de desplegar el frontend que usa
-`crear_cotizacion()`, porque la versión anterior insertaba directamente.
+`crear_cotizacion()`, porque la versión anterior insertaba directamente. Lo mismo
+`20261031010000_quitar_comprobante_unico.sql`, después de `20261031000000`.
 
 **Pendiente:** el esquema base (anterior a estas migraciones) no está
 versionado. Para generarlo hace falta Docker (`supabase db dump`).

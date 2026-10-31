@@ -7,7 +7,12 @@ const venta = (extra: Partial<IVenta> = {}): IVenta => ({
   cliente_nombre: 'CLIENTE SAC', cliente_documento: '20123456789', subtotal: 1000, descuento_global: 0, igv: 180, total: 1180,
   incluye_igv: true, precios_con_igv: false, pagado: 0, saldo: 1180, condicion_pago: 'CONTADO',
   venta_items: [{ id: 'linea-1', descripcion: 'Arena', unidad: 'm3', cantidad: 10, precio_unitario: 100, importe: 1000 }],
-  pagos: [], ...extra
+  pagos: [], venta_comprobantes: [], ...extra
+});
+
+const conArchivo = (extra: any = {}): any => ({
+  id: 'c1', venta_id: 'v1', empresa_id: 'WM', tipo: 'FACTURA', numero: 'F001-1', fecha: '2026-10-01', monto: 500,
+  archivo_ruta: 'WM/v1/c1-1.pdf', archivo_nombre: 'f.pdf', registrado_en: '', anulado: false, ...extra
 });
 
 describe('AccionesVentaComponent', () => {
@@ -29,7 +34,11 @@ describe('AccionesVentaComponent', () => {
       anularPago: vi.fn(async () => venta()),
       anularVenta: vi.fn(async () => venta({ estado: 'ANULADA' })),
       marcarEntregaVenta: vi.fn(async (_: string, estado: any) => venta({ estado_entrega: estado })),
-      guardarComprobanteVenta: vi.fn(async () => venta({ comprobante_tipo: 'FACTURA', comprobante_numero: 'F001-1' }))
+      agregarComprobanteVenta: vi.fn(async (_: string, c: any) => venta({ venta_comprobantes: [conArchivo({ ...c, id: 'c1', archivo_ruta: null })] })),
+      subirArchivoComprobante: vi.fn(async () => 'WM/v1/c1-1.pdf'),
+      adjuntarArchivoComprobante: vi.fn(async () => venta({ venta_comprobantes: [conArchivo()] })),
+      urlArchivoComprobante: vi.fn(async () => 'https://enlace.temporal/f.pdf'),
+      anularComprobanteVenta: vi.fn(async () => venta({ venta_comprobantes: [conArchivo({ anulado: true })] }))
     };
     mensajes = { add: vi.fn() };
     router = { navigate: vi.fn() };
@@ -47,12 +56,12 @@ describe('AccionesVentaComponent', () => {
 
   describe('menú', () => {
     it('un vendedor registra pagos, entrega y factura, pero no ajusta ni anula', () => {
-      expect(etiquetas(venta())).toEqual(['Ver detalle', 'Registrar pago', 'Marcar entrega parcial', 'Marcar entregada', 'Anotar factura o boleta']);
+      expect(etiquetas(venta())).toEqual(['Ver detalle', 'Registrar pago', 'Marcar entrega parcial', 'Marcar entregada', 'Agregar factura o boleta']);
     });
 
     it('el admin además ajusta y anula', () => {
       esAdmin = true;
-      expect(etiquetas(venta())).toEqual(['Ver detalle', 'Registrar pago', 'Marcar entrega parcial', 'Marcar entregada', 'Anotar factura o boleta', 'Ajustar', 'Anular']);
+      expect(etiquetas(venta())).toEqual(['Ver detalle', 'Registrar pago', 'Marcar entrega parcial', 'Marcar entregada', 'Agregar factura o boleta', 'Ajustar', 'Anular']);
     });
 
     it('sin saldo no ofrece registrar pago', () => {
@@ -62,10 +71,6 @@ describe('AccionesVentaComponent', () => {
     it('no ofrece el estado de entrega en el que ya está', () => {
       expect(etiquetas(venta({ estado_entrega: 'ENTREGADA' }))).toEqual(expect.arrayContaining(['Marcar por entregar', 'Marcar entrega parcial']));
       expect(etiquetas(venta({ estado_entrega: 'ENTREGADA' }))).not.toContain('Marcar entregada');
-    });
-
-    it('con comprobante, ofrece cambiarlo', () => {
-      expect(etiquetas(venta({ comprobante_tipo: 'FACTURA', comprobante_numero: 'F001-1' }))).toContain('Cambiar factura o boleta');
     });
 
     it('una venta anulada solo se puede ver, también para el admin', () => {
@@ -186,13 +191,159 @@ describe('AccionesVentaComponent', () => {
     expect(actualizadas[0].estado_entrega).toBe('ENTREGADA');
   });
 
-  it('propone boleta para un DNI y factura para un RUC', () => {
-    comp.abrirComprobante(venta({ cliente_documento: '12345678' }));
-    expect(comp.comprobante.tipo).toBe('BOLETA');
-    comp.abrirComprobante(venta());
-    expect(comp.comprobante.tipo).toBe('FACTURA');
-    comp.abrirComprobante(venta({ cliente_documento: '12345678', comprobante_tipo: 'FACTURA', comprobante_numero: 'F001-1' }));
-    expect(comp.comprobante).toEqual({ tipo: 'FACTURA', numero: 'F001-1' });
+  describe('facturas y boletas', () => {
+    const pdf = (nombre: string, type = 'application/pdf', size = 1000): any => ({ name: nombre, type, size });
+    const eventoCon = (archivo: any) => {
+      const input: any = { files: [archivo], value: 'algo' };
+      return { target: input } as any;
+    };
+
+    it('propone boleta para un DNI, factura para un RUC y el monto cobrado sin facturar', () => {
+      comp.abrirComprobante(venta({ cliente_documento: '12345678' }));
+      expect(comp.comprobante.tipo).toBe('BOLETA');
+      comp.abrirComprobante(venta({ pagado: 300, saldo: 880 }));
+      expect(comp.comprobante).toMatchObject({ tipo: 'FACTURA', numero: '', monto: 300, fecha: fechaIso() });
+      comp.abrirComprobante(venta());
+      expect(comp.comprobante.monto).toBe(1180);
+    });
+
+    it('pide número y monto; el archivo es opcional', async () => {
+      comp.abrirComprobante(venta());
+      comp.comprobante.monto = 0;
+      await comp.guardarComprobante();
+      expect(supabase.agregarComprobanteVenta).not.toHaveBeenCalled();
+      expect(comp.faltantesComprobante).toEqual(['el número', 'el monto']);
+      expect(comp.mostrarFaltantesComprobante).toBe(true);
+
+      Object.assign(comp.comprobante, { numero: ' f001-1 ', monto: 500 });
+      await comp.guardarComprobante();
+
+      expect(supabase.agregarComprobanteVenta).toHaveBeenCalledWith('v1', { tipo: 'FACTURA', numero: 'F001-1', monto: 500, fecha: fechaIso() });
+      expect(supabase.subirArchivoComprobante).not.toHaveBeenCalled();
+      expect(comp.comprobanteAbierto).toBe(false);
+      expect(actualizadas[0].venta_comprobantes).toHaveLength(1);
+    });
+
+    it('al elegir el archivo toma el número de su nombre, sin pisar lo escrito', async () => {
+      comp.abrirComprobante(venta());
+      const evento = eventoCon(pdf('20512345678-03-B001-77.pdf'));
+      await comp.alElegirArchivo(evento);
+      expect(comp.comprobante).toMatchObject({ tipo: 'BOLETA', numero: 'B001-77' });
+      expect(comp.archivoElegido.nombre).toBe('20512345678-03-B001-77.pdf');
+      expect(evento.target.value).toBe('');
+
+      comp.comprobante.numero = 'F001-9';
+      await comp.alElegirArchivo(eventoCon(pdf('F001-55.pdf')));
+      expect(comp.comprobante.numero).toBe('F001-9');
+    });
+
+    it('rechaza al elegirlo lo que no sea PDF o foto, o pese demasiado', async () => {
+      comp.abrirComprobante(venta());
+      await comp.alElegirArchivo(eventoCon(pdf('hoja.xlsx', 'application/vnd.ms-excel')));
+      expect(comp.archivoElegido).toBeNull();
+      expect(mensajes.add).toHaveBeenLastCalledWith(expect.objectContaining({ severity: 'warn', detail: 'Sube un PDF o una foto.' }));
+
+      await comp.alElegirArchivo(eventoCon(pdf('enorme.pdf', 'application/pdf', 11 * 1024 * 1024)));
+      expect(comp.archivoElegido).toBeNull();
+      expect(mensajes.add).toHaveBeenLastCalledWith(expect.objectContaining({ detail: 'El archivo pesa más de 10 MB.' }));
+    });
+
+    it('con archivo, guarda, sube y liga en ese orden', async () => {
+      comp.abrirComprobante(venta());
+      await comp.alElegirArchivo(eventoCon(pdf('F001-1.pdf')));
+      await comp.guardarComprobante();
+
+      expect(supabase.subirArchivoComprobante).toHaveBeenCalledWith(expect.objectContaining({ id: 'c1' }), comp.archivoElegido.contenido, 'pdf');
+      expect(supabase.adjuntarArchivoComprobante).toHaveBeenCalledWith('c1', 'WM/v1/c1-1.pdf', 'F001-1.pdf');
+      expect(actualizadas[0].venta_comprobantes[0].archivo_ruta).toBe('WM/v1/c1-1.pdf');
+    });
+
+    it('si el archivo falla, la factura queda guardada y lo avisa', async () => {
+      supabase.subirArchivoComprobante.mockRejectedValueOnce(new Error('sin red'));
+      comp.abrirComprobante(venta());
+      await comp.alElegirArchivo(eventoCon(pdf('F001-1.pdf')));
+      await comp.guardarComprobante();
+
+      expect(mensajes.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'warn', summary: 'Factura F001-1 guardada, sin archivo' }));
+      expect(comp.comprobanteAbierto).toBe(false);
+      expect(actualizadas[0].venta_comprobantes[0].archivo_ruta).toBeNull();
+      expect(comp.guardando).toBe(false);
+    });
+
+    it('si el servidor rechaza el número, dice por qué y deja la ventana abierta', async () => {
+      supabase.agregarComprobanteVenta.mockRejectedValueOnce({ code: '22023', message: 'El número F001-1 ya está en esta venta.' });
+      comp.abrirComprobante(venta());
+      comp.comprobante.numero = 'F001-1';
+      await comp.guardarComprobante();
+      expect(mensajes.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error', detail: 'El número F001-1 ya está en esta venta.' }));
+      expect(comp.comprobanteAbierto).toBe(true);
+    });
+
+    it('avisa si con esta se factura de más, sin bloquear; sin IGV no se compara', () => {
+      comp.abrirComprobante(venta({ venta_comprobantes: [conArchivo({ monto: 1000 })] }));
+      comp.comprobante.monto = 200;
+      expect(comp.excesoDeFactura).toBe(20);
+      expect(comp.faltantesComprobante).toEqual(['el número']);
+
+      comp.abrirComprobante(venta({ incluye_igv: false, venta_comprobantes: [conArchivo({ monto: 1000 })] }));
+      comp.comprobante.monto = 9000;
+      expect(comp.excesoDeFactura).toBe(0);
+    });
+
+    it('sube después el archivo de una factura guardada sin él', async () => {
+      const input: any = { click: vi.fn() };
+      const sinArchivo = conArchivo({ archivo_ruta: null });
+      comp.elegirArchivoDe(sinArchivo, input);
+      expect(input.click).toHaveBeenCalled();
+
+      await comp.alElegirArchivoNuevo(eventoCon(pdf('F001-1.pdf')));
+
+      expect(supabase.subirArchivoComprobante).toHaveBeenCalledWith(sinArchivo, expect.anything(), 'pdf');
+      expect(supabase.adjuntarArchivoComprobante).toHaveBeenCalledWith('c1', 'WM/v1/c1-1.pdf', 'F001-1.pdf');
+      expect(actualizadas).toHaveLength(1);
+      expect(comp.subiendoArchivoDe).toBeNull();
+    });
+
+    it('un archivo inválido al subir después dice el motivo', async () => {
+      comp.elegirArchivoDe(conArchivo({ archivo_ruta: null }), { click: vi.fn() } as any);
+      await comp.alElegirArchivoNuevo(eventoCon(pdf('hoja.xlsx', 'application/vnd.ms-excel')));
+      expect(supabase.subirArchivoComprobante).not.toHaveBeenCalled();
+      expect(mensajes.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error', detail: 'Sube un PDF o una foto.' }));
+    });
+
+    it('el archivo se abre con un enlace temporal, en una ventana abierta antes de pedirlo', async () => {
+      const ventana: any = { location: { href: '' }, close: vi.fn() };
+      vi.stubGlobal('window', { open: vi.fn(() => ventana), location: { href: '' } });
+      await comp.verArchivo(conArchivo());
+      expect(supabase.urlArchivoComprobante).toHaveBeenCalledWith('WM/v1/c1-1.pdf');
+      expect(ventana.location.href).toBe('https://enlace.temporal/f.pdf');
+    });
+
+    it('si no consigue el enlace, cierra la ventana y lo dice', async () => {
+      const ventana: any = { location: { href: '' }, close: vi.fn() };
+      vi.stubGlobal('window', { open: vi.fn(() => ventana), location: { href: '' } });
+      supabase.urlArchivoComprobante.mockRejectedValueOnce(new Error('sin red'));
+      await comp.verArchivo(conArchivo());
+      expect(ventana.close).toHaveBeenCalled();
+      expect(mensajes.add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error', summary: 'No se abrió el archivo' }));
+    });
+
+    it('anular pide motivo y usa el id de la factura', async () => {
+      comp.pedirAnularComprobante(conArchivo());
+      expect(comp.pedido.titulo).toBe('Anular factura');
+      expect(comp.pedido.mensaje).toContain('Su archivo se conserva');
+      comp.motivo = 'Se emitió mal';
+      await comp.confirmarMotivo();
+      expect(supabase.anularComprobanteVenta).toHaveBeenCalledWith('c1', 'Se emitió mal');
+      expect(actualizadas[0].venta_comprobantes[0].anulado).toBe(true);
+    });
+
+    it('anular una venta con facturas vigentes lo recuerda', () => {
+      comp.pedirAnularVenta(venta({ venta_comprobantes: [conArchivo()] }));
+      expect(comp.pedido.mensaje).toContain('nota de crédito');
+      comp.pedirAnularVenta(venta({ venta_comprobantes: [conArchivo({ anulado: true })] }));
+      expect(comp.pedido.mensaje).not.toContain('nota de crédito');
+    });
   });
 
   it('ajustar abre el cotizador con las líneas, sus id y lo pagado', () => {

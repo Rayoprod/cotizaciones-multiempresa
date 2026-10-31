@@ -31,13 +31,6 @@
         <span class="dato-etiqueta">Pago</span>
         <p class="dato-valor">{{ textoCondicionPago(v) }}</p>
       </div>
-      <div class="dato">
-        <span class="dato-etiqueta">Factura o boleta</span>
-        <p class="dato-valor">
-          {{ textoComprobante(v) ?? (v.estado === 'ACTIVA' ? '' : 'Sin anotar') }}
-          <button *ngIf="v.estado === 'ACTIVA'" type="button" class="enlace" (click)="abrirComprobante(v)">{{ v.comprobante_numero ? 'Cambiar' : 'Anotar' }}</button>
-        </p>
-      </div>
       <div class="dato" *ngIf="v.lugar_entrega">
         <span class="dato-etiqueta">Lugar de entrega</span>
         <p class="dato-valor">{{ v.lugar_entrega }}</p>
@@ -108,10 +101,10 @@
       <h3 class="seccion">Pagos</h3>
       <p *ngIf="!v.pagos.length" class="ayuda m-0">Todavía no hay pagos.</p>
       <ul class="lista">
-        <li *ngFor="let p of v.pagos" class="pago" [class.pago-anulado]="p.anulado">
+        <li *ngFor="let p of v.pagos" class="registro" [class.registro-anulado]="p.anulado">
           <div class="min-w-0">
             <p class="m-0">
-              <span class="pago-monto">{{ soles(p.monto) }}</span>
+              <span class="registro-monto">{{ soles(p.monto) }}</span>
               {{ etiquetaMetodo(p.metodo) }}<ng-container *ngIf="p.referencia"> · {{ p.referencia }}</ng-container>
             </p>
             <p class="ayuda m-0">{{ fechaCorta(p.fecha) }}<ng-container *ngIf="p.creado_por_nombre"> · {{ p.creado_por_nombre }}</ng-container></p>
@@ -122,6 +115,40 @@
                   (click)="pedirAnularPago(v, p)">Anular</button>
         </li>
       </ul>
+    </section>
+
+    <section aria-label="Facturas y boletas">
+      <div class="seccion-cabecera">
+        <h3 class="seccion">Facturas y boletas</h3>
+        <button *ngIf="v.estado === 'ACTIVA'" type="button" class="enlace flex-shrink-0" (click)="abrirComprobante(v)">
+          <i class="pi pi-plus" aria-hidden="true"></i> Agregar
+        </button>
+      </div>
+      <p *ngIf="resumenFacturado(v) as resumen" class="ayuda mt-0 mb-1">{{ resumen }}</p>
+      <p *ngIf="cobradoSinFacturar(v) as sinFacturar" class="ayuda text-amber-800 mt-0 mb-1">Cobrado sin facturar: {{ soles(sinFacturar) }}</p>
+      <p *ngIf="!v.venta_comprobantes.length" class="ayuda m-0">Todavía no hay ninguna.</p>
+      <ul class="lista">
+        <li *ngFor="let c of v.venta_comprobantes" class="registro" [class.registro-anulado]="c.anulado">
+          <div class="min-w-0">
+            <p class="m-0">
+              <span class="registro-monto">{{ soles(c.monto) }}</span>
+              {{ etiquetaComprobante(c) }}
+            </p>
+            <p class="ayuda m-0">{{ fechaCorta(c.fecha) }}<ng-container *ngIf="c.creado_por_nombre"> · {{ c.creado_por_nombre }}</ng-container></p>
+            <p *ngIf="c.anulado" class="ayuda text-red-700 m-0">Anulada<ng-container *ngIf="c.anulado_por_nombre"> por {{ c.anulado_por_nombre }}</ng-container>: {{ c.motivo_anulacion }}</p>
+          </div>
+          <div class="registro-acciones">
+            <button *ngIf="c.archivo_ruta" type="button" class="enlace" [attr.aria-label]="'Ver archivo de ' + etiquetaComprobante(c)" (click)="verArchivo(c)">Ver archivo</button>
+            <button *ngIf="!c.archivo_ruta && !c.anulado" type="button" class="enlace" [disabled]="subiendoArchivoDe === c.id"
+                    [attr.aria-label]="'Subir archivo de ' + etiquetaComprobante(c)" (click)="elegirArchivoDe(c, archivoNuevo)">
+              {{ subiendoArchivoDe === c.id ? 'Subiendo…' : 'Subir archivo' }}
+            </button>
+            <button *ngIf="esAdmin && !c.anulado" type="button" class="enlace enlace-peligro"
+                    [attr.aria-label]="'Anular ' + etiquetaComprobante(c)" (click)="pedirAnularComprobante(c)">Anular</button>
+          </div>
+        </li>
+      </ul>
+      <input #archivoNuevo type="file" class="hidden" accept="application/pdf,image/*" (change)="alElegirArchivoNuevo($event)" />
     </section>
 
     <section *ngIf="v.venta_cambios?.length" aria-label="Historial">
@@ -191,22 +218,48 @@
   </ng-template>
 </p-dialog>
 
-<!-- Factura o boleta -->
-<p-dialog header="Factura o boleta" [(visible)]="comprobanteAbierto" [modal]="true" appendTo="body"
-          [draggable]="false" [resizable]="false" [style]="{ width: '24rem' }">
+<!-- Agregar factura o boleta -->
+<p-dialog header="Agregar factura o boleta" [(visible)]="comprobanteAbierto" [modal]="true" appendTo="body"
+          [draggable]="false" [resizable]="false" [style]="{ width: '26rem' }">
   <div *ngIf="ventaComprobante as v" class="flex flex-column gap-3">
-    <p class="ayuda m-0">{{ v.folio }}. Se emite en tu sistema de siempre; aquí solo se guarda el número, para ubicarla.</p>
+    <p class="ayuda m-0">{{ v.folio }}. Se emite en tu sistema de siempre; aquí se guarda para ubicarla.</p>
+
+    <div>
+      <span class="etiqueta-campo">Archivo</span>
+      <input #archivo type="file" class="hidden" accept="application/pdf,image/*" (change)="alElegirArchivo($event)" />
+      <div *ngIf="archivoElegido as elegido; else sinArchivo" class="archivo-elegido">
+        <i class="pi pi-file" aria-hidden="true"></i>
+        <span class="archivo-nombre">{{ elegido.nombre }}</span>
+        <button type="button" class="enlace flex-shrink-0" (click)="quitarArchivoElegido()">Quitar</button>
+      </div>
+      <ng-template #sinArchivo>
+        <button pButton type="button" icon="pi pi-upload" label="Elegir PDF o foto" class="p-button-outlined w-full" (click)="archivo.click()"></button>
+        <p class="ayuda mt-1 mb-0">Opcional: también lo puedes subir después.</p>
+      </ng-template>
+    </div>
+
     <div class="segmentos w-full" role="group" aria-label="Tipo de comprobante">
       <button type="button" class="segmento" [class.segmento-activo]="comprobante.tipo === 'FACTURA'" [attr.aria-pressed]="comprobante.tipo === 'FACTURA'" (click)="comprobante.tipo = 'FACTURA'">Factura</button>
       <button type="button" class="segmento" [class.segmento-activo]="comprobante.tipo === 'BOLETA'" [attr.aria-pressed]="comprobante.tipo === 'BOLETA'" (click)="comprobante.tipo = 'BOLETA'">Boleta</button>
     </div>
     <div>
-      <label for="comprobante-numero" class="etiqueta-campo">Número</label>
+      <label for="comprobante-numero" class="etiqueta-campo">Número <span class="text-red-600">*</span></label>
       <input pInputText id="comprobante-numero" class="w-full" maxlength="30" placeholder="F001-00001234" [(ngModel)]="comprobante.numero" />
-      <p *ngIf="v.comprobante_numero" class="ayuda mt-1 mb-0">Déjalo vacío para quitarlo.</p>
+    </div>
+    <div>
+      <label for="comprobante-monto" class="etiqueta-campo">Monto del comprobante <span class="text-red-600">*</span></label>
+      <p-inputNumber inputId="comprobante-monto" [(ngModel)]="comprobante.monto" mode="decimal" [minFractionDigits]="2" [maxFractionDigits]="2" [min]="0"
+                     prefix="S/ " placeholder="S/ 0.00" class="w-full" styleClass="w-full" inputStyleClass="w-full text-right"
+                     (keydown.enter)="$event.preventDefault()"></p-inputNumber>
+      <p *ngIf="excesoDeFactura > 0" class="ayuda text-amber-800 mt-1 mb-0" role="status">Con esta, lo facturado supera el total en {{ soles(excesoDeFactura) }}. Puedes guardarla igual.</p>
+    </div>
+    <div>
+      <label for="comprobante-fecha" class="etiqueta-campo">Fecha de emisión</label>
+      <input pInputText type="date" id="comprobante-fecha" class="w-full" [max]="hoy" [(ngModel)]="comprobante.fecha" />
     </div>
   </div>
   <ng-template pTemplate="footer">
+    <p *ngIf="mostrarFaltantesComprobante && faltantesComprobante.length" class="ayuda text-amber-800 text-left mt-0 mb-2" role="alert">Falta {{ faltantesComprobante.join(' y ') }}.</p>
     <button pButton type="button" label="Cancelar" class="p-button-text p-button-secondary" (click)="cerrarComprobante()"></button>
     <button pButton type="button" label="Guardar" icon="pi pi-check" [loading]="guardando" (click)="guardarComprobante()"></button>
   </ng-template>

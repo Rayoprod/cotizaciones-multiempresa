@@ -10,10 +10,12 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { TagModule } from 'primeng/tag';
 import {
-  CLAVE_BORRADOR_COTIZADOR, ETIQUETA_COBRO, ETIQUETA_ENTREGA, EstadoEntrega, IBorradorCotizador, IPago, IVenta,
-  METODOS_PAGO, MetodoPago, TipoComprobante, UNIDADES_COMUNES, describirCambio, estadoCobro, fechaCorta, fechaDeCotizacion,
-  fechaIso, modoIgvDe, severidadCobro, severidadEntrega, soles, textoComprobante, textoCondicionPago
+  CLAVE_BORRADOR_COTIZADOR, ETIQUETA_COBRO, ETIQUETA_ENTREGA, EstadoEntrega, IBorradorCotizador, IPago, IVenta, IVentaComprobante,
+  METODOS_PAGO, MetodoPago, TipoComprobante, UNIDADES_COMUNES, cobradoSinFacturar, comprobanteDesdeArchivo, comprobantesVigentes,
+  describirCambio, estadoCobro, etiquetaComprobante, facturadoDe, fechaCorta, fechaDeCotizacion, fechaIso, modoIgvDe,
+  montoSugeridoFactura, resumenFacturado, severidadCobro, severidadEntrega, soles, textoCondicionPago
 } from '../../models';
+import { prepararArchivoComprobante } from '../../services/imagenes';
 import { PdfService, lineasTotales } from '../../services/pdf.service';
 import { SessionContextService } from '../../services/session-context.service';
 import { SupabaseService } from '../../services/supabase.service';
@@ -47,7 +49,9 @@ export class AccionesVentaComponent {
   readonly soles = soles;
   readonly fechaCorta = fechaCorta;
   readonly textoCondicionPago = textoCondicionPago;
-  readonly textoComprobante = textoComprobante;
+  readonly etiquetaComprobante = etiquetaComprobante;
+  readonly resumenFacturado = resumenFacturado;
+  readonly cobradoSinFacturar = cobradoSinFacturar;
   readonly describirCambio = describirCambio;
   readonly lineasTotales = lineasTotales;
   readonly metodos = METODOS_PAGO;
@@ -71,7 +75,13 @@ export class AccionesVentaComponent {
 
   comprobanteAbierto = false;
   ventaComprobante: IVenta | null = null;
-  comprobante: { tipo: TipoComprobante; numero: string } = { tipo: 'FACTURA', numero: '' };
+  comprobante: { tipo: TipoComprobante; numero: string; monto: number | null; fecha: string } = this.comprobanteVacio();
+  /** El archivo ya revisado, listo para subir al guardar. */
+  archivoElegido: { contenido: Blob; extension: string; nombre: string } | null = null;
+  mostrarFaltantesComprobante = false;
+  /** La factura a la que se le sube un archivo desde el detalle. */
+  comprobanteConArchivoNuevo: IVentaComprobante | null = null;
+  subiendoArchivoDe: string | null = null;
 
   /** Anular siempre pide motivo: queda en el historial. */
   motivoAbierto = false;
@@ -109,7 +119,7 @@ export class AccionesVentaComponent {
       }
     }
     items.push({
-      label: venta.comprobante_numero ? 'Cambiar factura o boleta' : 'Anotar factura o boleta',
+      label: 'Agregar factura o boleta',
       icon: 'pi pi-receipt',
       command: () => this.abrirComprobante(venta)
     });
@@ -274,7 +284,7 @@ export class AccionesVentaComponent {
     });
   }
 
-  // ─── Entrega y comprobante ───────────────────────────────────────────────
+  // ─── Entrega ─────────────────────────────────────────────────────────────
 
   async marcarEntrega(venta: IVenta, estado: EstadoEntrega) {
     if (estado === venta.estado_entrega || this.cambiandoEntrega) return;
@@ -291,10 +301,22 @@ export class AccionesVentaComponent {
     }
   }
 
+  // ─── Facturas y boletas ──────────────────────────────────────────────────
+
+  private comprobanteVacio() {
+    return { tipo: 'FACTURA' as TipoComprobante, numero: '', monto: null as number | null, fecha: fechaIso() };
+  }
+
   abrirComprobante(venta: IVenta) {
     this.ventaComprobante = venta;
     this.comprobanteAbierto = true;
-    this.comprobante = { tipo: venta.comprobante_tipo ?? (venta.cliente_documento.length === 8 ? 'BOLETA' : 'FACTURA'), numero: venta.comprobante_numero ?? '' };
+    this.comprobante = {
+      ...this.comprobanteVacio(),
+      tipo: venta.cliente_documento.length === 8 ? 'BOLETA' : 'FACTURA',
+      monto: montoSugeridoFactura(venta)
+    };
+    this.archivoElegido = null;
+    this.mostrarFaltantesComprobante = false;
     this.cdr.markForCheck();
   }
 
@@ -303,21 +325,143 @@ export class AccionesVentaComponent {
     this.cdr.markForCheck();
   }
 
+  /** Revisa el archivo al elegirlo: si no sirve, se sabe antes de guardar la factura. */
+  async alElegirArchivo(event: Event) {
+    const archivo = this.archivoDelInput(event);
+    if (!archivo) return;
+    try {
+      this.archivoElegido = { ...await prepararArchivoComprobante(archivo), nombre: archivo.name };
+      const sugerido = comprobanteDesdeArchivo(archivo.name);
+      if (sugerido && !this.comprobante.numero.trim()) {
+        this.comprobante = { ...this.comprobante, ...sugerido };
+      }
+    } catch (e: any) {
+      this.msg.add({ severity: 'warn', summary: 'Ese archivo no sirve', detail: e?.message });
+    }
+    this.cdr.markForCheck();
+  }
+
+  quitarArchivoElegido() {
+    this.archivoElegido = null;
+    this.cdr.markForCheck();
+  }
+
+  /** Se vacía el input para que elegir de nuevo el mismo archivo también avise. */
+  private archivoDelInput(event: Event): File | null {
+    const input = event.target as HTMLInputElement;
+    const archivo = input.files?.[0] ?? null;
+    input.value = '';
+    return archivo;
+  }
+
+  get faltantesComprobante(): string[] {
+    const falta: string[] = [];
+    if (!this.comprobante.numero.trim()) falta.push('el número');
+    if ((this.comprobante.monto ?? 0) <= 0) falta.push('el monto');
+    if (!this.comprobante.fecha) falta.push('la fecha');
+    else if (this.comprobante.fecha > fechaIso()) falta.push('una fecha que no sea futura');
+    return falta;
+  }
+
+  /** Con esta, lo facturado superaría el total. No se bloquea: se avisa. */
+  get excesoDeFactura(): number {
+    const venta = this.ventaComprobante;
+    if (!venta?.incluye_igv) return 0;
+    return Math.max(0, facturadoDe(venta) + (this.comprobante.monto ?? 0) - Number(venta.total));
+  }
+
   async guardarComprobante() {
     if (!this.ventaComprobante || this.guardando) return;
+    if (this.faltantesComprobante.length) {
+      this.mostrarFaltantesComprobante = true;
+      this.cdr.markForCheck();
+      return;
+    }
     this.guardando = true;
     this.cdr.markForCheck();
     try {
-      const venta = await this.supabase.guardarComprobanteVenta(this.ventaComprobante.id, this.comprobante.tipo, this.comprobante.numero);
+      const numero = this.comprobante.numero.trim().toUpperCase();
+      let venta = await this.supabase.agregarComprobanteVenta(this.ventaComprobante.id, {
+        tipo: this.comprobante.tipo,
+        numero,
+        monto: this.comprobante.monto!,
+        fecha: this.comprobante.fecha
+      });
+      if (this.archivoElegido) {
+        const nuevo = venta.venta_comprobantes.find(c => !c.anulado && c.tipo === this.comprobante.tipo && c.numero === numero)!;
+        try {
+          venta = await this.subirYLigar(nuevo, this.archivoElegido);
+        } catch (e) {
+          // La factura ya quedó guardada: el archivo se puede subir después desde la venta.
+          console.error('Error al subir el archivo:', e);
+          this.msg.add({
+            severity: 'warn', summary: `${etiquetaComprobante(nuevo)} guardada, sin archivo`, life: 8000,
+            detail: 'El archivo no se subió. Inténtalo de nuevo desde el detalle de la venta.'
+          });
+        }
+      }
       this.comprobanteAbierto = false;
       this.aplicar(venta);
     } catch (e: any) {
       console.error('Error al guardar el comprobante:', e);
-      this.msg.add({ severity: 'error', summary: 'No se guardó', detail: mensajeDe(e, 'Revisa tu conexión e inténtalo de nuevo.') });
+      this.msg.add({ severity: 'error', summary: 'No se guardó', life: 8000, detail: mensajeDe(e, 'Revisa tu conexión e inténtalo de nuevo.') });
     } finally {
       this.guardando = false;
       this.cdr.markForCheck();
     }
+  }
+
+  private async subirYLigar(comprobante: IVentaComprobante, archivo: { contenido: Blob; extension: string; nombre: string }): Promise<IVenta> {
+    const ruta = await this.supabase.subirArchivoComprobante(comprobante, archivo.contenido, archivo.extension);
+    return this.supabase.adjuntarArchivoComprobante(comprobante.id, ruta, archivo.nombre);
+  }
+
+  /** Subir el archivo de una factura que se guardó sin él. */
+  elegirArchivoDe(comprobante: IVentaComprobante, input: HTMLInputElement) {
+    this.comprobanteConArchivoNuevo = comprobante;
+    input.click();
+  }
+
+  async alElegirArchivoNuevo(event: Event) {
+    const archivo = this.archivoDelInput(event);
+    const comprobante = this.comprobanteConArchivoNuevo;
+    if (!archivo || !comprobante) return;
+    this.subiendoArchivoDe = comprobante.id;
+    this.cdr.markForCheck();
+    try {
+      const preparado = await prepararArchivoComprobante(archivo);
+      this.aplicar(await this.subirYLigar(comprobante, { ...preparado, nombre: archivo.name }));
+    } catch (e: any) {
+      console.error('Error al subir el archivo:', e);
+      this.msg.add({ severity: 'error', summary: 'No se subió el archivo', life: 8000, detail: e?.code ? mensajeDe(e, 'Revisa tu conexión e inténtalo de nuevo.') : e?.message });
+    } finally {
+      this.subiendoArchivoDe = null;
+      this.cdr.markForCheck();
+    }
+  }
+
+  async verArchivo(comprobante: IVentaComprobante) {
+    // Se abre antes de pedir el enlace: después de esperar, el navegador la tomaría por una ventana emergente.
+    const ventana = window.open('', '_blank');
+    try {
+      const url = await this.supabase.urlArchivoComprobante(comprobante.archivo_ruta!);
+      if (ventana) ventana.location.href = url;
+      else window.location.href = url;
+    } catch (e) {
+      console.error('Error al abrir el archivo:', e);
+      ventana?.close();
+      this.msg.add({ severity: 'error', summary: 'No se abrió el archivo', detail: 'Revisa tu conexión e inténtalo de nuevo.' });
+    }
+  }
+
+  pedirAnularComprobante(comprobante: IVentaComprobante) {
+    this.pedirMotivo({
+      titulo: `Anular ${comprobante.tipo === 'BOLETA' ? 'boleta' : 'factura'}`,
+      mensaje: `${etiquetaComprobante(comprobante)} por ${soles(comprobante.monto)} deja de contar como facturado. Su archivo se conserva. Si corresponde una nota de crédito, se emite en tu sistema.`,
+      boton: 'Anular',
+      exito: `${etiquetaComprobante(comprobante)} anulada`,
+      ejecutar: motivo => this.supabase.anularComprobanteVenta(comprobante.id, motivo)
+    });
   }
 
   // ─── Ajustar y anular (solo admin) ───────────────────────────────────────
@@ -367,7 +511,8 @@ export class AccionesVentaComponent {
     }
     const avisos = [
       venta.folio_cotizacion ? `La cotización ${venta.folio_cotizacion} vuelve a Pendiente.` : '',
-      venta.estado_entrega !== 'PENDIENTE' ? 'Figura con material entregado: revisa cómo queda eso.' : ''
+      venta.estado_entrega !== 'PENDIENTE' ? 'Figura con material entregado: revisa cómo queda eso.' : '',
+      comprobantesVigentes(venta).length ? 'Tiene facturas o boletas vigentes: revisa si toca una nota de crédito en tu sistema.' : ''
     ].filter(Boolean).join(' ');
     this.pedirMotivo({
       titulo: 'Anular venta',

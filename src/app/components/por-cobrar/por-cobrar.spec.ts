@@ -6,7 +6,7 @@ const venta = (extra: Partial<IVenta> = {}): IVenta => ({
   id: 'v1', folio: 'WM-V-00000001', fecha: '2026-10-01', empresa_id: 'WM', estado: 'ACTIVA', estado_entrega: 'PENDIENTE',
   cliente_nombre: 'CLIENTE SAC', cliente_documento: '20123456789', subtotal: 100, descuento_global: 0, igv: 18, total: 118,
   incluye_igv: true, precios_con_igv: false, pagado: 0, saldo: 118, condicion_pago: 'CONTADO',
-  venta_items: [], pagos: [], ...extra
+  venta_items: [], pagos: [], venta_comprobantes: [], ...extra
 });
 
 const hace = (dias: number) => fechaIso(new Date(Date.now() - dias * 86400000));

@@ -8,7 +8,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import {
   ETIQUETA_ENTREGA, IDeudaCliente, IVenta, cobradoEnElMes, deudasPorCliente, diasDeAtraso, estaVencidaVenta, fechaCorta,
-  redondear2, severidadEntrega, textoComprobante
+  redondear2, severidadEntrega, textoComprobantes
 } from '../../models';
 import { descargarCsv } from '../../services/csv';
 import { SessionContextService } from '../../services/session-context.service';
@@ -156,11 +156,11 @@ export class PorCobrarComponent implements OnInit {
       v.vence_el ? fechaCorta(v.vence_el) : '',
       diasDeAtraso(v) || '',
       this.etiquetaEntrega(v),
-      textoComprobante(v) ?? ''
+      textoComprobantes(v) ?? ''
     ]));
     descargarCsv(
       `por_cobrar_${this.empresaActiva?.nombre_comercial || 'export'}_${new Date().toISOString().slice(0, 10)}.csv`,
-      ['Cliente', 'Documento', 'Folio', 'Fecha', 'Total', 'Pagado', 'Saldo', 'Vence', 'Días de atraso', 'Entrega', 'Comprobante'],
+      ['Cliente', 'Documento', 'Folio', 'Fecha', 'Total', 'Pagado', 'Saldo', 'Vence', 'Días de atraso', 'Entrega', 'Comprobantes'],
       filas
     );
   }

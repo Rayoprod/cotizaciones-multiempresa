@@ -106,13 +106,20 @@
   margin: 0 0 0.5rem;
 }
 
+.seccion-cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .lista {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.pago,
+.registro,
 .cambio {
   padding: 0.5rem 0;
   border-top: 1px solid var(--slate-100);
@@ -122,23 +129,50 @@
   &:first-child { border-top: none; padding-top: 0; }
 }
 
-.pago {
+.registro {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
 }
 
-.pago-monto {
+.registro-monto {
   font-weight: 700;
   color: var(--slate-900);
   font-variant-numeric: tabular-nums;
   margin-right: 0.25rem;
 }
 
-.pago-anulado .pago-monto {
+.registro-anulado .registro-monto {
   text-decoration: line-through;
   color: var(--slate-500);
+}
+
+.registro-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem 0.875rem;
+  flex-shrink: 0;
+}
+
+.archivo-elegido {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.625rem;
+  font-size: 0.875rem;
+  color: var(--slate-800);
+}
+
+.archivo-nombre {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .botones-detalle {
@@ -164,4 +198,14 @@
   }
 
   .botones-detalle .flex-1 { display: none; }
+
+  /* En el celular las acciones de cada factura van debajo, con espacio para el dedo */
+  .registro { flex-wrap: wrap; row-gap: 0.125rem; }
+
+  .registro-acciones {
+    width: 100%;
+    justify-content: flex-start;
+
+    .enlace { min-height: 2.25rem; }
+  }
 }

@@ -97,13 +97,19 @@ describe('condicionesPdf', () => {
 });
 
 describe('orden de venta', () => {
-  const venta: any = { estado: 'ACTIVA', condicion_pago: 'CREDITO', dias_credito: 30, vence_el: '2026-11-30', pagado: 300, saldo: 880 };
+  const venta: any = { estado: 'ACTIVA', condicion_pago: 'CREDITO', dias_credito: 30, vence_el: '2026-11-30', pagado: 300, saldo: 880, venta_comprobantes: [] };
+  const factura = (numero: string, anulado = false) => ({ tipo: 'FACTURA', numero, anulado });
 
   it('dice cómo se paga, de qué cotización viene y su comprobante', () => {
     expect(lineasDeVenta(venta)).toEqual([['Condición de pago', 'Crédito a 30 días, vence el 30/11/2026']]);
-    expect(lineasDeVenta({ ...venta, condicion_pago: 'CONTADO', folio_cotizacion: 'WM-00000021', comprobante_tipo: 'FACTURA', comprobante_numero: 'F001-9' })).toEqual([
+    expect(lineasDeVenta({ ...venta, condicion_pago: 'CONTADO', folio_cotizacion: 'WM-00000021', venta_comprobantes: [factura('F001-9')] })).toEqual([
       ['Condición de pago', 'Contado'], ['Cotización', 'WM-00000021'], ['Comprobante', 'Factura F001-9']
     ]);
+  });
+
+  it('con varias facturas las lista todas, sin las anuladas', () => {
+    const lineas = lineasDeVenta({ ...venta, venta_comprobantes: [factura('F001-1'), factura('F001-2', true), factura('F001-3')] });
+    expect(lineas[1]).toEqual(['Comprobantes', 'Factura F001-1, Factura F001-3']);
   });
 
   it('las líneas de la venta van después de los impuestos', () => {

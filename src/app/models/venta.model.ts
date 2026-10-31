@@ -61,11 +61,30 @@ export interface IPago {
   motivo_anulacion?: string | null;
 }
 
+/** Una factura o boleta de la venta. La app no las emite: las guarda para ubicarlas. */
+export interface IVentaComprobante {
+  id: string;
+  venta_id: string;
+  empresa_id: string;
+  tipo: TipoComprobante;
+  numero: string;
+  fecha: string;
+  monto: number;
+  archivo_ruta?: string | null;
+  archivo_nombre?: string | null;
+  registrado_en: string;
+  creado_por_nombre?: string | null;
+  anulado: boolean;
+  anulado_en?: string | null;
+  anulado_por_nombre?: string | null;
+  motivo_anulacion?: string | null;
+}
+
 export interface IVentaCambio {
   id: string;
   fecha: string;
   usuario_nombre?: string | null;
-  tipo: 'AJUSTE' | 'ANULACION' | 'ENTREGA' | 'COMPROBANTE' | 'PAGO_ANULADO';
+  tipo: 'AJUSTE' | 'ANULACION' | 'ENTREGA' | 'COMPROBANTE' | 'PAGO_ANULADO' | 'COMPROBANTE_ANULADO';
   detalle: any;
   motivo?: string | null;
 }
@@ -98,8 +117,6 @@ export interface IVenta {
   lugar_entrega?: string | null;
   observaciones?: string | null;
   condiciones?: Partial<ICondicionesPdf>;
-  comprobante_tipo?: TipoComprobante | null;
-  comprobante_numero?: string | null;
   cotizacion_id?: string | null;
   folio_cotizacion?: string | null;
   vendedor?: string | null;
@@ -109,6 +126,7 @@ export interface IVenta {
   motivo_anulacion?: string | null;
   venta_items: IVentaItem[];
   pagos: IPago[];
+  venta_comprobantes: IVentaComprobante[];
   /** Solo llega con las operaciones sobre una venta; la lista no lo trae. */
   venta_cambios?: IVentaCambio[];
 }
@@ -228,9 +246,73 @@ export function textoCondicionPago(venta: Pick<IVenta, 'condicion_pago' | 'dias_
   return `Crédito a ${venta.dias_credito} días, vence el ${fechaCorta(venta.vence_el)}`;
 }
 
-export function textoComprobante(venta: Pick<IVenta, 'comprobante_tipo' | 'comprobante_numero'>): string | null {
-  if (!venta.comprobante_numero) return null;
-  return `${venta.comprobante_tipo === 'BOLETA' ? 'Boleta' : 'Factura'} ${venta.comprobante_numero}`;
+export function etiquetaComprobante(comprobante: Pick<IVentaComprobante, 'tipo' | 'numero'>): string {
+  return `${comprobante.tipo === 'BOLETA' ? 'Boleta' : 'Factura'} ${comprobante.numero}`;
+}
+
+export function comprobantesVigentes(venta: Pick<IVenta, 'venta_comprobantes'>): IVentaComprobante[] {
+  return (venta.venta_comprobantes ?? []).filter(c => !c.anulado);
+}
+
+/** "Factura F001-1" o "3 comprobantes": lo que cabe en una fila de la lista. */
+export function resumenComprobantes(venta: Pick<IVenta, 'venta_comprobantes'>): string | null {
+  const vigentes = comprobantesVigentes(venta);
+  if (!vigentes.length) return null;
+  return vigentes.length === 1 ? etiquetaComprobante(vigentes[0]) : `${vigentes.length} comprobantes`;
+}
+
+/** Todos los vigentes con su número, para el PDF y los CSV. */
+export function textoComprobantes(venta: Pick<IVenta, 'venta_comprobantes'>): string | null {
+  const vigentes = comprobantesVigentes(venta);
+  return vigentes.length ? vigentes.map(etiquetaComprobante).join(', ') : null;
+}
+
+export function facturadoDe(venta: Pick<IVenta, 'venta_comprobantes'>): number {
+  return redondear2(comprobantesVigentes(venta).reduce((suma, c) => suma + Number(c.monto), 0));
+}
+
+type DatosDeFacturacion = Pick<IVenta, 'estado' | 'incluye_igv' | 'total' | 'pagado' | 'venta_comprobantes'>;
+
+/**
+ * Cuánto falta facturar, o null si no se puede saber: en una venta sin IGV la
+ * factura puede llevarlo encima del total, así que los montos no se comparan.
+ */
+export function faltaFacturar(venta: DatosDeFacturacion): number | null {
+  if (venta.estado !== 'ACTIVA' || !venta.incluye_igv) return null;
+  return Math.max(0, redondear2(Number(venta.total) - facturadoDe(venta)));
+}
+
+/** Lo cobrado que aún no tiene factura, como un adelanto. Null en lo mismo que faltaFacturar. */
+export function cobradoSinFacturar(venta: DatosDeFacturacion): number | null {
+  if (venta.estado !== 'ACTIVA' || !venta.incluye_igv) return null;
+  return Math.max(0, redondear2(Number(venta.pagado) - facturadoDe(venta)));
+}
+
+/** Lo que se propone al agregar una: primero lo cobrado sin facturar; si no hay, lo que falta. */
+export function montoSugeridoFactura(venta: DatosDeFacturacion): number | null {
+  return cobradoSinFacturar(venta) || faltaFacturar(venta) || null;
+}
+
+/** Cómo va la facturación de la venta, en una línea. */
+export function resumenFacturado(venta: DatosDeFacturacion): string | null {
+  const facturado = facturadoDe(venta);
+  const falta = faltaFacturar(venta);
+  if (falta === null) return facturado > 0 ? `Facturado ${soles(facturado)}` : null;
+  const total = Number(venta.total);
+  if (facturado > total) return `Facturado ${soles(facturado)}: ${soles(redondear2(facturado - total))} más que el total`;
+  if (falta === 0) return facturado > 0 ? `Facturado ${soles(facturado)}: completo` : null;
+  return facturado > 0 ? `Facturado ${soles(facturado)} de ${soles(total)}. Falta ${soles(falta)}` : `Falta facturar ${soles(falta)}`;
+}
+
+/**
+ * Los archivos de una factura electrónica suelen llamarse como su número
+ * (20512345678-01-F001-00001234.pdf): así no hay que escribirlo.
+ */
+export function comprobanteDesdeArchivo(nombre: string): { tipo: TipoComprobante; numero: string } | null {
+  const coincide = /(?:^|[^A-Z0-9])([FBE][A-Z0-9]{2}[0-9])[-_ ](\d{1,8})(?:[^0-9]|$)/i.exec(nombre);
+  if (!coincide) return null;
+  const serie = coincide[1].toUpperCase();
+  return { tipo: /^(B|EB)/.test(serie) ? 'BOLETA' : 'FACTURA', numero: `${serie}-${coincide[2]}` };
 }
 
 /** Lo que dice el historial de la venta sobre un cambio. */
@@ -245,10 +327,10 @@ export function describirCambio(cambio: Pick<IVentaCambio, 'tipo' | 'detalle'>):
       return 'Venta anulada';
     case 'ENTREGA':
       return `Entrega: ${ETIQUETA_ENTREGA[d.antes as EstadoEntrega] ?? d.antes} → ${ETIQUETA_ENTREGA[d.despues as EstadoEntrega] ?? d.despues}`;
-    case 'COMPROBANTE': {
-      const texto = textoComprobante({ comprobante_tipo: d.despues?.tipo, comprobante_numero: d.despues?.numero });
-      return texto ? `Comprobante: ${texto}` : 'Se quitó el comprobante';
-    }
+    case 'COMPROBANTE':
+      return d.despues?.numero ? `Comprobante: ${etiquetaComprobante(d.despues)}` : 'Se quitó el comprobante';
+    case 'COMPROBANTE_ANULADO':
+      return `${etiquetaComprobante(d)} anulada`;
     case 'PAGO_ANULADO':
       return `Pago de ${soles(d.monto)} anulado`;
     default:

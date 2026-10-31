@@ -10,21 +10,22 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import {
-  ETIQUETA_COBRO, ETIQUETA_ENTREGA, IVenta, diasDeAtraso, estadoCobro, estaVencidaVenta, fechaCorta, redondear2,
-  severidadCobro, severidadEntrega, soles, textoComprobante
+  ETIQUETA_COBRO, ETIQUETA_ENTREGA, IVenta, diasDeAtraso, estadoCobro, estaVencidaVenta, facturadoDe, faltaFacturar, fechaCorta,
+  redondear2, resumenComprobantes, severidadCobro, severidadEntrega, soles, textoComprobantes
 } from '../../models';
 import { descargarCsv } from '../../services/csv';
 import { SessionContextService } from '../../services/session-context.service';
 import { SupabaseService } from '../../services/supabase.service';
 import { AccionesVentaComponent } from './acciones-venta';
 
-export type FiltroVenta = 'TODAS' | 'POR_COBRAR' | 'VENCIDAS' | 'POR_ENTREGAR' | 'ANULADAS';
+export type FiltroVenta = 'TODAS' | 'POR_COBRAR' | 'VENCIDAS' | 'POR_ENTREGAR' | 'POR_FACTURAR' | 'ANULADAS';
 
 export function cumpleFiltroVenta(venta: IVenta, filtro: FiltroVenta, hoy: Date = new Date()): boolean {
   switch (filtro) {
     case 'POR_COBRAR': return venta.estado === 'ACTIVA' && Number(venta.saldo) > 0;
     case 'VENCIDAS': return estaVencidaVenta(venta, hoy);
     case 'POR_ENTREGAR': return venta.estado === 'ACTIVA' && venta.estado_entrega !== 'ENTREGADA';
+    case 'POR_FACTURAR': return (faltaFacturar(venta) ?? 0) > 0;
     case 'ANULADAS': return venta.estado === 'ANULADA';
     default: return true;
   }
@@ -45,7 +46,7 @@ export class VentasComponent implements OnInit {
   @ViewChild(AccionesVentaComponent, { static: true }) acciones!: AccionesVentaComponent;
 
   readonly fechaCorta = fechaCorta;
-  readonly textoComprobante = textoComprobante;
+  readonly resumenComprobantes = resumenComprobantes;
 
   ventas: IVenta[] = [];
   ventasFiltradas: IVenta[] = [];
@@ -62,9 +63,10 @@ export class VentasComponent implements OnInit {
     { value: 'POR_COBRAR', label: 'Por cobrar' },
     { value: 'VENCIDAS', label: 'Vencidas' },
     { value: 'POR_ENTREGAR', label: 'Por entregar' },
+    { value: 'POR_FACTURAR', label: 'Por facturar' },
     { value: 'ANULADAS', label: 'Anuladas' }
   ];
-  conteos: Record<FiltroVenta, number> = { TODAS: 0, POR_COBRAR: 0, VENCIDAS: 0, POR_ENTREGAR: 0, ANULADAS: 0 };
+  conteos: Record<FiltroVenta, number> = { TODAS: 0, POR_COBRAR: 0, VENCIDAS: 0, POR_ENTREGAR: 0, POR_FACTURAR: 0, ANULADAS: 0 };
 
   totalVendido = 0;
   totalCobrado = 0;
@@ -148,7 +150,7 @@ export class VentasComponent implements OnInit {
         v.folio.toLowerCase().includes(termino) ||
         v.cliente_nombre.toLowerCase().includes(termino) ||
         v.cliente_documento.includes(termino) ||
-        (v.comprobante_numero ?? '').toLowerCase().includes(termino) ||
+        (v.venta_comprobantes ?? []).some(c => c.numero.toLowerCase().includes(termino)) ||
         (v.folio_cotizacion ?? '').toLowerCase().includes(termino)
       );
     }
@@ -189,7 +191,7 @@ export class VentasComponent implements OnInit {
     }
     descargarCsv(
       `ventas_${this.empresaActiva?.nombre_comercial || 'export'}_${new Date().toISOString().slice(0, 10)}.csv`,
-      ['Folio', 'Fecha', 'Cliente', 'Documento', 'Total', 'Pagado', 'Saldo', 'Vence', 'Cobro', 'Entrega', 'Comprobante', 'Cotización', 'Vendedor'],
+      ['Folio', 'Fecha', 'Cliente', 'Documento', 'Total', 'Pagado', 'Saldo', 'Vence', 'Cobro', 'Entrega', 'Facturado', 'Comprobantes', 'Cotización', 'Vendedor'],
       this.ventasFiltradas.map(v => [
         v.folio,
         fechaCorta(v.fecha),
@@ -201,7 +203,8 @@ export class VentasComponent implements OnInit {
         v.vence_el ? fechaCorta(v.vence_el) : '',
         this.etiquetaCobro(v),
         this.etiquetaEntrega(v),
-        textoComprobante(v) ?? '',
+        facturadoDe(v).toFixed(2),
+        textoComprobantes(v) ?? '',
         v.folio_cotizacion ?? '',
         v.vendedor_nombre || v.vendedor || ''
       ])

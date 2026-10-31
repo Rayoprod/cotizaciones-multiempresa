@@ -7,7 +7,7 @@ const venta = (extra: Partial<IVenta> = {}): IVenta => ({
   id: 'v1', folio: 'WM-V-00000001', fecha: '2026-10-01', empresa_id: 'WM', estado: 'ACTIVA', estado_entrega: 'PENDIENTE',
   cliente_nombre: 'CLIENTE SAC', cliente_documento: '20123456789', subtotal: 100, descuento_global: 0, igv: 18, total: 118,
   incluye_igv: true, precios_con_igv: false, pagado: 0, saldo: 118, condicion_pago: 'CONTADO',
-  venta_items: [], pagos: [], ...extra
+  venta_items: [], pagos: [], venta_comprobantes: [], ...extra
 });
 
 const hace = (dias: number) => fechaIso(new Date(Date.now() - dias * 86400000));
@@ -39,6 +39,15 @@ describe('cumpleFiltroVenta', () => {
     expect(cumpleFiltroVenta(venta({ estado_entrega: 'PARCIAL' }), 'POR_ENTREGAR', hoy)).toBe(true);
   });
 
+  it('por facturar es lo que tiene IGV y aún no se factura todo', () => {
+    const comprobante: any = { numero: 'F001-1', monto: 118, anulado: false };
+    expect(cumpleFiltroVenta(venta(), 'POR_FACTURAR', hoy)).toBe(true);
+    expect(cumpleFiltroVenta(venta({ venta_comprobantes: [{ ...comprobante, monto: 18 }] }), 'POR_FACTURAR', hoy)).toBe(true);
+    expect(cumpleFiltroVenta(venta({ venta_comprobantes: [comprobante] }), 'POR_FACTURAR', hoy)).toBe(false);
+    expect(cumpleFiltroVenta(venta({ incluye_igv: false }), 'POR_FACTURAR', hoy)).toBe(false);
+    expect(cumpleFiltroVenta(venta({ estado: 'ANULADA' }), 'POR_FACTURAR', hoy)).toBe(false);
+  });
+
   it('vencida es con saldo y fecha pasada', () => {
     expect(cumpleFiltroVenta(venta({ vence_el: '2026-10-29' }), 'VENCIDAS', hoy)).toBe(true);
     expect(cumpleFiltroVenta(venta({ vence_el: '2026-10-30' }), 'VENCIDAS', hoy)).toBe(false);
@@ -48,7 +57,7 @@ describe('cumpleFiltroVenta', () => {
 describe('VentasComponent', () => {
   const ventas = [
     venta({ id: 'a', folio: 'WM-V-3', fecha: hace(1), cliente_nombre: 'ANDINA SAC', total: 1000, pagado: 400, saldo: 600 }),
-    venta({ id: 'b', folio: 'WM-V-2', fecha: hace(5), cliente_nombre: 'PACIFICO', cliente_documento: '44556677', total: 500, pagado: 500, saldo: 0, estado_entrega: 'ENTREGADA', comprobante_numero: 'F001-77', comprobante_tipo: 'FACTURA' }),
+    venta({ id: 'b', folio: 'WM-V-2', fecha: hace(5), cliente_nombre: 'PACIFICO', cliente_documento: '44556677', total: 500, pagado: 500, saldo: 0, estado_entrega: 'ENTREGADA', venta_comprobantes: [{ numero: 'F001-77', tipo: 'FACTURA', monto: 500, anulado: false } as any] }),
     venta({ id: 'c', folio: 'WM-V-1', fecha: hace(40), cliente_nombre: 'ATRASADO', total: 300, saldo: 300, vence_el: hace(10) }),
     venta({ id: 'd', folio: 'WM-V-0', fecha: hace(50), cliente_nombre: 'ANULADO', total: 9999, saldo: 9999, estado: 'ANULADA' })
   ];
@@ -75,7 +84,7 @@ describe('VentasComponent', () => {
     expect(comp.totalVendido).toBe(1800);
     expect(comp.totalCobrado).toBe(900);
     expect(comp.totalPorCobrar).toBe(900);
-    expect(comp.conteos).toEqual({ TODAS: 4, POR_COBRAR: 2, VENCIDAS: 1, POR_ENTREGAR: 2, ANULADAS: 1 });
+    expect(comp.conteos).toEqual({ TODAS: 4, POR_COBRAR: 2, VENCIDAS: 1, POR_ENTREGAR: 2, POR_FACTURAR: 2, ANULADAS: 1 });
   });
 
   it('elegir un filtro no cambia los KPI', () => {
