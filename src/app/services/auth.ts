@@ -52,6 +52,14 @@ export class AuthService {
    * un usuario desactivado.
    */
   async asegurarPerfil(): Promise<IProfile | null> {
+    // En la cantera la señal va y viene, y un pedido puede quedarse colgado: se
+    // abre con lo guardado y se confirma aparte.
+    const enCampo = this.session.modoCampo() ? this.session.usuario() : null;
+    if (enCampo) {
+      this.confirmarCuentaDeCampo();
+      return enCampo;
+    }
+
     const { data } = await this.supabase.obtenerSesion();
     const usuario = data.session?.user;
     if (!usuario) {
@@ -88,6 +96,31 @@ export class AuthService {
     this.session.setUsuario(actual);
     this.perfilVerificadoEn = Date.now();
     return actual;
+  }
+
+  /**
+   * Cierra la sesión solo si es seguro que terminó o que la cuenta se desactivó.
+   * Sin señal `obtenerSesion` da error o el perfil no llega, y no pasa nada: lo
+   * guardado en el celular se envía cuando vuelva la conexión.
+   */
+  private async confirmarCuentaDeCampo(): Promise<void> {
+    if (Date.now() - this.perfilVerificadoEn < REVALIDAR_PERFIL_MS) return;
+    this.perfilVerificadoEn = Date.now();
+    try {
+      const { data, error } = await this.supabase.obtenerSesion();
+      if (error) return;
+      const usuario = data.session?.user;
+      const perfil = usuario ? await this.supabase.obtenerPerfil(usuario.id) : null;
+      if (perfil && perfil.activo !== false) return;
+
+      if (usuario) this.motivoCierre = perfil ? 'desactivada' : 'sin_perfil';
+      await this.supabase.cerrarSesion();
+      this.session.clearAll();
+      this.perfilVerificadoEn = 0;
+      this.router.navigateByUrl(this.urlLogin());
+    } catch {
+      // Sin conexión: se vuelve a intentar la próxima vez.
+    }
   }
 
   /** Por qué asegurarPerfil() cerró la sesión; se borra al leerlo. */

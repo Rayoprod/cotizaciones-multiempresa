@@ -2,11 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthService } from './auth';
 import { IProfile } from '../models';
 
-function crearEscenario(opciones: { sesion?: boolean; perfil?: IProfile | null | Error } = {}) {
+function crearEscenario(opciones: { sesion?: boolean; perfil?: IProfile | null | Error; campo?: IProfile; errorSesion?: unknown } = {}) {
   const { sesion = true, perfil = { id: 'u1', email: 'v@x.com', rol: 'vendedor', activo: true } } = opciones;
 
-  let usuarioEnSesion: IProfile | null = null;
+  let usuarioEnSesion: IProfile | null = opciones.campo ?? null;
   const session = {
+    modoCampo: () => !!opciones.campo,
     usuario: () => usuarioEnSesion,
     setUsuario: vi.fn((u: IProfile) => { usuarioEnSesion = u; }),
     clearUsuario: vi.fn(() => { usuarioEnSesion = null; }),
@@ -14,7 +15,8 @@ function crearEscenario(opciones: { sesion?: boolean; perfil?: IProfile | null |
   };
   const supabase = {
     obtenerSesion: vi.fn(async () => ({
-      data: { session: sesion ? { user: { id: 'u1', email: 'v@x.com' } } : null }
+      data: { session: sesion ? { user: { id: 'u1', email: 'v@x.com' } } : null },
+      error: opciones.errorSesion ?? null
     })),
     obtenerPerfil: vi.fn(async () => {
       if (perfil instanceof Error) throw perfil;
@@ -24,12 +26,65 @@ function crearEscenario(opciones: { sesion?: boolean; perfil?: IProfile | null |
   };
   const router = {
     createUrlTree: vi.fn((ruta: string[], extras: any) => ({ ruta, extras })),
-    navigate: vi.fn()
+    navigate: vi.fn(),
+    navigateByUrl: vi.fn()
   };
 
   const auth = new AuthService(supabase as any, router as any, session as any, { invalidar: vi.fn() } as any);
   return { auth, supabase, session, router };
 }
+
+describe('AuthService en la cantera', () => {
+  const guardado: IProfile = { id: 'u1', email: 'e@x.com', rol: 'usuario', activo: true };
+  // La confirmación corre aparte: se le da tiempo a terminar.
+  const dejarTerminar = () => new Promise(resolve => setTimeout(resolve));
+
+  it('abre con lo guardado aunque la red no conteste nunca', async () => {
+    const { auth, supabase } = crearEscenario({ campo: guardado });
+    supabase.obtenerSesion.mockImplementation(() => new Promise(() => {}) as any);
+    expect(await auth.asegurarPerfil()).toEqual(guardado);
+  });
+
+  it('sin señal no cierra la sesión', async () => {
+    const { auth, supabase, session } = crearEscenario({ campo: guardado, sesion: false, errorSesion: new Error('Failed to fetch') });
+    await auth.asegurarPerfil();
+    await dejarTerminar();
+    expect(supabase.cerrarSesion).not.toHaveBeenCalled();
+    expect(session.clearAll).not.toHaveBeenCalled();
+  });
+
+  it('con la sesión válida pero sin poder leer el perfil tampoco la cierra', async () => {
+    const { auth, supabase } = crearEscenario({ campo: guardado, perfil: new Error('Failed to fetch') });
+    await auth.asegurarPerfil();
+    await dejarTerminar();
+    expect(supabase.cerrarSesion).not.toHaveBeenCalled();
+  });
+
+  it('si la sesión de verdad terminó, lleva al login', async () => {
+    const { auth, session, router } = crearEscenario({ campo: guardado, sesion: false });
+    await auth.asegurarPerfil();
+    await dejarTerminar();
+    expect(session.clearAll).toHaveBeenCalled();
+    expect(router.navigateByUrl).toHaveBeenCalled();
+  });
+
+  it('si la cuenta se desactivó, cierra y lo explica', async () => {
+    const { auth, supabase, router } = crearEscenario({ campo: guardado, perfil: { id: 'u1', activo: false } });
+    await auth.asegurarPerfil();
+    await dejarTerminar();
+    expect(supabase.cerrarSesion).toHaveBeenCalled();
+    expect(router.navigateByUrl).toHaveBeenCalledWith({ ruta: ['/login'], extras: { queryParams: { motivo: 'desactivada' } } });
+  });
+
+  it('no consulta la red más de una vez cada 5 minutos', async () => {
+    const { auth, supabase } = crearEscenario({ campo: guardado });
+    await auth.asegurarPerfil();
+    await dejarTerminar();
+    await auth.asegurarPerfil();
+    await dejarTerminar();
+    expect(supabase.obtenerSesion).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('AuthService.asegurarPerfil', () => {
   beforeEach(() => vi.useRealTimers());

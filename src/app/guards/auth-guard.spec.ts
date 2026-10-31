@@ -7,8 +7,10 @@ import { authGuard } from './auth-guard';
 import { adminGuard } from './admin-guard';
 import { adminGeneralGuard } from './admin-general-guard';
 import { initialRedirectGuard } from './initial-redirect.guard';
+import { campoGuard } from './campo-guard';
+import { SessionContextService } from '../services/session-context.service';
 
-function ejecutar(guard: any, perfil: { rol: string } | null, rolesEnEmpresas: string[] = []) {
+function ejecutar(guard: any, perfil: { rol: string } | null, rolesEnEmpresas: string[] = [], sesion: { modoCampo?: boolean; empresa?: boolean } = {}) {
   const auth = {
     asegurarPerfil: async () => perfil,
     urlLogin: () => 'LOGIN'
@@ -21,7 +23,8 @@ function ejecutar(guard: any, perfil: { rol: string } | null, rolesEnEmpresas: s
     providers: [
       { provide: AuthService, useValue: auth },
       { provide: EmpresasUsuarioService, useValue: empresasUsuario },
-      { provide: Router, useValue: router }
+      { provide: Router, useValue: router },
+      { provide: SessionContextService, useValue: { modoCampo: () => !!sesion.modoCampo, empresaActiva: () => sesion.empresa ? { id: 'VDC' } : null } }
     ]
   });
   return runInInjectionContext(injector, () => guard({} as any, {} as any));
@@ -33,6 +36,17 @@ describe('guards', () => {
     expect(await ejecutar(adminGuard, null)).toBe('LOGIN');
     expect(await ejecutar(adminGeneralGuard, null)).toBe('LOGIN');
     expect(await ejecutar(initialRedirectGuard, null)).toBe('LOGIN');
+  });
+
+  it('el celular de cantera abre directo en su pantalla', async () => {
+    expect(await ejecutar(initialRedirectGuard, { rol: 'usuario' }, [], { modoCampo: true })).toBe('/cantera');
+    expect(await ejecutar(initialRedirectGuard, { rol: 'admin' }, [], { modoCampo: true })).toBe('/cantera');
+  });
+
+  it('a la cantera se entra con sesión y empresa', async () => {
+    expect(await ejecutar(campoGuard, null)).toBe('LOGIN');
+    expect(await ejecutar(campoGuard, { rol: 'usuario' })).toBe('/selector');
+    expect(await ejecutar(campoGuard, { rol: 'usuario' }, [], { empresa: true })).toBe(true);
   });
 
   it('authGuard deja pasar a cualquier cuenta activa', async () => {

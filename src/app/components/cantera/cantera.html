@@ -1,0 +1,48 @@
+<main class="cantera">
+  <header>
+    <h1 class="titulo">Prueba sin señal</h1>
+    <p class="ayuda m-0">{{ session.empresaActiva()?.nombre_comercial }}</p>
+  </header>
+
+  <ul class="estados" aria-label="Estado de este celular">
+    <li>
+      <span>Conexión</span>
+      <strong [class.text-emerald-700]="conSenal" [class.text-amber-800]="!conSenal">{{ conSenal ? 'Con señal' : 'Sin señal' }}</strong>
+    </li>
+    <li>
+      <span>Sesión guardada en este celular</span>
+      <strong class="text-emerald-700">Sí</strong>
+    </li>
+    <li>
+      <span>Datos protegidos del borrado</span>
+      <strong [class.text-emerald-700]="datosProtegidos" [class.text-amber-800]="!datosProtegidos">
+        {{ datosProtegidos === null ? 'No se sabe' : datosProtegidos ? 'Sí' : 'Todavía no' }}
+      </strong>
+    </li>
+  </ul>
+
+  <p *ngIf="errorAlmacen" class="aviso-error" role="alert">Este celular no dejó guardar. Avísale a quien te pasó esta prueba.</p>
+
+  <button pButton type="button" icon="pi pi-plus" label="Anotar una salida de prueba" class="boton-grande" (click)="anotar()"></button>
+
+  <section aria-label="Anotaciones">
+    <h2 class="seccion">Anotadas en este celular: {{ anotaciones.length }}</h2>
+    <ul class="anotaciones">
+      <li *ngFor="let a of anotaciones">{{ fechaHora(a.fecha) }}</li>
+    </ul>
+  </section>
+
+  <section class="pasos" aria-label="Cómo probar">
+    <h2 class="seccion">Cómo probar</h2>
+    <ol>
+      <li>Con señal, instala la app: menú de Chrome → <strong>Instalar app</strong> o <strong>Agregar a la pantalla principal</strong>.</li>
+      <li>Ábrela desde su ícono y anota una o dos salidas aquí.</li>
+      <li>Pon el celular en <strong>modo avión</strong>.</li>
+      <li>Cierra la app por completo, desde las apps recientes.</li>
+      <li>Ábrela otra vez desde su ícono. Debe abrir esta pantalla con lo anotado.</li>
+      <li>Anota dos más, apaga y prende el celular, y vuelve a abrirla sin señal. Deben seguir ahí.</li>
+    </ol>
+  </section>
+
+  <button type="button" class="enlace enlace-discreto salir" (click)="salir()">Salir de la prueba</button>
+</main>

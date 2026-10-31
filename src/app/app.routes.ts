@@ -4,6 +4,7 @@ import { SelectorComponent } from './components/selector-empresa/selector-empres
 import { authGuard } from './guards/auth-guard';
 import { adminGuard } from './guards/admin-guard';
 import { adminGeneralGuard } from './guards/admin-general-guard';
+import { campoGuard } from './guards/campo-guard';
 import { initialRedirectGuard } from './guards/initial-redirect.guard';
 
 export const routes: Routes = [
@@ -16,6 +17,16 @@ export const routes: Routes = [
     path: 'selector',
     component: SelectorComponent,
     canActivate: [authGuard]
+  },
+
+  // ── CANTERA ───────────────────────────────────────
+  // Fuera del layout: tiene que abrir sin señal y no pedir nada a la red al entrar.
+  {
+    path: 'cantera',
+    canActivate: [campoGuard],
+    loadComponent: () =>
+      import('./components/cantera/cantera')
+        .then(m => m.CanteraComponent)
   },
 
   // Direcciones del antiguo panel de administración (marcadores, PWA instalada)

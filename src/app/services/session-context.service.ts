@@ -10,6 +10,17 @@ const KEYS = {
   rol: 'session_rol'
 } as const;
 
+/**
+ * localStorage: lo que el celular de cantera necesita para abrir sin señal. La
+ * sesión normal va en sessionStorage, que se pierde al cerrar la app.
+ */
+const CLAVE_MODO_CAMPO = 'modo_campo';
+
+interface ICopiaCampo {
+  usuario: IProfile;
+  empresa: IEmpresa;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SessionContextService {
 
@@ -17,11 +28,14 @@ export class SessionContextService {
   private _empresaActiva = signal<IEmpresa | null>(this.leerEmpresa());
   private _usuario       = signal<IProfile | null>(this.leerUsuario());
   private _empresas      = signal<IEmpresa[]>([]);
+  private _modoCampo     = signal<boolean>(this.leerCopiaCampo() !== null);
 
   // ── Públicos (solo lectura) ────────────────────────────────────
   readonly empresaActiva  = this._empresaActiva.asReadonly();
   readonly usuario        = this._usuario.asReadonly();
   readonly empresas       = this._empresas.asReadonly();
+  /** Este celular trabaja en la cantera: abre con lo guardado, sin esperar a la red. */
+  readonly modoCampo      = this._modoCampo.asReadonly();
 
   readonly rol = computed(() => this._usuario()?.rol ?? null);
   readonly empresaId = computed(() => this._empresaActiva()?.id ?? null);
@@ -79,6 +93,37 @@ export class SessionContextService {
     this._usuario.set(null);
   }
 
+  // ── Modo cantera ───────────────────────────────────────────────
+
+  /** Guarda en el celular la cuenta y la empresa, sin los datos bancarios. */
+  activarModoCampo(): void {
+    const usuario = this._usuario();
+    const empresa = this._empresaActiva();
+    if (!usuario || !empresa) return;
+    const { cuentas_bancarias: _, ...sinCuentas } = empresa;
+    const copia: ICopiaCampo = { usuario, empresa: sinCuentas };
+    localStorage.setItem(CLAVE_MODO_CAMPO, JSON.stringify(copia));
+    this._modoCampo.set(true);
+  }
+
+  salirModoCampo(): void {
+    this.borrarCopiaCampo();
+    this._modoCampo.set(false);
+  }
+
+  private borrarCopiaCampo(): void {
+    try {
+      localStorage.removeItem(CLAVE_MODO_CAMPO);
+    } catch { /* sin almacenamiento no hay copia que borrar */ }
+  }
+
+  private leerCopiaCampo(): ICopiaCampo | null {
+    try {
+      const raw = localStorage.getItem(CLAVE_MODO_CAMPO);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
   // ── Empresas disponibles ───────────────────────────────────────
 
   setEmpresas(lista: IEmpresa[]): void {
@@ -89,24 +134,25 @@ export class SessionContextService {
 
   clearAll(): void {
     sessionStorage.clear();
+    this.salirModoCampo();
     this._empresaActiva.set(null);
     this._usuario.set(null);
     this._empresas.set([]);
   }
 
-  // ── Lectura inicial desde sessionStorage ──────────────────────
+  // ── Lectura inicial desde sessionStorage o la copia de cantera ─
 
   private leerEmpresa(): IEmpresa | null {
     try {
       const raw = sessionStorage.getItem(KEYS.empresa);
-      return raw ? JSON.parse(raw) : null;
+      return raw ? JSON.parse(raw) : this.leerCopiaCampo()?.empresa ?? null;
     } catch { return null; }
   }
 
   private leerUsuario(): IProfile | null {
     try {
       const raw = sessionStorage.getItem(KEYS.usuario);
-      return raw ? JSON.parse(raw) : null;
+      return raw ? JSON.parse(raw) : this.leerCopiaCampo()?.usuario ?? null;
     } catch { return null; }
   }
 }
