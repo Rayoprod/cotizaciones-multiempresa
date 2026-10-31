@@ -413,6 +413,29 @@
           </div>
         </div>
       </p-tabPanel>
+
+      <!-- Cantera -->
+      <p-tabPanel header="Cantera">
+        <div class="flex flex-column gap-4 panel-empresa pt-2">
+          <div *ngIf="esAdminGeneral" class="flex align-items-start gap-3 p-3 border-round-xl surface-ground border-1 surface-border">
+            <p-inputSwitch inputId="empresaSalidas" [ngModel]="usaSalidas" [ngModelOptions]="{ standalone: true }" (ngModelChange)="alternarSalidas($event)"></p-inputSwitch>
+            <label for="empresaSalidas" class="cursor-pointer">
+              <span class="font-bold text-900 text-sm block">Salidas de cantera</span>
+              <span class="text-xs text-600">El encargado anota cada volquete en su celular, sin señal. La oficina ve lo entregado de cada venta.</span>
+            </label>
+          </div>
+          <p *ngIf="!esAdminGeneral" class="m-0 text-sm text-700">
+            Salidas de cantera: <strong>{{ usaSalidas ? 'activado' : 'no activado' }}</strong>. Lo activa el administrador general.
+          </p>
+
+          <div class="flex flex-column gap-2">
+            <label for="empresaCapacidad" class="font-semibold text-900 text-sm">Capacidad de un volquete (m³)</label>
+            <input pInputText id="empresaCapacidad" type="number" inputmode="decimal" min="0" step="0.5" formControlName="capacidad_volquete_m3" class="w-full" style="max-width: 10rem">
+            <small class="text-600">Con esto abre la salida de una placa nueva. El encargado la puede corregir en cada viaje.</small>
+            <small *ngIf="empresaForm.get('capacidad_volquete_m3')?.touched && empresaForm.get('capacidad_volquete_m3')?.invalid" class="text-red-700">Escribe una capacidad mayor a 0.</small>
+          </div>
+        </div>
+      </p-tabPanel>
     </p-tabView>
   </form>
 

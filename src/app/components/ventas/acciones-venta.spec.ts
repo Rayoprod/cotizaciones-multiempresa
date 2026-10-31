@@ -21,6 +21,7 @@ describe('AccionesVentaComponent', () => {
   let router: any;
   let pdf: any;
   let esAdmin: boolean;
+  let usaSalidas: boolean;
   let comp: any;
   let actualizadas: IVenta[];
   const etiquetas = (v: IVenta) => comp.menuDe(v).filter((i: any) => !i.separator).map((i: any) => i.label);
@@ -30,6 +31,8 @@ describe('AccionesVentaComponent', () => {
     vi.stubGlobal('sessionStorage', { setItem: (k: string, v: string) => almacen.set(k, v), getItem: (k: string) => almacen.get(k) ?? null });
     supabase = {
       getCambiosVenta: vi.fn(async () => [{ id: 'c1', tipo: 'ENTREGA', fecha: '2026-10-02', detalle: {} }]),
+      getSalidasDeVenta: vi.fn(async () => [{ id: 's1', placa: 'ABC123', cantidad: 25, unidad: 'm3' }]),
+      detenerSalidasVenta: vi.fn(async (_: string, detener: boolean, motivo: string | null) => venta({ salidas_detenidas_en: detener ? '2026-10-02T10:00:00Z' : null, motivo_detencion: motivo })),
       registrarPago: vi.fn(async () => venta({ pagado: 500, saldo: 680 })),
       anularPago: vi.fn(async () => venta()),
       anularVenta: vi.fn(async () => venta({ estado: 'ANULADA' })),
@@ -44,9 +47,10 @@ describe('AccionesVentaComponent', () => {
     router = { navigate: vi.fn() };
     pdf = { generarYDescargarOrdenVenta: vi.fn(async () => {}) };
     esAdmin = false;
+    usaSalidas = false;
     comp = new AccionesVentaComponent(
       supabase, mensajes, pdf, { markForCheck: () => {} } as any, router,
-      { esAdminEmpresaActiva: () => esAdmin, empresaActiva: () => ({ id: 'WM' }) } as any
+      { esAdminEmpresaActiva: () => esAdmin, empresaActiva: () => ({ id: 'WM' }), usaSalidas: () => usaSalidas } as any
     );
     actualizadas = [];
     comp.actualizada.subscribe((v: IVenta) => actualizadas.push(v));
@@ -66,6 +70,19 @@ describe('AccionesVentaComponent', () => {
 
     it('sin saldo no ofrece registrar pago', () => {
       expect(etiquetas(venta({ pagado: 1180, saldo: 0 }))).not.toContain('Registrar pago');
+    });
+
+    it('con salidas, la entrega ya no se marca a mano', () => {
+      const conSalidas = venta({ estado_entrega: 'PARCIAL', venta_items: [{ id: 'linea-1', descripcion: 'Arena', unidad: 'm3', cantidad: 10, precio_unitario: 100, importe: 1000, entregado: 5 }] });
+      expect(etiquetas(conSalidas).filter((e: string) => e.startsWith('Marcar'))).toEqual([]);
+    });
+
+    it('detener salidas se ofrece solo si la empresa usa el módulo, y según cómo esté la venta', () => {
+      expect(etiquetas(venta())).not.toContain('Detener salidas');
+      usaSalidas = true;
+      expect(etiquetas(venta())).toContain('Detener salidas');
+      expect(etiquetas(venta({ salidas_detenidas_en: '2026-10-02T10:00:00Z' }))).toContain('Reanudar salidas');
+      expect(etiquetas(venta({ salidas_detenidas_en: '2026-10-02T10:00:00Z' }))).not.toContain('Detener salidas');
     });
 
     it('no ofrece el estado de entrega en el que ya está', () => {
@@ -365,5 +382,42 @@ describe('AccionesVentaComponent', () => {
     await comp.descargarPdf(v);
     expect(pdf.generarYDescargarOrdenVenta).toHaveBeenCalledWith(v, { id: 'WM' });
     expect(comp.descargando).toBe(false);
+  });
+  describe('salidas', () => {
+    beforeEach(() => { usaSalidas = true; });
+
+    it('el detalle trae las salidas solo si la empresa usa el módulo', async () => {
+      await comp.verDetalle(venta());
+      expect(comp.salidasDelDetalle).toHaveLength(1);
+
+      usaSalidas = false;
+      supabase.getSalidasDeVenta.mockClear();
+      await comp.verDetalle(venta());
+      expect(supabase.getSalidasDeVenta).not.toHaveBeenCalled();
+      expect(comp.salidasDelDetalle).toBeNull();
+    });
+
+    it('detener pide motivo y lo envía', async () => {
+      comp.pedirDetenerSalidas(venta());
+      expect(comp.pedido.titulo).toBe('Detener salidas');
+      comp.motivo = 'Debe el adelanto';
+      await comp.confirmarMotivo();
+      expect(supabase.detenerSalidasVenta).toHaveBeenCalledWith('v1', true, 'Debe el adelanto');
+      expect(actualizadas[0].salidas_detenidas_en).toBeTruthy();
+    });
+
+    it('reanudar no pide motivo', async () => {
+      await comp.reanudarSalidas(venta({ salidas_detenidas_en: '2026-10-02T10:00:00Z' }));
+      expect(supabase.detenerSalidasVenta).toHaveBeenCalledWith('v1', false, null);
+      expect(actualizadas[0].salidas_detenidas_en).toBeNull();
+    });
+
+    it('con material entregado, no pide motivo para anular: dice qué falta', () => {
+      esAdmin = true;
+      const conSalidas = venta({ venta_items: [{ id: 'linea-1', descripcion: 'Arena', unidad: 'm3', cantidad: 10, precio_unitario: 100, importe: 1000, entregado: 5 }] });
+      comp.pedirAnularVenta(conSalidas);
+      expect(comp.motivoAbierto).toBe(false);
+      expect(mensajes.add.mock.calls[0][0].summary).toBe('Tiene salidas vigentes');
+    });
   });
 });

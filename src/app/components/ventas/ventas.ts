@@ -11,7 +11,7 @@ import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import {
   ETIQUETA_COBRO, ETIQUETA_ENTREGA, IVenta, diasDeAtraso, estadoCobro, estaVencidaVenta, facturadoDe, faltaFacturar, fechaCorta,
-  redondear2, resumenComprobantes, severidadCobro, severidadEntrega, soles, textoComprobantes
+  redondear2, resumenComprobantes, severidadCobro, severidadEntrega, soles, textoComprobantes, textoFaltanteVenta, tieneEntregaCalculada
 } from '../../models';
 import { descargarCsv } from '../../services/csv';
 import { SessionContextService } from '../../services/session-context.service';
@@ -227,6 +227,12 @@ export class VentasComponent implements OnInit {
 
   severidadDeEntrega(venta: IVenta) {
     return severidadEntrega(venta.estado_entrega);
+  }
+
+  /** Bajo la etiqueta de entrega: cuánto falta, si lo calculan las salidas. */
+  detalleEntrega(venta: IVenta): string | null {
+    if (venta.estado !== 'ACTIVA' || !tieneEntregaCalculada(venta)) return null;
+    return textoFaltanteVenta(venta);
   }
 
   /** Bajo la etiqueta de cobro: cuánto debe y hasta cuándo. */

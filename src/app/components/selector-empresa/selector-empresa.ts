@@ -52,7 +52,7 @@ export class SelectorComponent implements OnInit {
 
   seleccionar(empresa: any) {
     this.session.setEmpresaActiva(empresa);
-    this.router.navigate(['/cotizador']);
+    this.router.navigate([this.session.esEncargado() ? '/cantera' : '/cotizador']);
   }
 
   async cerrarSesion() {

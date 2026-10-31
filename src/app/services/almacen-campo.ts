@@ -1,9 +1,11 @@
 import { Injectable } from '@angular/core';
 
-const BASE = 'cantera';
+const BASE = 'salidas_cantera';
 const VERSION = 1;
+/** La de la prueba sin señal: nada de lo anotado ahí era una salida real. */
+const BASE_DE_PRUEBA = 'cantera';
 
-export type TablaCampo = 'pruebas';
+export type TablaCampo = 'salidas' | 'fotos';
 
 /**
  * Lo que el celular de cantera guarda para trabajar sin señal. Va en IndexedDB y
@@ -18,11 +20,18 @@ export class AlmacenCampoService {
     this.base ??= new Promise((resolve, reject) => {
       const pedido = indexedDB.open(BASE, VERSION);
       pedido.onupgradeneeded = () => {
-        if (!pedido.result.objectStoreNames.contains('pruebas')) {
-          pedido.result.createObjectStore('pruebas', { keyPath: 'id' });
-        }
+        pedido.result.createObjectStore('salidas', { keyPath: 'id' });
+        pedido.result.createObjectStore('fotos', { keyPath: 'empresa_id' });
+        indexedDB.deleteDatabase(BASE_DE_PRUEBA);
       };
-      pedido.onsuccess = () => resolve(pedido.result);
+      pedido.onsuccess = () => {
+        // Una versión nueva de la app no debe quedar esperando a esta pestaña.
+        pedido.result.onversionchange = () => {
+          pedido.result.close();
+          this.base = null;
+        };
+        resolve(pedido.result);
+      };
       pedido.onerror = () => {
         this.base = null;
         reject(pedido.error);
@@ -49,6 +58,25 @@ export class AlmacenCampoService {
       const pedido = base.transaction(tabla, 'readonly').objectStore(tabla).getAll();
       pedido.onsuccess = () => resolve(pedido.result as T[]);
       pedido.onerror = () => reject(pedido.error);
+    });
+  }
+
+  async leer<T>(tabla: TablaCampo, clave: string): Promise<T | null> {
+    const base = await this.abrir();
+    return new Promise((resolve, reject) => {
+      const pedido = base.transaction(tabla, 'readonly').objectStore(tabla).get(clave);
+      pedido.onsuccess = () => resolve((pedido.result as T) ?? null);
+      pedido.onerror = () => reject(pedido.error);
+    });
+  }
+
+  async borrar(tabla: TablaCampo, clave: string): Promise<void> {
+    const base = await this.abrir();
+    return new Promise((resolve, reject) => {
+      const transaccion = base.transaction(tabla, 'readwrite');
+      transaccion.objectStore(tabla).delete(clave);
+      transaccion.oncomplete = () => resolve();
+      transaccion.onerror = () => reject(transaccion.error);
     });
   }
 }

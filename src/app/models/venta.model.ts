@@ -1,5 +1,6 @@
 // src/app/models/venta.model.ts
 import { ICondicionesPdf, fechaDeCotizacion, redondear2 } from './cotizacion.model';
+import { UNIDADES_COMUNES, esUnidadDeServicio } from './producto.model';
 
 export type EstadoVenta = 'ACTIVA' | 'ANULADA';
 export type EstadoEntrega = 'PENDIENTE' | 'PARCIAL' | 'ENTREGADA';
@@ -42,6 +43,8 @@ export interface IVentaItem {
   precio_unitario: number;
   importe: number;
   orden?: number;
+  /** Lo que ya salió de la cantera; lo calculan las salidas. */
+  entregado?: number;
 }
 
 export interface IPago {
@@ -84,7 +87,8 @@ export interface IVentaCambio {
   id: string;
   fecha: string;
   usuario_nombre?: string | null;
-  tipo: 'AJUSTE' | 'ANULACION' | 'ENTREGA' | 'COMPROBANTE' | 'PAGO_ANULADO' | 'COMPROBANTE_ANULADO';
+  tipo: 'AJUSTE' | 'ANULACION' | 'ENTREGA' | 'COMPROBANTE' | 'PAGO_ANULADO' | 'COMPROBANTE_ANULADO'
+    | 'SALIDAS_DETENIDAS' | 'SALIDAS_REANUDADAS' | 'SALIDA_ANULADA' | 'SALIDA_ENLAZADA' | 'SALIDA_MOVIDA';
   detalle: any;
   motivo?: string | null;
 }
@@ -124,6 +128,10 @@ export interface IVenta {
   anulada_en?: string | null;
   anulada_por_nombre?: string | null;
   motivo_anulacion?: string | null;
+  /** Si tiene fecha, la oficina pidió no despachar: el encargado lo ve y, si sale igual, queda marcado. */
+  salidas_detenidas_en?: string | null;
+  salidas_detenidas_por_nombre?: string | null;
+  motivo_detencion?: string | null;
   venta_items: IVentaItem[];
   pagos: IPago[];
   venta_comprobantes: IVentaComprobante[];
@@ -315,6 +323,11 @@ export function comprobanteDesdeArchivo(nombre: string): { tipo: TipoComprobante
   return { tipo: /^(B|EB)/.test(serie) ? 'BOLETA' : 'FACTURA', numero: `${serie}-${coincide[2]}` };
 }
 
+function textoDeSalida(d: { cantidad?: number; unidad?: string; placa?: string }): string {
+  const unidad = UNIDADES_COMUNES.find(u => u.value === d.unidad)?.label ?? d.unidad;
+  return `${Number(d.cantidad).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${unidad}, placa ${d.placa}`;
+}
+
 /** Lo que dice el historial de la venta sobre un cambio. */
 export function describirCambio(cambio: Pick<IVentaCambio, 'tipo' | 'detalle'>): string {
   const d = cambio.detalle ?? {};
@@ -333,9 +346,59 @@ export function describirCambio(cambio: Pick<IVentaCambio, 'tipo' | 'detalle'>):
       return `${etiquetaComprobante(d)} anulada`;
     case 'PAGO_ANULADO':
       return `Pago de ${soles(d.monto)} anulado`;
+    case 'SALIDAS_DETENIDAS':
+      return 'Salidas detenidas';
+    case 'SALIDAS_REANUDADAS':
+      return 'Salidas reanudadas';
+    case 'SALIDA_ANULADA':
+      return `Salida anulada: ${textoDeSalida(d)}`;
+    case 'SALIDA_ENLAZADA':
+      return `Salida enlazada: ${textoDeSalida(d)}`;
+    case 'SALIDA_MOVIDA':
+      return `Salida pasada a ${d.hacia}: ${textoDeSalida(d)}`;
     default:
       return cambio.tipo;
   }
+}
+
+type DatosDeEntrega = Pick<IVenta, 'venta_items'>;
+
+/** Tiene salidas registradas: la entrega ya no se marca a mano. */
+export function tieneEntregaCalculada(venta: DatosDeEntrega): boolean {
+  return (venta.venta_items ?? []).some(i => Number(i.entregado) > 0);
+}
+
+/** Lo que vale lo que ya salió, con su parte de descuento e IGV: es lo que se compara con lo pagado. */
+export function valorEntregado(venta: DatosDeEntrega & Pick<IVenta, 'subtotal' | 'total'>): number {
+  const subtotal = Number(venta.subtotal);
+  if (subtotal <= 0) return 0;
+  const salido = (venta.venta_items ?? []).reduce((suma, i) => suma + Number(i.entregado ?? 0) * Number(i.precio_unitario), 0);
+  return redondear2(Number(venta.total) * salido / subtotal);
+}
+
+/**
+ * Lo más delicado: el material ya salió y falta el dinero. Una venta marcada a mano
+ * como entregada no tiene cantidades, así que cuenta por su total.
+ */
+export function entregadoSinPagarDe(venta: DatosDeEntrega & Pick<IVenta, 'estado' | 'estado_entrega' | 'subtotal' | 'total' | 'pagado'>): number {
+  if (venta.estado !== 'ACTIVA') return 0;
+  const valor = tieneEntregaCalculada(venta)
+    ? valorEntregado(venta)
+    : venta.estado_entrega === 'ENTREGADA' ? Number(venta.total) : 0;
+  return Math.max(0, redondear2(valor - Number(venta.pagado)));
+}
+
+/** "Faltan 55 m³", "Faltan 55 m³ y 20 bolsa": lo que queda por salir, sin los servicios. */
+export function textoFaltanteVenta(venta: DatosDeEntrega): string | null {
+  const porUnidad = new Map<string, number>();
+  for (const i of venta.venta_items ?? []) {
+    const falta = Number(i.cantidad) - Number(i.entregado ?? 0);
+    if (falta > 0 && !esUnidadDeServicio(i.unidad)) porUnidad.set(i.unidad, (porUnidad.get(i.unidad) ?? 0) + falta);
+  }
+  if (!porUnidad.size) return null;
+  return 'Faltan ' + [...porUnidad].map(([unidad, falta]) =>
+    `${falta.toLocaleString('en-US', { maximumFractionDigits: 2 })} ${UNIDADES_COMUNES.find(u => u.value === unidad)?.label ?? unidad}`
+  ).join(' y ');
 }
 
 /** Todo lo que debe un cliente. Se agrupa por documento: el cliente puede haber salido de la cartera. */

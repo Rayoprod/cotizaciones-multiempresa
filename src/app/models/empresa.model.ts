@@ -28,6 +28,10 @@ export interface IEmpresa {
   lugares_entrega?: string[];
   /** Modo de IGV con el que abre una cotización nueva de esta empresa. */
   modo_igv?: ModoIgv;
+  /** Lo que esta empresa tiene activado; lo decide el administrador general. */
+  modulos?: string[];
+  /** Con cuántos m³ abre una salida de un volquete del que no se sabe la capacidad. */
+  capacidad_volquete_m3?: number;
   // Relación cargada por separado desde tabla cuentas_bancarias
   cuentas_bancarias?: ICuentaBancaria[];
   /** Rol del usuario actual en esta empresa (no es columna: viene de usuario_empresa). */
@@ -66,6 +70,8 @@ export interface EmpresaFormData {
   contacto_aprobacion?: string;
   mostrar_cuentas?: boolean;
   prefijo?: string;
+  modulos?: string[];
+  capacidad_volquete_m3?: number;
 }
 
 export interface EmpresaValidationError {

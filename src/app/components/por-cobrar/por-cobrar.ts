@@ -7,7 +7,7 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import {
-  ETIQUETA_ENTREGA, IDeudaCliente, IVenta, cobradoEnElMes, deudasPorCliente, diasDeAtraso, estaVencidaVenta, fechaCorta,
+  ETIQUETA_ENTREGA, IDeudaCliente, IVenta, cobradoEnElMes, deudasPorCliente, diasDeAtraso, entregadoSinPagarDe, estaVencidaVenta, fechaCorta,
   redondear2, severidadEntrega, textoComprobantes
 } from '../../models';
 import { descargarCsv } from '../../services/csv';
@@ -89,9 +89,9 @@ export class PorCobrarComponent implements OnInit {
     this.totalPorCobrar = redondear2(this.deudas.reduce((suma, d) => suma + d.saldo, 0));
     this.totalVencido = redondear2(this.deudas.reduce((suma, d) => suma + d.vencido, 0));
     this.clientesVencidos = this.deudas.filter(d => d.vencido > 0).length;
-    const entregadas = this.deudas.flatMap(d => d.ventas).filter(v => v.estado_entrega === 'ENTREGADA');
-    this.entregadoSinPagar = redondear2(entregadas.reduce((suma, v) => suma + Number(v.saldo), 0));
-    this.ventasEntregadasSinPagar = entregadas.length;
+    const sinPagar = this.deudas.flatMap(d => d.ventas).map(entregadoSinPagarDe).filter(monto => monto > 0);
+    this.entregadoSinPagar = redondear2(sinPagar.reduce((suma, monto) => suma + monto, 0));
+    this.ventasEntregadasSinPagar = sinPagar.length;
     this.cobradoEsteMes = cobradoEnElMes(this.ventas, hoy);
     this.aplicarFiltros();
   }

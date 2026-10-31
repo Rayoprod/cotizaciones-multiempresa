@@ -30,6 +30,8 @@ interface Usuario {
   activo: boolean;
 }
 
+const ETIQUETA_ROL: Record<RolEmpresa, string> = { admin: 'Admin', vendedor: 'Vendedor', encargado: 'Encargado' };
+
 /** Lo que se muestra en la columna "Acceso": una etiqueta por empresa. */
 export interface EtiquetaAcceso {
   texto: string;
@@ -50,8 +52,8 @@ export function etiquetasDeAcceso(
   return [...asignaciones]
     .sort((a, b) => (nombres.get(a.empresa_id) ?? a.empresa_id).localeCompare(nombres.get(b.empresa_id) ?? b.empresa_id))
     .map(a => ({
-      texto: `${nombres.get(a.empresa_id) ?? a.empresa_id} · ${a.rol === 'admin' ? 'Admin' : 'Vendedor'}`,
-      severidad: a.rol === 'admin' ? 'warning' : 'info'
+      texto: `${nombres.get(a.empresa_id) ?? a.empresa_id} · ${ETIQUETA_ROL[a.rol]}`,
+      severidad: a.rol === 'admin' ? 'warning' : a.rol === 'encargado' ? 'secondary' : 'info'
     }));
 }
 
@@ -99,7 +101,8 @@ export class UsuariosComponent implements OnInit {
 
   rolesEmpresa: { label: string; value: RolEmpresa }[] = [
     { label: 'Vendedor', value: 'vendedor' },
-    { label: 'Admin', value: 'admin' }
+    { label: 'Admin', value: 'admin' },
+    { label: 'Encargado', value: 'encargado' }
   ];
 
   constructor(

@@ -6,6 +6,7 @@ import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 
 import { IEmpresa, ICuentaBancaria } from '../../models/empresa.model';
 import { MODOS_IGV } from '../../models/cotizacion.model';
+import { MODULO_SALIDAS } from '../../models/salida.model';
 import { SupabaseService } from '../../services/supabase.service';
 import { ApiPeruService } from '../../services/api-peru.service';
 import {
@@ -128,6 +129,8 @@ export class EmpresasComponent implements OnInit {
       contacto_aprobacion: ['', Validators.maxLength(200)],
       lugares_entrega: [[] as string[]],
       modo_igv: ['sumar'],
+      modulos: [[] as string[]],
+      capacidad_volquete_m3: [25, [Validators.required, Validators.min(0.01), Validators.max(999999)]],
       cuentas_bancarias: this.fb.array([])
     });
     
@@ -213,7 +216,9 @@ export class EmpresasComponent implements OnInit {
       mostrar_cuentas: true,
       contacto_aprobacion: '',
       lugares_entrega: [],
-      modo_igv: 'sumar'
+      modo_igv: 'sumar',
+      modulos: [],
+      capacidad_volquete_m3: 25
     });
     this.cuentasFormArray.clear();
     
@@ -238,7 +243,9 @@ export class EmpresasComponent implements OnInit {
       mostrar_cuentas: empresa.mostrar_cuentas ?? true,
       contacto_aprobacion: (empresa.contacto_aprobacion || '').trim(),
       lugares_entrega: [...(empresa.lugares_entrega ?? [])],
-      modo_igv: empresa.modo_igv ?? 'sumar'
+      modo_igv: empresa.modo_igv ?? 'sumar',
+      modulos: [...(empresa.modulos ?? [])],
+      capacidad_volquete_m3: empresa.capacidad_volquete_m3 ?? 25
     });
     
     
@@ -436,6 +443,16 @@ export class EmpresasComponent implements OnInit {
   
   // ── GUARDADO ─────────────────────────────────────────────────────────
   
+  get usaSalidas(): boolean {
+    return (this.empresaForm.value.modulos ?? []).includes(MODULO_SALIDAS);
+  }
+
+  alternarSalidas(activar: boolean) {
+    this.empresaForm.patchValue({ modulos: activar ? [MODULO_SALIDAS] : [] });
+    this.empresaForm.markAsDirty();
+    this.cdr.markForCheck();
+  }
+
   async guardarEmpresa() {
 
     this.empresaForm.markAllAsTouched();
@@ -455,6 +472,12 @@ export class EmpresasComponent implements OnInit {
 
     if (this.cuentasFormArray.length > 0 && this.cuentasFormArray.invalid) {
       this.pestanaActiva = 3;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    if (this.empresaForm.get('capacidad_volquete_m3')?.invalid) {
+      this.pestanaActiva = 4;
       this.cdr.markForCheck();
       return;
     }

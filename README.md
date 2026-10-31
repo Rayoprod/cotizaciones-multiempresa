@@ -153,8 +153,8 @@ Funciones auxiliares de las políticas: `es_superadmin()`,
   partes y cada pago es de una sola venta. No se puede pagar más que el saldo.
   `pagado` lo mantienen las funciones; `saldo` es una columna calculada.
   "Vencida" y "Pagada" no se guardan: se calculan (`estadoCobro`).
-- **Entrega**: Por entregar, Parcial o Entregada, a mano. Se calculará sola cuando
-  existan las salidas.
+- **Entrega**: Por entregar, Parcial o Entregada. Se marca a mano mientras la venta no
+  tenga salidas; con salidas, la calculan ellas.
 - **Facturas y boletas**: se emiten en el sistema de siempre; aquí se guardan para
   ubicarlas. Una venta puede tener varias, por ejemplo una por cada adelanto y otra
   por el saldo. Cada una lleva número, fecha, monto y, si ya se tiene, su archivo: un
@@ -175,6 +175,43 @@ Funciones auxiliares de las políticas: `es_superadmin()`,
   que no se borran. Si venía de una cotización, esta vuelve a Pendiente.
 - Se escribe solo por funciones (`crear_venta`, `registrar_pago`, `agregar_comprobante_venta`…);
   `authenticated` únicamente lee. `supabase/pruebas_ventas.sql` prueba estas reglas.
+
+
+## Salidas de cantera
+
+El módulo se activa por empresa (`empresas.modulos`) y solo lo cambia el superadmin.
+La oficina vende; el encargado anota cada volquete en la cantera, casi siempre sin señal.
+
+- **Rol Encargado** (`usuario_empresa.rol`): no ve precios, montos ni deudas.
+  `tiene_acceso_empresa()` significa "acceso de oficina" y lo deja fuera de todo lo
+  demás; recibe lo suyo por `datos_cantera()`, que no trae montos ni observaciones. De
+  una venta detenida solo sabe que lo está: el motivo suele hablar de deudas.
+- **Sin señal**: `/cantera` abre desde lo guardado, sin esperar a la red. Cada salida va
+  primero a IndexedDB (`AlmacenCampoService`) y `ColaCampoService` la envía en orden
+  cuando puede. El service worker no sincroniza en segundo plano: lo pendiente sale con
+  la app abierta y con señal.
+- **Enviar dos veces no duplica**: el celular genera el `id` y `registrar_salida` lo
+  usa. Un error de conexión, 401 o 42501 se reintenta (sin señal, un token vencido llega
+  como falta de permisos); un rechazo real (22xxx, 23xxx, P0001) queda "con problema" y
+  no detiene a las demás.
+- **Lo que no calza se marca, no se rechaza**, porque el volquete ya salió: sin venta,
+  de más, con la venta detenida o anulada. Queda `por_revisar` hasta que la oficina la
+  enlace a una venta (`enlazar_salida`) o la dé por revisada con una nota.
+- **Lo que falta entregar** en el celular es lo del servidor menos lo que aún no llegó
+  (`faltanteDeLinea`).
+- **Volquetes**: una placa nueva se guarda sola, con la capacidad del primer viaje, y
+  queda por completar en oficina. La cantidad se propone desde la capacidad y se puede
+  corregir. El chofer se propone con el último de esa placa.
+- **Anular**: quien la registró, el mismo día y con motivo (cuenta la hora del celular:
+  anulada a tiempo sin señal puede llegar al día siguiente). Después, solo un admin.
+- **En la venta**: `venta_items.entregado` se calcula de nuevo desde las salidas. No se
+  puede quitar una línea con salidas, bajar de lo entregado ni anular la venta sin
+  resolverlas. Las unidades viaje, hora, día, mes y glb son servicios: no salen de la
+  cantera.
+- **Detener salidas**: no impide anotar. El encargado lo ve cuando su celular tiene
+  señal y, si sale igual, queda marcado.
+- `supabase/pruebas_cantera.sql` prueba estas reglas y que el encargado no lea nada de
+  oficina.
 
 ## Color de la empresa
 

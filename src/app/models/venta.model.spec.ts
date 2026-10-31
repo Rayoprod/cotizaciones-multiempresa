@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   IVenta, IVentaComprobante, adelantoDe, cobradoEnElMes, cobradoSinFacturar, comprobanteDesdeArchivo, datosVentaIniciales,
   describirCambio, deudasPorCliente, diasDeAtraso, esDocumentoValido, estadoCobro, estaVencidaVenta, facturadoDe, faltaFacturar,
-  faltantesDatosVenta, fechaIso, montoSugeridoFactura, resumenComprobantes, resumenFacturado, textoComprobantes, textoCondicionPago
+  faltantesDatosVenta, fechaIso, montoSugeridoFactura, resumenComprobantes, resumenFacturado, textoComprobantes, textoCondicionPago,
+  entregadoSinPagarDe, textoFaltanteVenta, tieneEntregaCalculada, valorEntregado
 } from './venta.model';
 
 const hoy = new Date(2026, 9, 30, 15, 30);
@@ -220,5 +221,67 @@ describe('cobrado en el mes', () => {
   it('cuenta por la fecha del pago y sin lo anulado', () => {
     const ventas = [venta({ pagos: [pago('2026-10-01', 100), pago('2026-09-30', 50), pago('2026-10-15', 70, true)] }), venta({ pagos: [pago('2026-10-30', 33.3)] })];
     expect(cobradoEnElMes(ventas, hoy)).toBe(133.3);
+  });
+});
+
+describe('entrega calculada por las salidas', () => {
+  const lineas = [
+    { id: 'a', descripcion: 'Arena', unidad: 'm3', cantidad: 100, precio_unitario: 50, importe: 5000, entregado: 40 },
+    { id: 'b', descripcion: 'Piedra', unidad: 'm3', cantidad: 50, precio_unitario: 60, importe: 3000, entregado: 0 },
+    { id: 'c', descripcion: 'Flete', unidad: 'viaje', cantidad: 1, precio_unitario: 2000, importe: 2000, entregado: 0 }
+  ];
+  const base = { estado: 'ACTIVA' as const, estado_entrega: 'PARCIAL' as const, subtotal: 10000, total: 11800, pagado: 0, venta_items: lineas };
+
+  it('sabe si ya la calculan las salidas', () => {
+    expect(tieneEntregaCalculada(base)).toBe(true);
+    expect(tieneEntregaCalculada({ venta_items: [{ ...lineas[1] }] })).toBe(false);
+    expect(tieneEntregaCalculada({ venta_items: [{ descripcion: 'x', unidad: 'm3', cantidad: 1, precio_unitario: 1, importe: 1 }] })).toBe(false);
+  });
+
+  it('valora lo entregado con su parte de IGV y descuento', () => {
+    // 40 × 50 = 2,000 de 10,000 de subtotal: el 20% del total
+    expect(valorEntregado(base)).toBe(2360);
+  });
+
+  it('con subtotal en cero, nada', () => {
+    expect(valorEntregado({ ...base, subtotal: 0 })).toBe(0);
+  });
+
+  it('entregado sin pagar: lo que vale lo que salió menos lo pagado', () => {
+    expect(entregadoSinPagarDe(base)).toBe(2360);
+    expect(entregadoSinPagarDe({ ...base, pagado: 1000 })).toBe(1360);
+    expect(entregadoSinPagarDe({ ...base, pagado: 5000 })).toBe(0);
+  });
+
+  it('marcada a mano como entregada no tiene cantidades: cuenta por su total', () => {
+    const aMano = { ...base, estado_entrega: 'ENTREGADA' as const, venta_items: [{ ...lineas[1] }], pagado: 800 };
+    expect(entregadoSinPagarDe(aMano)).toBe(11000);
+  });
+
+  it('marcada a mano como parcial no se puede saber cuánto', () => {
+    expect(entregadoSinPagarDe({ ...base, venta_items: [{ ...lineas[1] }] })).toBe(0);
+  });
+
+  it('una anulada no cuenta', () => {
+    expect(entregadoSinPagarDe({ ...base, estado: 'ANULADA' })).toBe(0);
+  });
+
+  it('dice lo que falta sumando por unidad, sin los servicios', () => {
+    expect(textoFaltanteVenta(base)).toBe('Faltan 110 m³');
+    expect(textoFaltanteVenta({ venta_items: [lineas[0], { ...lineas[1], unidad: 'bolsa', cantidad: 20 }] })).toBe('Faltan 60 m³ y 20 bolsa');
+  });
+
+  it('completa o solo de servicios: no hay nada que decir', () => {
+    expect(textoFaltanteVenta({ venta_items: [{ ...lineas[0], entregado: 100 }] })).toBeNull();
+    expect(textoFaltanteVenta({ venta_items: [lineas[2]] })).toBeNull();
+  });
+
+  it('el historial cuenta lo que pasó con las salidas', () => {
+    const d = { cantidad: 25, unidad: 'm3', placa: 'ABC123' };
+    expect(describirCambio({ tipo: 'SALIDAS_DETENIDAS', detalle: {} })).toBe('Salidas detenidas');
+    expect(describirCambio({ tipo: 'SALIDAS_REANUDADAS', detalle: {} })).toBe('Salidas reanudadas');
+    expect(describirCambio({ tipo: 'SALIDA_ANULADA', detalle: d })).toBe('Salida anulada: 25 m³, placa ABC123');
+    expect(describirCambio({ tipo: 'SALIDA_ENLAZADA', detalle: d })).toBe('Salida enlazada: 25 m³, placa ABC123');
+    expect(describirCambio({ tipo: 'SALIDA_MOVIDA', detalle: { ...d, hacia: 'V-2' } })).toBe('Salida pasada a V-2: 25 m³, placa ABC123');
   });
 });

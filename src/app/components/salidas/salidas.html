@@ -1,0 +1,311 @@
+<div class="p-3 md:p-4">
+
+  <!-- Encabezado -->
+  <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="text-2xl font-bold text-900 m-0">Salidas</h1>
+      <p class="text-600 text-sm mt-1 mb-0">{{ empresaActiva?.nombre_comercial }}. Llegan cuando el celular de la cantera encuentra señal.</p>
+    </div>
+
+    <div class="flex align-items-center gap-2 flex-wrap">
+      <button pButton type="button" icon="pi pi-refresh" label="Actualizar" class="p-button-outlined p-button-secondary p-button-sm"
+              [loading]="cargando" (click)="cargarDatos()"></button>
+      <button *ngIf="vista === 'SALIDAS'" pButton type="button" icon="pi pi-download" label="Exportar CSV"
+              class="p-button-outlined p-button-secondary p-button-sm" (click)="exportarCSV()"></button>
+      <button *ngIf="vista === 'VOLQUETES'" pButton type="button" icon="pi pi-plus" label="Nuevo volquete"
+              class="p-button-sm" (click)="abrirVolquete(null)"></button>
+      <a *ngIf="vista === 'SALIDAS'" pButton routerLink="/cantera" icon="pi pi-truck" label="Registrar en cantera" class="p-button-sm no-underline"></a>
+    </div>
+  </div>
+
+  <div class="segmentos mb-3" role="group" aria-label="Qué ver">
+    <button type="button" class="segmento" [class.segmento-activo]="vista === 'SALIDAS'" [attr.aria-pressed]="vista === 'SALIDAS'" (click)="elegirVista('SALIDAS')">Salidas</button>
+    <button type="button" class="segmento" [class.segmento-activo]="vista === 'VOLQUETES'" [attr.aria-pressed]="vista === 'VOLQUETES'" (click)="elegirVista('VOLQUETES')">
+      Volquetes<ng-container *ngIf="volquetesPorCompletar"> ({{ volquetesPorCompletar }} por completar)</ng-container>
+    </button>
+  </div>
+
+  <div *ngIf="cargando" aria-busy="true">
+    <div class="grid mb-3">
+      <div class="col-6 lg:col-3" *ngFor="let _ of [1, 2, 3]"><div class="esqueleto" style="height: 6rem"></div></div>
+    </div>
+    <div class="esqueleto" style="height: 22rem"></div>
+  </div>
+
+  <!-- ── Salidas ──────────────────────────────────────────────────────────── -->
+  <ng-container *ngIf="!cargando && vista === 'SALIDAS'">
+    <div class="grid mb-3">
+      <div class="col-12 md:col-4">
+        <div class="kpi">
+          <span class="kpi-titulo">Hoy</span>
+          <p class="kpi-texto">{{ resumenHoy }}</p>
+        </div>
+      </div>
+      <div class="col-12 md:col-4">
+        <div class="kpi">
+          <span class="kpi-titulo">En estas fechas</span>
+          <p class="kpi-texto">{{ resumenPeriodo }}</p>
+        </div>
+      </div>
+      <div class="col-12 md:col-4">
+        <div class="kpi">
+          <span class="kpi-titulo">Por revisar</span>
+          <p class="kpi-valor" [class.text-amber-700]="conteos.POR_REVISAR > 0" [class.text-slate-900]="!conteos.POR_REVISAR">{{ conteos.POR_REVISAR }}</p>
+          <p class="kpi-nota">sin venta, de más o con la venta detenida</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tarjeta-filtros">
+      <div class="filtros-estado" role="group" aria-label="Filtrar salidas">
+        <button *ngFor="let f of filtros" type="button" class="filtro"
+                [class.filtro-activo]="filtro === f.value"
+                [attr.aria-pressed]="filtro === f.value"
+                (click)="elegirFiltro(f.value)">
+          {{ f.label }} <span class="filtro-cuenta">{{ conteos[f.value] }}</span>
+        </button>
+      </div>
+
+      <div class="grid align-items-end mt-2">
+        <div class="col-12 md:col-6">
+          <label for="buscarSalida" class="etiqueta-filtro">Buscar</label>
+          <input pInputText id="buscarSalida" [(ngModel)]="terminoBusqueda" (ngModelChange)="aplicarFiltros()"
+                 placeholder="Placa, cliente, material, guía o chofer" class="w-full" />
+        </div>
+        <div class="col-6 md:col-3">
+          <label for="salidaDesde" class="etiqueta-filtro">Desde</label>
+          <input pInputText id="salidaDesde" type="date" [(ngModel)]="fechaDesde" (change)="cargarDatos()" class="w-full" />
+        </div>
+        <div class="col-6 md:col-3">
+          <label for="salidaHasta" class="etiqueta-filtro">Hasta</label>
+          <input pInputText id="salidaHasta" type="date" [(ngModel)]="fechaHasta" (change)="cargarDatos()" class="w-full" />
+        </div>
+        <div class="col-12 flex justify-content-end py-0" *ngIf="hayFiltros">
+          <button pButton type="button" icon="pi pi-filter-slash" label="Limpiar"
+                  class="p-button-text p-button-secondary p-button-sm" (click)="limpiarFiltros()"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Celular y tablet -->
+    <div class="lista-tarjetas lg:hidden mb-4">
+      <div *ngFor="let s of salidasFiltradas" class="tarjeta-fila" [class.fila-apagada]="s.estado === 'ANULADA'">
+        <div class="flex align-items-center justify-content-between gap-2">
+          <span class="font-bold text-900">{{ formatoPlaca(s.placa) }}</span>
+          <span class="text-xs text-600 flex-shrink-0">{{ fechaHora(s.registrada_en) }}</span>
+        </div>
+        <p class="font-bold text-900 m-0 mt-2">{{ cantidadConUnidad(s.cantidad, s.unidad) }} <span class="font-normal text-700">{{ s.material }}</span></p>
+        <p class="text-sm text-900 m-0 cliente-nombre">{{ s.cliente }}</p>
+        <ng-container *ngTemplateOutlet="vinculo; context: { $implicit: s }"></ng-container>
+        <ng-container *ngTemplateOutlet="detalles; context: { $implicit: s }"></ng-container>
+        <ng-container *ngTemplateOutlet="estado; context: { $implicit: s }"></ng-container>
+        <div class="flex flex-wrap justify-content-end gap-3 mt-2 pt-2 border-top-1 surface-border" *ngIf="s.estado === 'ACTIVA'">
+          <ng-container *ngTemplateOutlet="acciones; context: { $implicit: s }"></ng-container>
+        </div>
+      </div>
+      <ng-container *ngIf="salidasFiltradas.length === 0">
+        <ng-container *ngTemplateOutlet="vacio"></ng-container>
+      </ng-container>
+    </div>
+
+    <!-- Escritorio -->
+    <div class="hidden lg:block bg-white border-round-2xl overflow-hidden border-1 surface-border">
+      <p-table [value]="salidasFiltradas" [paginator]="salidasFiltradas.length > 20" [rows]="20" [rowsPerPageOptions]="[20, 50, 100]"
+               [tableStyle]="{ 'table-layout': 'fixed' }" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="registrada_en" style="width: 9.5rem">Salió <p-sortIcon field="registrada_en" /></th>
+            <th pSortableColumn="placa" style="width: 7.5rem">Volquete <p-sortIcon field="placa" /></th>
+            <th pSortableColumn="material" style="width: 9rem">Material <p-sortIcon field="material" /></th>
+            <th pSortableColumn="cliente">Cliente <p-sortIcon field="cliente" /></th>
+            <th style="width: 12rem">Estado</th>
+            <th style="width: 8.5rem" aria-label="Acciones"></th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-s>
+          <tr [class.fila-apagada]="s.estado === 'ANULADA'">
+            <td>
+              <p class="text-sm text-900 m-0">{{ fechaHora(s.registrada_en) }}</p>
+              <p *ngIf="llegoOtroDia(s)" class="text-xs text-600 m-0">Llegó {{ fechaHora(s.recibida_en) }}</p>
+            </td>
+            <td>
+              <p class="font-bold text-900 text-sm m-0">{{ formatoPlaca(s.placa) }}</p>
+              <p *ngIf="s.chofer" class="text-xs text-600 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="s.chofer">{{ s.chofer }}</p>
+              <p *ngIf="s.guia" class="text-xs text-600 m-0">Guía {{ s.guia }}</p>
+            </td>
+            <td>
+              <p class="font-bold text-900 text-sm m-0">{{ cantidadConUnidad(s.cantidad, s.unidad) }}</p>
+              <p class="text-xs text-700 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="s.material">{{ s.material }}</p>
+            </td>
+            <td>
+              <p class="text-sm text-900 m-0 text-overflow-ellipsis overflow-hidden white-space-nowrap" [pTooltip]="s.cliente">{{ s.cliente }}</p>
+              <ng-container *ngTemplateOutlet="vinculo; context: { $implicit: s }"></ng-container>
+            </td>
+            <td><ng-container *ngTemplateOutlet="estado; context: { $implicit: s }"></ng-container></td>
+            <td>
+              <div class="flex flex-column align-items-end" *ngIf="s.estado === 'ACTIVA'">
+                <ng-container *ngTemplateOutlet="acciones; context: { $implicit: s }"></ng-container>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr><td colspan="6"><ng-container *ngTemplateOutlet="vacio"></ng-container></td></tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </ng-container>
+
+  <!-- ── Volquetes ────────────────────────────────────────────────────────── -->
+  <ng-container *ngIf="!cargando && vista === 'VOLQUETES'">
+    <p class="ayuda mt-0 mb-3">El encargado agrega una placa nueva sin detener el viaje; aquí se completa de quién es y su capacidad.</p>
+
+    <div class="lista-tarjetas mb-4">
+      <button *ngFor="let v of vehiculos" type="button" class="tarjeta-fila volquete" [class.fila-apagada]="!v.activo" (click)="abrirVolquete(v)">
+        <span class="flex align-items-center justify-content-between gap-2">
+          <span class="font-bold text-900">{{ formatoPlaca(v.placa) }}</span>
+          <p-tag *ngIf="faltaCompletar(v)" value="Por completar" severity="warning" />
+          <p-tag *ngIf="!v.activo" value="De baja" severity="secondary" />
+        </span>
+        <span class="text-sm text-700">
+          {{ v.capacidad_m3 ? (v.capacidad_m3 | number:'1.0-2') + ' m³' : 'Sin capacidad' }} · {{ etiquetaPropietario(v.propietario) }}
+        </span>
+        <span *ngIf="v.chofer" class="text-sm text-700">{{ v.chofer }}</span>
+        <span *ngIf="v.ultima_salida_en" class="text-xs text-600">Última salida: {{ fechaHora(v.ultima_salida_en) }}</span>
+      </button>
+    </div>
+
+    <div *ngIf="!vehiculos.length" class="text-center py-5 px-3 bg-white border-round-2xl border-1 surface-border">
+      <p class="font-semibold text-900 m-0">Todavía no hay volquetes</p>
+      <p class="ayuda mt-1 mb-0">Agrégalos aquí, o aparecen solos con la primera salida de cada placa.</p>
+    </div>
+  </ng-container>
+</div>
+
+<!-- A qué venta pertenece -->
+<ng-template #vinculo let-s>
+  <a *ngIf="s.venta_id" routerLink="/ventas" [queryParams]="{ venta: s.venta_id }" class="enlace text-xs white-space-nowrap">{{ s.folio_venta }}</a>
+  <p *ngIf="!s.venta_id && s.folio_venta" class="text-xs text-600 m-0">Era de {{ s.folio_venta }}</p>
+</ng-template>
+
+<ng-template #detalles let-s>
+  <p *ngIf="s.chofer || s.guia" class="text-xs text-600 m-0 mt-1">
+    <ng-container *ngIf="s.chofer">{{ s.chofer }}</ng-container><ng-container *ngIf="s.chofer && s.guia"> · </ng-container><ng-container *ngIf="s.guia">Guía {{ s.guia }}</ng-container>
+  </p>
+  <p *ngIf="llegoOtroDia(s)" class="text-xs text-600 m-0">Llegó {{ fechaHora(s.recibida_en) }}</p>
+</ng-template>
+
+<!-- Por revisar, revisada o anulada -->
+<ng-template #estado let-s>
+  <div *ngIf="s.estado === 'ANULADA'" class="mt-1">
+    <p-tag value="Anulada" severity="secondary" />
+    <p class="text-xs text-600 m-0 mt-1">{{ s.anulada_por_nombre }}: {{ s.motivo_anulacion }}</p>
+  </div>
+  <ng-container *ngIf="s.estado === 'ACTIVA'">
+    <div *ngIf="s.por_revisar" class="mt-1">
+      <p-tag value="Por revisar" severity="warning" />
+      <p *ngFor="let m of motivosDeRevision(s)" class="text-xs text-amber-800 m-0 mt-1">{{ m }}</p>
+    </div>
+    <p *ngIf="s.revisada_en" class="text-xs text-600 m-0 mt-1">Revisada por {{ s.revisada_por_nombre }}: {{ s.nota_revision }}</p>
+    <p *ngIf="!s.por_revisar && !s.revisada_en" class="text-xs text-600 m-0 mt-1">Por {{ s.creado_por_nombre }}</p>
+  </ng-container>
+</ng-template>
+
+<ng-template #acciones let-s>
+  <button type="button" class="enlace accion" (click)="abrirEnlazar(s)">{{ s.venta_item_id ? 'Cambiar de venta' : 'Enlazar a venta' }}</button>
+  <button *ngIf="s.por_revisar" type="button" class="enlace accion" (click)="pedirRevisar(s)">Dar por revisada</button>
+  <button *ngIf="esAdmin" type="button" class="enlace enlace-peligro accion" (click)="pedirAnular(s)">Anular</button>
+</ng-template>
+
+<ng-template #vacio>
+  <div class="text-center py-5 px-3">
+    <p class="font-semibold text-900 m-0">{{ salidas.length ? 'Ninguna salida con estos filtros' : 'Todavía no hay salidas en estas fechas' }}</p>
+    <button *ngIf="hayFiltros" pButton type="button" label="Limpiar filtros" class="p-button-text p-button-sm mt-2" (click)="limpiarFiltros()"></button>
+    <p *ngIf="!salidas.length" class="ayuda mt-1 mb-0">Aparecen aquí cuando el celular del encargado encuentra señal.</p>
+  </div>
+</ng-template>
+
+<!-- Enlazar a una venta -->
+<p-dialog [header]="salidaAEnlazar?.venta_item_id ? 'Cambiar de venta' : 'Enlazar a una venta'" [(visible)]="enlazarAbierto" [modal]="true" appendTo="body"
+          [draggable]="false" [resizable]="false" [dismissableMask]="true" [style]="{ width: '34rem' }">
+  <div *ngIf="salidaAEnlazar as s" class="flex flex-column gap-3">
+    <p class="m-0 line-height-3">
+      <strong>{{ formatoPlaca(s.placa) }}, {{ cantidadConUnidad(s.cantidad, s.unidad) }}</strong> de {{ s.material }}, del {{ fechaCorta(s.fecha) }}.
+      El encargado anotó: {{ s.cliente }}.
+    </p>
+
+    <input pInputText class="w-full" aria-label="Buscar venta" placeholder="Buscar cliente o folio" [(ngModel)]="busquedaVenta" />
+
+    <div *ngIf="cargandoVentas" class="esqueleto" style="height: 8rem" aria-busy="true"></div>
+
+    <ng-container *ngIf="!cargandoVentas">
+      <div *ngFor="let v of ventasCompatibles" class="venta-enlazar">
+        <p class="font-bold text-900 m-0 cliente-nombre">{{ v.cliente_nombre }}</p>
+        <p class="ayuda m-0">{{ v.folio }} · {{ fechaCorta(v.fecha) }}<ng-container *ngIf="textoFaltanteDe(v) as falta"> · {{ falta }}</ng-container></p>
+        <button *ngFor="let l of lineasCompatibles(v)" type="button" class="linea-enlazar" [disabled]="guardando" [attr.aria-pressed]="s.venta_item_id === l.id" (click)="enlazar(l)">
+          <span>{{ l.descripcion }}</span>
+          <span class="text-sm text-700 white-space-nowrap">{{ textoLinea(l) }}</span>
+        </button>
+      </div>
+      <p *ngIf="!ventasCompatibles.length" class="ayuda m-0">Ninguna venta activa tiene una línea en {{ s.unidad }}.</p>
+    </ng-container>
+
+    <p class="ayuda m-0">¿Aún no existe la venta? <a routerLink="/cotizador" [queryParams]="{ tipo: 'venta' }" class="enlace">Regístrala</a> y vuelve aquí.</p>
+  </div>
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Cerrar" class="p-button-text p-button-secondary" (click)="cerrarEnlazar()"></button>
+  </ng-template>
+</p-dialog>
+
+<!-- Revisar o anular: siempre con un porqué -->
+<p-dialog [header]="pedido?.titulo" [(visible)]="motivoAbierto" [modal]="true" appendTo="body"
+          [draggable]="false" [resizable]="false" [style]="{ width: '26rem' }">
+  <div *ngIf="pedido as p" class="flex flex-column gap-3">
+    <p class="m-0 line-height-3">{{ p.mensaje }}</p>
+    <div>
+      <label for="salida-motivo" class="etiqueta-campo">{{ p.etiqueta }} <span class="text-red-600">*</span></label>
+      <textarea pInputTextarea id="salida-motivo" rows="2" class="w-full" maxlength="500" [(ngModel)]="textoMotivo"></textarea>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <button pButton type="button" label="Cancelar" class="p-button-text p-button-secondary" (click)="cerrarMotivo()"></button>
+    <button pButton type="button" [label]="pedido?.boton || 'Guardar'" [class.p-button-danger]="pedido?.peligro" [disabled]="!textoMotivo.trim()" [loading]="guardando" (click)="confirmarMotivo()"></button>
+  </ng-template>
+</p-dialog>
+
+<!-- Volquete -->
+<p-dialog [header]="volquete.id ? 'Editar volquete' : 'Nuevo volquete'" [(visible)]="volqueteAbierto" [modal]="true" appendTo="body"
+          [draggable]="false" [resizable]="false" [style]="{ width: '26rem' }">
+  <div class="flex flex-column gap-3">
+    <div>
+      <label for="volquete-placa" class="etiqueta-campo">Placa <span class="text-red-600">*</span></label>
+      <input pInputText id="volquete-placa" class="w-full" maxlength="10" placeholder="ABC-123" style="text-transform: uppercase" [(ngModel)]="volquete.placa" />
+    </div>
+    <div>
+      <label for="volquete-capacidad" class="etiqueta-campo">Capacidad (m³) <span class="text-red-600">*</span></label>
+      <input pInputText id="volquete-capacidad" class="w-full" type="number" inputmode="decimal" min="0" step="0.5" [(ngModel)]="volquete.capacidad_m3" />
+    </div>
+    <div>
+      <span class="etiqueta-campo">De quién es <span class="text-red-600">*</span></span>
+      <div class="segmentos w-full" role="group" aria-label="De quién es">
+        <button *ngFor="let p of propietarios" type="button" class="segmento" [class.segmento-activo]="volquete.propietario === p.value"
+                [attr.aria-pressed]="volquete.propietario === p.value" (click)="volquete.propietario = p.value">{{ p.label }}</button>
+      </div>
+    </div>
+    <div>
+      <label for="volquete-chofer" class="etiqueta-campo">Chofer habitual</label>
+      <input pInputText id="volquete-chofer" class="w-full" maxlength="80" placeholder="Opcional" [(ngModel)]="volquete.chofer" />
+    </div>
+    <label *ngIf="volquete.id" class="flex align-items-center gap-2 cursor-pointer">
+      <input type="checkbox" [(ngModel)]="volquete.activo" />
+      <span>Activo. De baja ya no se ofrece en la cantera.</span>
+    </label>
+  </div>
+  <ng-template pTemplate="footer">
+    <p *ngIf="mostrarFaltantesVolquete && faltantesVolquete.length" class="ayuda text-amber-800 text-left mt-0 mb-2" role="alert">Falta {{ faltantesVolquete.join(' y ') }}.</p>
+    <button pButton type="button" label="Cancelar" class="p-button-text p-button-secondary" (click)="cerrarVolquete()"></button>
+    <button pButton type="button" label="Guardar" icon="pi pi-check" [loading]="guardando" (click)="guardarVolquete()"></button>
+  </ng-template>
+</p-dialog>

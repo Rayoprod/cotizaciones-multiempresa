@@ -56,7 +56,9 @@ export class LoginComponent implements OnInit {
       const { error } = await this.authService.login(this.correo, this.contrasena);
 
       if (error) {
-        this.mensajeError = 'Correo o contraseña incorrectos.';
+        // Sin señal también vuelve con error, y no es que la contraseña esté mal.
+        const sinConexion = !error.status || error.status >= 500;
+        this.mensajeError = sinConexion ? 'No hay conexión. Para entrar necesitas señal.' : 'Correo o contraseña incorrectos.';
         return;
       }
 

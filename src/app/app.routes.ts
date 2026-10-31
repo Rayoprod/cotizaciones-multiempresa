@@ -5,6 +5,8 @@ import { authGuard } from './guards/auth-guard';
 import { adminGuard } from './guards/admin-guard';
 import { adminGeneralGuard } from './guards/admin-general-guard';
 import { campoGuard } from './guards/campo-guard';
+import { oficinaGuard } from './guards/oficina-guard';
+import { moduloSalidasGuard } from './guards/modulo-salidas-guard';
 import { initialRedirectGuard } from './guards/initial-redirect.guard';
 
 export const routes: Routes = [
@@ -42,7 +44,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./layout/layout.component')
         .then(m => m.LayoutComponent),
-    canActivate: [authGuard],
+    canActivate: [authGuard, oficinaGuard],
     children: [
       // Ruta vacía que redirige según el rol usando el guard
       { path: '', canActivate: [initialRedirectGuard], children: [] },
@@ -69,6 +71,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/por-cobrar/por-cobrar')
             .then(m => m.PorCobrarComponent)
+      },
+      {
+        path: 'salidas',
+        canActivate: [moduloSalidasGuard],
+        loadComponent: () =>
+          import('./components/salidas/salidas')
+            .then(m => m.SalidasComponent)
       },
       {
         path: 'productos',

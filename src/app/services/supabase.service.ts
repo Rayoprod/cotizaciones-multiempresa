@@ -4,7 +4,8 @@ import { environment } from '../../environments/environment';
 import {
   IEmpresa, ICotizacion, ICuentaBancaria, INuevaCotizacion, IProfile,
   IAsignacionEmpresa, RolGlobal, ICondicionesPdf, IDatosVenta, IVenta, IVentaCambio, IVentaComprobante,
-  EstadoEntrega, MetodoPago, ModoIgv, TipoComprobante, adelantoDe
+  EstadoEntrega, MetodoPago, ModoIgv, TipoComprobante, adelantoDe,
+  IDatosCantera, ISalida, ISalidaLocal, IVehiculo, PropietarioVehiculo
 } from '../models';
 
 @Injectable({ providedIn: 'root' })
@@ -484,6 +485,118 @@ export class SupabaseService {
     const { data, error } = await this.client.rpc('anular_pago', { p_pago_id: pagoId, p_motivo: motivo });
     if (error) throw error;
     return data as IVenta;
+  }
+
+  // ─── CANTERA ──────────────────────────────────────────────────────────────
+
+  /** Lo que el celular necesita para trabajar sin señal: sin montos. */
+  async datosCantera(empresaId: string): Promise<IDatosCantera> {
+    const { data, error } = await this.client.rpc('datos_cantera', { p_empresa_id: empresaId });
+    if (error) throw error;
+    return data as IDatosCantera;
+  }
+
+  /** El id lo generó el celular: enviarla dos veces no la duplica. */
+  async registrarSalida(salida: ISalidaLocal): Promise<void> {
+    const { error } = await this.client.rpc('registrar_salida', {
+      p_id: salida.id,
+      p_empresa_id: salida.empresa_id,
+      p_venta_id: salida.venta_id,
+      p_venta_item_id: salida.venta_item_id,
+      p_cliente: salida.cliente,
+      p_producto_id: salida.producto_id,
+      p_material: salida.material,
+      p_unidad: salida.unidad,
+      p_cantidad: salida.cantidad,
+      p_placa: salida.placa,
+      p_chofer: salida.chofer,
+      p_guia: salida.guia,
+      p_registrada_en: salida.registrada_en
+    });
+    if (error) throw error;
+  }
+
+  /** `anuladaEn` es la hora del celular: anulada a tiempo sin señal puede llegar al día siguiente. */
+  async anularSalida(id: string, motivo: string, anuladaEn?: string): Promise<ISalida> {
+    const { data, error } = await this.client.rpc('anular_salida', {
+      p_salida_id: id, p_motivo: motivo, p_anulada_en: anuladaEn ?? null
+    });
+    if (error) throw error;
+    return data as ISalida;
+  }
+
+  /** Las salidas de un rango de fechas, y siempre las que están por revisar. */
+  async getSalidas(empresaId: string, desde: string, hasta: string): Promise<ISalida[]> {
+    const { data, error } = await this.client
+      .from('salidas')
+      .select('*')
+      .eq('empresa_id', empresaId)
+      .or(`por_revisar.eq.true,and(fecha.gte.${desde},fecha.lte.${hasta})`)
+      .order('registrada_en', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as ISalida[];
+  }
+
+  async getSalidasDeVenta(ventaId: string): Promise<ISalida[]> {
+    const { data, error } = await this.client
+      .from('salidas')
+      .select('*')
+      .eq('venta_id', ventaId)
+      .order('registrada_en', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as ISalida[];
+  }
+
+  async enlazarSalida(salidaId: string, ventaItemId: string): Promise<ISalida> {
+    const { data, error } = await this.client.rpc('enlazar_salida', { p_salida_id: salidaId, p_venta_item_id: ventaItemId });
+    if (error) throw error;
+    return data as ISalida;
+  }
+
+  async revisarSalida(salidaId: string, nota: string): Promise<ISalida> {
+    const { data, error } = await this.client.rpc('revisar_salida', { p_salida_id: salidaId, p_nota: nota });
+    if (error) throw error;
+    return data as ISalida;
+  }
+
+  async detenerSalidasVenta(ventaId: string, detener: boolean, motivo: string | null): Promise<IVenta> {
+    const { data, error } = await this.client.rpc('detener_salidas_venta', {
+      p_venta_id: ventaId, p_detener: detener, p_motivo: motivo
+    });
+    if (error) throw error;
+    return data as IVenta;
+  }
+
+  async getVehiculos(empresaId: string): Promise<IVehiculo[]> {
+    const { data, error } = await this.client
+      .from('vehiculos')
+      .select('*')
+      .eq('empresa_id', empresaId)
+      .order('activo', { ascending: false })
+      .order('placa');
+    if (error) throw error;
+    return (data ?? []) as IVehiculo[];
+  }
+
+  async guardarVehiculo(empresaId: string, vehiculo: {
+    id: string | null;
+    placa: string;
+    capacidad_m3: number | null;
+    propietario: PropietarioVehiculo | null;
+    chofer: string | null;
+    activo: boolean;
+  }): Promise<IVehiculo> {
+    const { data, error } = await this.client.rpc('guardar_vehiculo', {
+      p_empresa_id: empresaId,
+      p_id: vehiculo.id,
+      p_placa: vehiculo.placa,
+      p_capacidad_m3: vehiculo.capacidad_m3,
+      p_propietario: vehiculo.propietario,
+      p_chofer: vehiculo.chofer,
+      p_activo: vehiculo.activo
+    });
+    if (error) throw error;
+    return data as IVehiculo;
   }
 
   // ─── CUENTAS BANCARIAS ────────────────────────────────────────────────────

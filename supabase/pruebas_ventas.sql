@@ -266,7 +266,9 @@ begin
   end;
   insert into storage.objects (bucket_id, name) values ('comprobantes', v_emp || '/' || v_id || '/f001-123.pdf');
   insert into storage.objects (bucket_id, name) values ('comprobantes', v_emp || '/' || v_otra || '/de-otra-venta.pdf');
-  select count(*) into v_n from storage.objects where bucket_id = 'comprobantes' and name like v_emp || '/%';
+  -- Solo estas dos carpetas: la empresa puede tener archivos reales.
+  select count(*) into v_n from storage.objects
+   where bucket_id = 'comprobantes' and (name like v_emp || '/' || v_id || '/%' or name like v_emp || '/' || v_otra || '/%');
   r := r || jsonb_build_object('prueba', 'el vendedor sube y ve archivos en la carpeta de su empresa', 'ok', v_n = 2, 'detalle', v_n || ' archivos');
   begin
     perform public.adjuntar_archivo_comprobante(v_comp, v_emp || '/' || v_otra || '/de-otra-venta.pdf', 'x.pdf');

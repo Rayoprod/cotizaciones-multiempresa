@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SessionContextService } from './session-context.service';
 import { IEmpresa } from '../models';
 
-const empresa = (id: string, mi_rol?: 'admin' | 'vendedor'): IEmpresa =>
-  ({ id, nombre_comercial: id, ruc: '20000000001', color: '#000000', mi_rol });
+const empresa = (id: string, mi_rol?: 'admin' | 'vendedor' | 'encargado', modulos?: string[]): IEmpresa =>
+  ({ id, nombre_comercial: id, ruc: '20000000001', color: '#000000', mi_rol, modulos });
 
 function almacen() {
   const datos = new Map<string, string>();
@@ -121,5 +121,30 @@ describe('SessionContextService - rol en la empresa activa', () => {
   it('sin empresa activa nadie más que el superadmin es admin', () => {
     session.setUsuario({ id: 'u1', rol: 'usuario', activo: true });
     expect(session.esAdminEmpresaActiva()).toBe(false);
+  });
+  it('es encargado según su rol en la empresa activa', () => {
+    const session = new SessionContextService();
+    session.setUsuario({ id: 'u1', rol: 'usuario' });
+    session.setEmpresaActiva(empresa('VDC', 'encargado'));
+    expect(session.esEncargado()).toBe(true);
+    session.setEmpresaActiva(empresa('WM', 'vendedor'));
+    expect(session.esEncargado()).toBe(false);
+  });
+
+  it('el superadmin nunca queda como encargado', () => {
+    const session = new SessionContextService();
+    session.setUsuario({ id: 'u1', rol: 'admin' });
+    session.setEmpresaActiva(empresa('VDC', 'encargado'));
+    expect(session.esEncargado()).toBe(false);
+  });
+
+  it('usa Salidas si la empresa activa tiene el módulo', () => {
+    const session = new SessionContextService();
+    session.setEmpresaActiva(empresa('VDC', 'admin', ['salidas']));
+    expect(session.usaSalidas()).toBe(true);
+    session.setEmpresaActiva(empresa('WM', 'admin', []));
+    expect(session.usaSalidas()).toBe(false);
+    session.setEmpresaActiva(empresa('RAYO', 'admin'));
+    expect(session.usaSalidas()).toBe(false);
   });
 });

@@ -7,6 +7,7 @@
         <span class="font-bold text-lg text-900">{{ v.folio }}</span>
         <p-tag [value]="etiquetaCobro(v)" [severity]="severidadDeCobro(v)" />
         <p-tag *ngIf="v.estado === 'ACTIVA'" [value]="etiquetaEntrega(v)" [severity]="severidadDeEntrega(v)" />
+        <p-tag *ngIf="v.estado === 'ACTIVA' && v.salidas_detenidas_en" value="Salidas detenidas" severity="danger" />
       </div>
       <p class="ayuda mt-1 mb-0">{{ fechaCorta(v.fecha) }}<ng-container *ngIf="v.vendedor_nombre"> · {{ v.vendedor_nombre }}</ng-container></p>
     </div>
@@ -19,6 +20,15 @@
         <strong>Anulada<ng-container *ngIf="v.anulada_en"> el {{ fechaCorta(v.anulada_en) }}</ng-container><ng-container *ngIf="v.anulada_por_nombre"> por {{ v.anulada_por_nombre }}</ng-container>.</strong>
         {{ v.motivo_anulacion }}
       </div>
+    </div>
+
+    <div *ngIf="v.estado === 'ACTIVA' && v.salidas_detenidas_en" class="aviso-anulada" role="status">
+      <i class="pi pi-ban" aria-hidden="true"></i>
+      <div>
+        <strong>Salidas detenidas el {{ fechaCorta(v.salidas_detenidas_en) }}<ng-container *ngIf="v.salidas_detenidas_por_nombre"> por {{ v.salidas_detenidas_por_nombre }}</ng-container>.</strong>
+        {{ v.motivo_detencion }}
+      </div>
+      <button type="button" class="enlace flex-shrink-0" [disabled]="guardando" (click)="reanudarSalidas(v)">Reanudar</button>
     </div>
 
     <div class="detalle-datos">
@@ -47,7 +57,12 @@
         <span class="dato-etiqueta">Observaciones</span>
         <p class="dato-valor">{{ v.observaciones }}</p>
       </div>
-      <div class="dato dato-ancho" *ngIf="v.estado === 'ACTIVA'">
+      <div class="dato dato-ancho" *ngIf="v.estado === 'ACTIVA' && tieneEntregaCalculada(v)">
+        <span class="dato-etiqueta">Entrega</span>
+        <p class="dato-valor">{{ etiquetaEntrega(v) }}: {{ soles(valorEntregado(v)) }} entregados y {{ soles(v.pagado) }} pagados</p>
+        <p class="ayuda m-0">Se calcula con las salidas.</p>
+      </div>
+      <div class="dato dato-ancho" *ngIf="v.estado === 'ACTIVA' && !tieneEntregaCalculada(v)">
         <span class="dato-etiqueta mb-1">Entrega</span>
         <div class="segmentos" role="group" aria-label="Entrega">
           <button *ngFor="let e of opcionesEntrega" type="button" class="segmento"
@@ -74,6 +89,9 @@
             <td class="linea-descripcion">
               {{ i.descripcion }}
               <span class="solo-celular">{{ i.cantidad | number:'1.0-2' }} {{ etiquetaUnidad(i.unidad) }} × {{ i.precio_unitario | number:'1.2-2' }}</span>
+              <span *ngIf="esDespachable(i) && i.entregado! > 0" class="linea-entregado" [class.text-amber-800]="i.entregado! > i.cantidad">
+                Salieron {{ cantidadConUnidad(i.entregado!, i.unidad) }}
+              </span>
             </td>
             <td class="text-right solo-grande">{{ i.cantidad | number:'1.0-2' }} {{ etiquetaUnidad(i.unidad) }}</td>
             <td class="text-right solo-grande">{{ i.precio_unitario | number:'1.2-2' }}</td>
@@ -95,6 +113,22 @@
           <div class="fila-total fila-final" [class.fila-debe]="v.saldo > 0"><span>Saldo</span><span>S/ {{ v.saldo | number:'1.2-2' }}</span></div>
         </ng-container>
       </div>
+    </section>
+
+    <section *ngIf="usaSalidas && salidasDelDetalle?.length" aria-label="Salidas">
+      <h3 class="seccion">Salidas</h3>
+      <ul class="lista">
+        <li *ngFor="let s of salidasDelDetalle" class="registro" [class.registro-anulado]="s.estado === 'ANULADA'">
+          <div class="min-w-0">
+            <p class="m-0">
+              <span class="registro-monto">{{ cantidadConUnidad(s.cantidad, s.unidad) }}</span>
+              {{ s.material }}
+            </p>
+            <p class="ayuda m-0">{{ horaSalida(s.registrada_en) }} · {{ formatoPlaca(s.placa) }}<ng-container *ngIf="s.chofer"> · {{ s.chofer }}</ng-container><ng-container *ngIf="s.guia"> · Guía {{ s.guia }}</ng-container></p>
+            <p *ngIf="s.estado === 'ANULADA'" class="ayuda text-red-700 m-0">Anulada<ng-container *ngIf="s.anulada_por_nombre"> por {{ s.anulada_por_nombre }}</ng-container>: {{ s.motivo_anulacion }}</p>
+          </div>
+        </li>
+      </ul>
     </section>
 
     <section aria-label="Pagos">
@@ -168,6 +202,7 @@
       <button pButton type="button" icon="pi pi-file-pdf" label="Orden de venta" class="p-button-outlined"
               [loading]="descargando" (click)="descargarPdf(v)"></button>
       <span class="flex-1"></span>
+      <button *ngIf="usaSalidas && v.estado === 'ACTIVA' && !v.salidas_detenidas_en" pButton type="button" icon="pi pi-ban" label="Detener salidas" class="p-button-text p-button-secondary" (click)="pedirDetenerSalidas(v)"></button>
       <ng-container *ngIf="esAdmin && v.estado === 'ACTIVA'">
         <button pButton type="button" label="Anular" class="p-button-text p-button-danger" (click)="pedirAnularVenta(v)"></button>
         <button pButton type="button" icon="pi pi-pencil" label="Ajustar" class="p-button-outlined p-button-secondary" (click)="ajustar(v)"></button>
@@ -265,7 +300,7 @@
   </ng-template>
 </p-dialog>
 
-<!-- Motivo al anular -->
+<!-- Motivo al anular o al detener -->
 <p-dialog [header]="pedido?.titulo" [(visible)]="motivoAbierto" [modal]="true" appendTo="body"
           [draggable]="false" [resizable]="false" [style]="{ width: '26rem' }">
   <div *ngIf="pedido as p" class="flex flex-column gap-3">

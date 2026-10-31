@@ -134,6 +134,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
     return !this.session.esSuperadmin() && this.session.esAdminEmpresaActiva();
   }
 
+  get usaSalidas(): boolean {
+    return this.session.usaSalidas();
+  }
+
   /** Rol con el que trabaja ahora: depende de la empresa activa. */
   get etiquetaRol(): string {
     if (this.esAdminGeneral) return 'Superadmin';
@@ -252,6 +256,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
             this.session.clearEmpresaActiva();
           }
         }
+        // Le pudieron cambiar el rol mientras tenía la app abierta.
+        if (this.session.esEncargado()) this.router.navigate(['/cantera']);
       } catch (e) {
         console.error('Error al refrescar las empresas del usuario:', e);
       }

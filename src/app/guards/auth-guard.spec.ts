@@ -8,9 +8,11 @@ import { adminGuard } from './admin-guard';
 import { adminGeneralGuard } from './admin-general-guard';
 import { initialRedirectGuard } from './initial-redirect.guard';
 import { campoGuard } from './campo-guard';
+import { oficinaGuard } from './oficina-guard';
+import { moduloSalidasGuard } from './modulo-salidas-guard';
 import { SessionContextService } from '../services/session-context.service';
 
-function ejecutar(guard: any, perfil: { rol: string } | null, rolesEnEmpresas: string[] = [], sesion: { modoCampo?: boolean; empresa?: boolean } = {}) {
+function ejecutar(guard: any, perfil: { rol: string } | null, rolesEnEmpresas: string[] = [], sesion: { modoCampo?: boolean; empresa?: boolean; encargado?: boolean; salidas?: boolean } = {}) {
   const auth = {
     asegurarPerfil: async () => perfil,
     urlLogin: () => 'LOGIN'
@@ -24,7 +26,12 @@ function ejecutar(guard: any, perfil: { rol: string } | null, rolesEnEmpresas: s
       { provide: AuthService, useValue: auth },
       { provide: EmpresasUsuarioService, useValue: empresasUsuario },
       { provide: Router, useValue: router },
-      { provide: SessionContextService, useValue: { modoCampo: () => !!sesion.modoCampo, empresaActiva: () => sesion.empresa ? { id: 'VDC' } : null } }
+      { provide: SessionContextService, useValue: {
+        modoCampo: () => !!sesion.modoCampo,
+        empresaActiva: () => sesion.empresa ? { id: 'VDC' } : null,
+        esEncargado: () => !!sesion.encargado,
+        usaSalidas: () => !!sesion.salidas
+      } }
     ]
   });
   return runInInjectionContext(injector, () => guard({} as any, {} as any));
@@ -47,6 +54,16 @@ describe('guards', () => {
     expect(await ejecutar(campoGuard, null)).toBe('LOGIN');
     expect(await ejecutar(campoGuard, { rol: 'usuario' })).toBe('/selector');
     expect(await ejecutar(campoGuard, { rol: 'usuario' }, [], { empresa: true })).toBe(true);
+  });
+
+  it('el encargado no entra a las pantallas de oficina', async () => {
+    expect(await ejecutar(oficinaGuard, { rol: 'usuario' }, [], { encargado: true })).toBe('/cantera');
+    expect(await ejecutar(oficinaGuard, { rol: 'usuario' })).toBe(true);
+  });
+
+  it('Salidas solo se abre en una empresa con el módulo', async () => {
+    expect(await ejecutar(moduloSalidasGuard, { rol: 'usuario' }, [], { salidas: true })).toBe(true);
+    expect(await ejecutar(moduloSalidasGuard, { rol: 'usuario' })).toBe('/ventas');
   });
 
   it('authGuard deja pasar a cualquier cuenta activa', async () => {

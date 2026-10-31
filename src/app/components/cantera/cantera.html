@@ -1,48 +1,247 @@
 <main class="cantera">
-  <header>
-    <h1 class="titulo">Prueba sin señal</h1>
-    <p class="ayuda m-0">{{ session.empresaActiva()?.nombre_comercial }}</p>
+  <!-- Se ve siempre: lo primero que hay que saber es si lo anotado ya llegó -->
+  <header class="cabecera">
+    <div class="min-w-0">
+      <h1 class="titulo">Salidas</h1>
+      <p class="empresa">{{ session.empresaActiva()?.nombre_comercial }}</p>
+    </div>
+    <p class="senal" [class.senal-con]="haySenal" [class.senal-sin]="!haySenal" role="status">{{ textoSenal }}</p>
   </header>
 
-  <ul class="estados" aria-label="Estado de este celular">
-    <li>
-      <span>Conexión</span>
-      <strong [class.text-emerald-700]="conSenal" [class.text-amber-800]="!conSenal">{{ conSenal ? 'Con señal' : 'Sin señal' }}</strong>
-    </li>
-    <li>
-      <span>Sesión guardada en este celular</span>
-      <strong class="text-emerald-700">Sí</strong>
-    </li>
-    <li>
-      <span>Datos protegidos del borrado</span>
-      <strong [class.text-emerald-700]="datosProtegidos" [class.text-amber-800]="!datosProtegidos">
-        {{ datosProtegidos === null ? 'No se sabe' : datosProtegidos ? 'Sí' : 'Todavía no' }}
-      </strong>
-    </li>
-  </ul>
+  <p *ngIf="errorAlmacen" class="aviso aviso-peligro" role="alert">
+    Este celular no dejó guardar. No lo cierres y avisa a la oficina; anota esta salida en papel por ahora.
+  </p>
 
-  <p *ngIf="errorAlmacen" class="aviso-error" role="alert">Este celular no dejó guardar. Avísale a quien te pasó esta prueba.</p>
-
-  <button pButton type="button" icon="pi pi-plus" label="Anotar una salida de prueba" class="boton-grande" (click)="anotar()"></button>
-
-  <section aria-label="Anotaciones">
-    <h2 class="seccion">Anotadas en este celular: {{ anotaciones.length }}</h2>
-    <ul class="anotaciones">
-      <li *ngFor="let a of anotaciones">{{ fechaHora(a.fecha) }}</li>
-    </ul>
+  <section *ngIf="!session.usaSalidas()" class="aviso">
+    <strong>Salidas no está activado para esta empresa.</strong> Pídeselo al administrador.
   </section>
 
-  <section class="pasos" aria-label="Cómo probar">
-    <h2 class="seccion">Cómo probar</h2>
-    <ol>
-      <li>Con señal, instala la app: menú de Chrome → <strong>Instalar app</strong> o <strong>Agregar a la pantalla principal</strong>.</li>
-      <li>Ábrela desde su ícono y anota una o dos salidas aquí.</li>
-      <li>Pon el celular en <strong>modo avión</strong>.</li>
-      <li>Cierra la app por completo, desde las apps recientes.</li>
-      <li>Ábrela otra vez desde su ícono. Debe abrir esta pantalla con lo anotado.</li>
-      <li>Anota dos más, apaga y prende el celular, y vuelve a abrirla sin señal. Deben seguir ahí.</li>
-    </ol>
-  </section>
+  <ng-container *ngIf="session.usaSalidas()">
 
-  <button type="button" class="enlace enlace-discreto salir" (click)="salir()">Salir de la prueba</button>
+    <!-- ── La lista ─────────────────────────────────────────────────────── -->
+    <ng-container *ngIf="!destino">
+      <section class="resumen" aria-label="Resumen de hoy">
+        <p class="resumen-hoy"><span class="resumen-etiqueta">Hoy</span> {{ resumenHoy() }}</p>
+        <p class="resumen-envio" [class.text-amber-800]="cola.porEnviar() > 0">
+          {{ cola.porEnviar() > 0
+              ? cola.porEnviar() + ' por enviar. Se envían solas cuando haya señal.'
+              : 'Todo enviado.' }}
+        </p>
+        <p *ngIf="cola.conProblema() > 0" class="resumen-envio text-red-700">{{ cola.conProblema() }} con problema: revisa abajo.</p>
+      </section>
+
+      <section *ngIf="!instalada" class="aviso">
+        <strong>Instala la app con señal, antes de subir.</strong>
+        Menú de Chrome → Instalar app o Agregar a la pantalla principal. Sin instalarla puede no abrir sin señal.
+      </section>
+
+      <section class="bloque" aria-label="Ventas">
+        <h2 class="seccion">¿Para qué venta sale?</h2>
+        <p *ngIf="copiaVieja" class="ayuda-campo text-amber-800">
+          {{ cola.foto() ? 'Ventas actualizadas ' + copiaActualizada + '.' : 'Todavía no se bajaron las ventas.' }}
+          Con señal se actualizan solas. Si la venta no aparece, usa Salida sin venta.
+        </p>
+
+        <input *ngIf="hayBuscador" class="campo" type="search" aria-label="Buscar venta" placeholder="Buscar cliente o folio" [(ngModel)]="busqueda" />
+
+        <ul class="ventas">
+          <li *ngFor="let v of ventasFiltradas">
+            <button type="button" class="venta" [class.venta-detenida]="v.detenida" (click)="elegir(v.id)">
+              <span *ngIf="v.detenida" class="etiqueta-detenida">Detenida por la oficina</span>
+              <span class="venta-cliente">{{ v.cliente }}</span>
+              <span class="venta-datos">{{ v.folio }}<ng-container *ngIf="v.lugar_entrega"> · {{ v.lugar_entrega }}</ng-container></span>
+              <span *ngFor="let l of v.lineas" class="venta-linea">
+                <span class="venta-material">{{ l.material }}</span>
+                <span class="venta-falta" [class.text-red-700]="faltante(l) < 0" [class.text-emerald-700]="faltante(l) === 0">{{ textoFaltante(l) }}</span>
+              </span>
+            </button>
+          </li>
+        </ul>
+
+        <p *ngIf="cola.foto() && !ventasFiltradas.length" class="ayuda-campo">
+          {{ busqueda.trim() ? 'Ninguna venta coincide.' : 'No hay ventas por entregar.' }}
+        </p>
+
+        <button type="button" class="boton-secundario" (click)="elegir(SIN_VENTA)">Salida sin venta</button>
+      </section>
+
+      <section class="bloque" aria-label="Salidas de hoy">
+        <h2 class="seccion">Salidas de hoy</h2>
+        <p *ngIf="!filasDeHoy().length" class="ayuda-campo">Lo que anotes aparece aquí.</p>
+        <ul class="salidas">
+          <li *ngFor="let f of filasDeHoy(); trackBy: porId" class="salida" [class.salida-anulada]="f.anulada">
+            <div class="salida-fila">
+              <span class="salida-principal">{{ formatoPlaca(f.placa) }} · {{ cantidadConUnidad(f.cantidad, f.unidad) }}</span>
+              <span class="salida-envio" [class.envio-pendiente]="f.envio === 'pendiente'" [class.envio-problema]="f.envio === 'con_problema'">{{ textoEnvio(f) }}</span>
+            </div>
+            <p class="salida-detalle">{{ f.material }} · {{ f.cliente }}</p>
+            <p class="salida-detalle">{{ hora(f.registrada_en) }}<ng-container *ngIf="f.folio_venta"> · {{ f.folio_venta }}</ng-container><ng-container *ngIf="f.guia"> · Guía {{ f.guia }}</ng-container><ng-container *ngIf="f.chofer"> · {{ f.chofer }}</ng-container></p>
+            <p *ngIf="f.anulada && f.motivo_anulacion" class="salida-detalle">Motivo: {{ f.motivo_anulacion }}</p>
+            <p *ngIf="f.problema" class="salida-detalle text-red-700">{{ f.problema }}</p>
+
+            <div *ngIf="anulandoId === f.id; else accionesFila" class="anular">
+              <label class="etiqueta" [attr.for]="'motivo-' + f.id">¿Por qué se anula?</label>
+              <input class="campo" [id]="'motivo-' + f.id" maxlength="200" [(ngModel)]="motivoAnulacion" />
+              <div class="anular-botones">
+                <button type="button" class="boton-secundario" (click)="cancelarAnular()">No anular</button>
+                <button type="button" class="boton-peligro" [disabled]="!motivoAnulacion.trim()" (click)="confirmarAnular(f)">Anular salida</button>
+              </div>
+            </div>
+            <ng-template #accionesFila>
+              <div class="salida-acciones" *ngIf="puedeAnular(f) || f.envio === 'con_problema'">
+                <button *ngIf="f.envio === 'con_problema'" type="button" class="enlace" (click)="reintentar(f)">Reintentar</button>
+                <button *ngIf="puedeAnular(f)" type="button" class="enlace enlace-peligro" (click)="empezarAnular(f)">Anular</button>
+              </div>
+            </ng-template>
+          </li>
+        </ul>
+      </section>
+
+      <section class="bloque celular" aria-label="Este celular">
+        <h2 class="seccion">Este celular</h2>
+        <ul class="estados">
+          <li><span>Ventas actualizadas</span><strong>{{ copiaActualizada }}</strong></li>
+          <li>
+            <span>Listo para abrir sin señal</span>
+            <strong [class.text-emerald-700]="listaSinSenal" [class.text-amber-800]="!listaSinSenal">{{ listaSinSenal ? 'Sí' : 'Todavía no' }}</strong>
+          </li>
+          <li>
+            <span>Datos protegidos del borrado</span>
+            <strong [class.text-emerald-700]="datosProtegidos" [class.text-amber-800]="!datosProtegidos">
+              {{ datosProtegidos === null ? 'No se sabe' : datosProtegidos ? 'Sí' : 'Todavía no' }}
+            </strong>
+          </li>
+          <li><span>Cuenta</span><strong class="cuenta">{{ session.usuario()?.email }}</strong></li>
+        </ul>
+        <p *ngIf="cola.fallo()" class="ayuda-campo">No se pudo conectar con la oficina. Se vuelve a intentar solo.</p>
+        <button type="button" class="boton-secundario" [disabled]="cola.sincronizando()" (click)="actualizar()">
+          {{ cola.sincronizando() ? 'Actualizando…' : 'Actualizar ahora' }}
+        </button>
+
+        <div *ngIf="confirmandoSalir; else enlacesCelular" class="aviso aviso-peligro" role="alert">
+          <p class="m-0"><strong>Para volver a entrar necesitas señal.</strong>
+            <ng-container *ngIf="cola.porEnviar() > 0"> Tienes {{ cola.porEnviar() }} por enviar: se quedan en este celular y salen cuando entres de nuevo con tu cuenta.</ng-container>
+          </p>
+          <div class="anular-botones mt-2">
+            <button type="button" class="boton-secundario" (click)="cancelarCerrarSesion()">Seguir aquí</button>
+            <button type="button" class="boton-peligro" (click)="cerrarSesion()">Cerrar sesión</button>
+          </div>
+        </div>
+        <ng-template #enlacesCelular>
+          <div class="enlaces">
+            <button *ngIf="!esEncargado" type="button" class="enlace" (click)="volverALaOficina()">Volver a la oficina</button>
+            <button *ngIf="esEncargado && variasEmpresas" type="button" class="enlace" (click)="cambiarDeEmpresa()">Cambiar de empresa</button>
+            <button type="button" class="enlace enlace-discreto" (click)="pedirCerrarSesion()">Cerrar sesión</button>
+          </div>
+        </ng-template>
+      </section>
+    </ng-container>
+
+    <!-- ── El formulario ────────────────────────────────────────────────── -->
+    <ng-container *ngIf="destino">
+      <button type="button" class="volver" (click)="volver()">← Volver a las ventas</button>
+
+      <!-- Fuera del formulario: la última salida puede completar la venta y sacarla de la lista -->
+      <p *ngIf="confirmacion" class="aviso aviso-ok" role="status">
+        <strong>Guardada.</strong> {{ confirmacion }}
+      </p>
+
+      <section *ngIf="destinoPerdido" class="aviso">Esa venta ya se entregó completa o salió de este celular. Si sale otro volquete, usa Salida sin venta.</section>
+
+      <form *ngIf="!destinoPerdido" class="bloque formulario" (ngSubmit)="guardar()" autocomplete="off">
+        <ng-container *ngIf="venta as v">
+          <div>
+            <h2 class="formulario-cliente">{{ v.cliente }}</h2>
+            <p class="venta-datos m-0">{{ v.folio }}<ng-container *ngIf="v.lugar_entrega"> · {{ v.lugar_entrega }}</ng-container></p>
+          </div>
+
+          <p *ngIf="v.detenida" class="aviso aviso-peligro" role="alert">
+            <strong>La oficina detuvo esta venta.</strong> Llama antes de despachar. Si sale igual, anótala: quedará marcada para la oficina.
+          </p>
+
+          <fieldset class="grupo">
+            <legend class="etiqueta">Material</legend>
+            <div class="opciones">
+              <button *ngFor="let l of v.lineas" type="button" class="opcion" [class.opcion-activa]="form.lineaId === l.id"
+                      [attr.aria-pressed]="form.lineaId === l.id" (click)="elegirLinea(l)">
+                <span>{{ l.material }}</span>
+                <span class="opcion-nota">{{ textoFaltante(l) }}</span>
+              </button>
+            </div>
+          </fieldset>
+        </ng-container>
+
+        <ng-container *ngIf="esSinVenta">
+          <div>
+            <h2 class="formulario-cliente">Salida sin venta</h2>
+            <p class="ayuda-campo m-0">La oficina la enlaza a su venta después.</p>
+          </div>
+
+          <div>
+            <label class="etiqueta" for="salida-cliente">¿Para quién? <span class="requerido">*</span></label>
+            <input class="campo" id="salida-cliente" name="cliente" maxlength="120" [(ngModel)]="form.cliente" />
+          </div>
+
+          <div>
+            <label class="etiqueta" for="salida-material">Material <span class="requerido">*</span></label>
+            <input class="campo" id="salida-material" name="material" maxlength="120" [(ngModel)]="form.material" (ngModelChange)="alEscribirMaterial()" />
+            <div class="fichas" *ngIf="materiales.length">
+              <button *ngFor="let m of materiales" type="button" class="ficha" [class.ficha-activa]="form.materialId === m.id" (click)="elegirMaterial(m)">{{ m.material }}</button>
+            </div>
+          </div>
+
+          <fieldset class="grupo">
+            <legend class="etiqueta">Unidad</legend>
+            <div class="segmentos w-full">
+              <button *ngFor="let u of unidadesSinVenta" type="button" class="segmento" [class.segmento-activo]="form.unidad === u.value"
+                      [attr.aria-pressed]="form.unidad === u.value" (click)="elegirUnidad(u.value)">{{ u.label }}</button>
+            </div>
+          </fieldset>
+        </ng-container>
+
+        <div>
+          <label class="etiqueta" for="salida-placa">Placa <span class="requerido">*</span></label>
+          <input class="campo campo-placa" id="salida-placa" name="placa" maxlength="10" autocapitalize="characters" autocorrect="off" spellcheck="false"
+                 placeholder="ABC-123" [(ngModel)]="form.placa" (ngModelChange)="alEscribirPlaca()" />
+          <div class="fichas" *ngIf="volquetesALaVista.length">
+            <button *ngFor="let x of volquetesALaVista; trackBy: porPlaca" type="button" class="ficha" (click)="elegirVolquete(x)">
+              {{ formatoPlaca(x.placa) }}<ng-container *ngIf="x.capacidad_m3"> · {{ x.capacidad_m3 | number:'1.0-2' }} m³</ng-container>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="etiqueta" for="salida-cantidad">Cantidad en {{ etiquetaCantidad }} <span class="requerido">*</span></label>
+          <input class="campo campo-cantidad" id="salida-cantidad" name="cantidad" type="number" inputmode="decimal" min="0" step="any"
+                 [(ngModel)]="form.cantidad" (ngModelChange)="alEditarCantidad()" />
+          <p *ngIf="exceso > 0" class="ayuda-campo text-amber-800 mt-1 mb-0" role="status">
+            Te pasas {{ cantidadConUnidad(exceso, unidadActual) }} de lo vendido. Puedes guardarla: la oficina lo revisará.
+          </p>
+        </div>
+
+        <div class="dos-campos">
+          <div>
+            <label class="etiqueta" for="salida-chofer">Chofer</label>
+            <input class="campo" id="salida-chofer" name="chofer" maxlength="80" placeholder="Opcional" [(ngModel)]="form.chofer" />
+          </div>
+          <div>
+            <label class="etiqueta" for="salida-guia">Guía</label>
+            <input class="campo" id="salida-guia" name="guia" maxlength="40" placeholder="Opcional" [(ngModel)]="form.guia" />
+          </div>
+        </div>
+
+        <p *ngIf="mostrarFaltantes && faltantes.length" class="ayuda-campo text-amber-800 m-0" role="alert">Falta {{ faltantes.join(' y ') }}.</p>
+
+        <button type="submit" class="boton-grande" [class.boton-grande-peligro]="venta?.detenida" [disabled]="guardando">
+          {{ venta?.detenida ? 'Registrar de todos modos' : 'Guardar salida' }}
+        </button>
+      </form>
+    </ng-container>
+  </ng-container>
+
+  <!-- Sin el módulo, cerrar sesión o volver a la oficina sigue siendo posible -->
+  <div *ngIf="!session.usaSalidas()" class="enlaces">
+    <button *ngIf="!esEncargado" type="button" class="enlace" (click)="volverALaOficina()">Volver a la oficina</button>
+    <button type="button" class="enlace enlace-discreto" (click)="cerrarSesion()">Cerrar sesión</button>
+  </div>
 </main>

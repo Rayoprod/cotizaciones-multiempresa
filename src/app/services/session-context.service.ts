@@ -2,6 +2,7 @@ import { paletaDeAcento } from './tema';
 import { Injectable, signal, computed } from '@angular/core';
 import { IEmpresa } from '../models/empresa.model';
 import { IProfile } from '../models/auth.model';
+import { MODULO_SALIDAS } from '../models/salida.model';
 
 const KEYS = {
   empresa: 'empresa_activa',
@@ -48,6 +49,13 @@ export class SessionContextService {
   readonly esAdminEmpresaActiva = computed(() =>
     this.esSuperadmin() || this._empresaActiva()?.mi_rol === 'admin'
   );
+
+  /** En la empresa activa solo trabaja en la cantera: no ve nada de oficina. */
+  readonly esEncargado = computed(() =>
+    !this.esSuperadmin() && this._empresaActiva()?.mi_rol === 'encargado'
+  );
+
+  readonly usaSalidas = computed(() => this._empresaActiva()?.modulos?.includes(MODULO_SALIDAS) ?? false);
 
   constructor() {
     this.aplicarTemaEmpresa(this._empresaActiva()?.color);

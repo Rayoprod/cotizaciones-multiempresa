@@ -1,0 +1,53 @@
+.kpi-texto {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--slate-900);
+  margin: 0.25rem 0 0;
+}
+
+.accion {
+  min-height: 2rem;
+  text-align: right;
+}
+
+.volquete {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover { background: var(--slate-50); }
+}
+
+.venta-enlazar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.75rem;
+}
+
+.linea-enlazar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--slate-300);
+  border-radius: 0.5rem;
+  background: #ffffff;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover { background: var(--acento-suave); border-color: var(--acento); }
+  &[aria-pressed='true'] { border-color: var(--acento); background: var(--acento-suave); }
+}

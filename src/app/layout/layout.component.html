@@ -101,6 +101,26 @@
           <span>Por cobrar</span>
         </a>
 
+        <ng-container *ngIf="usaSalidas">
+        <p-divider styleClass="border-white-alpha-10 my-2"></p-divider>
+
+        <div class="mb-2 px-2" style="color: rgba(255,255,255,0.45); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;">
+          Cantera
+        </div>
+
+        <a routerLink="/salidas"
+           routerLinkActive="bg-white-alpha-15 text-white font-bold shadow-2 border-left-3 border-white-alpha-50"
+           [routerLinkActiveOptions]="{ exact: false }"
+           style="min-height: 48px; touch-action: manipulation;"
+           (click)="cerrarMenu()"
+           class="no-underline flex align-items-center gap-3 px-3 py-3 border-round-xl transition-all transition-duration-200 text-white-alpha-80 hover:bg-white-alpha-10 hover:text-white cursor-pointer">
+          <div class="flex align-items-center justify-content-center border-round-lg w-2rem h-2rem bg-white-alpha-10 text-white-alpha-90">
+            <i class="pi pi-truck text-base"></i>
+          </div>
+          <span>Salidas</span>
+        </a>
+        </ng-container>
+
         <p-divider styleClass="border-white-alpha-10 my-2"></p-divider>
 
         <div class="mb-2 px-2" style="color: rgba(255,255,255,0.45); font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;">

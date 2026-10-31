@@ -22,6 +22,15 @@ export const UNIDADES_COMUNES: Array<{ value: string; label: string }> = [
   { value: 'glb', label: 'glb' }
 ];
 
+/** Un flete o un alquiler no sale de la cantera. Mismo criterio que es_unidad_de_servicio(). */
+export function esUnidadDeServicio(unidad: string | null | undefined): boolean {
+  return ['viaje', 'hora', 'día', 'dia', 'mes', 'glb'].includes(String(unidad ?? '').trim().toLowerCase());
+}
+
+export function esUnidadDeVolumen(unidad: string | null | undefined): boolean {
+  return ['m3', 'm³'].includes(String(unidad ?? '').trim().toLowerCase());
+}
+
 /** La unidad más usada en el catálogo de la empresa: con ella abre una línea nueva. */
 export function unidadMasUsada(productos: Array<Pick<IProducto, 'unidad'>>): string {
   const cuenta = new Map<string, number>();

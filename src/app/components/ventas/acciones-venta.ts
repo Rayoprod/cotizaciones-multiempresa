@@ -10,11 +10,12 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputTextareaModule } from 'primeng/inputtextarea';
 import { TagModule } from 'primeng/tag';
 import {
-  CLAVE_BORRADOR_COTIZADOR, ETIQUETA_COBRO, ETIQUETA_ENTREGA, EstadoEntrega, IBorradorCotizador, IPago, IVenta, IVentaComprobante,
-  METODOS_PAGO, MetodoPago, TipoComprobante, UNIDADES_COMUNES, cobradoSinFacturar, comprobanteDesdeArchivo, comprobantesVigentes,
-  describirCambio, estadoCobro, etiquetaComprobante, facturadoDe, fechaCorta, fechaDeCotizacion, fechaIso, modoIgvDe,
-  montoSugeridoFactura, resumenFacturado, severidadCobro, severidadEntrega, soles, textoCondicionPago
+  CLAVE_BORRADOR_COTIZADOR, ETIQUETA_COBRO, ETIQUETA_ENTREGA, EstadoEntrega, IBorradorCotizador, IPago, ISalida, IVenta, IVentaComprobante, IVentaItem,
+  METODOS_PAGO, MetodoPago, TipoComprobante, UNIDADES_COMUNES, cantidadConUnidad, cobradoSinFacturar, comprobanteDesdeArchivo, comprobantesVigentes,
+  describirCambio, esUnidadDeServicio, estadoCobro, etiquetaComprobante, facturadoDe, fechaCorta, fechaDeCotizacion, fechaIso, formatoPlaca, modoIgvDe,
+  montoSugeridoFactura, resumenFacturado, severidadCobro, severidadEntrega, soles, tieneEntregaCalculada, textoCondicionPago, valorEntregado
 } from '../../models';
+import { mensajeDe } from '../../services/errores';
 import { prepararArchivoComprobante } from '../../services/imagenes';
 import { PdfService, lineasTotales } from '../../services/pdf.service';
 import { SessionContextService } from '../../services/session-context.service';
@@ -25,11 +26,6 @@ const TEXTO_MARCAR: Record<EstadoEntrega, { label: string; icon: string }> = {
   PARCIAL: { label: 'Marcar entrega parcial', icon: 'pi pi-truck' },
   ENTREGADA: { label: 'Marcar entregada', icon: 'pi pi-check' }
 };
-
-/** Lo que el servidor rechaza por una regla ya viene en español; lo demás es de conexión. */
-function mensajeDe(error: any, respaldo: string): string {
-  return ['22023', 'P0001', '42501'].includes(error?.code) && error?.message ? error.message : respaldo;
-}
 
 /**
  * Todo lo que se puede hacer con una venta, con sus ventanas: lo usan la lista de
@@ -54,6 +50,10 @@ export class AccionesVentaComponent {
   readonly cobradoSinFacturar = cobradoSinFacturar;
   readonly describirCambio = describirCambio;
   readonly lineasTotales = lineasTotales;
+  readonly tieneEntregaCalculada = tieneEntregaCalculada;
+  readonly valorEntregado = valorEntregado;
+  readonly cantidadConUnidad = cantidadConUnidad;
+  readonly formatoPlaca = formatoPlaca;
   readonly metodos = METODOS_PAGO;
   readonly hoy = fechaIso();
   readonly opcionesEntrega: Array<{ value: EstadoEntrega; label: string }> = [
@@ -65,6 +65,8 @@ export class AccionesVentaComponent {
   // Cada ventana conserva sus datos al cerrarse: si no, se vería vacía mientras se va.
   detalleAbierto = false;
   detalle: IVenta | null = null;
+  /** Null mientras se cargan, o si la empresa no usa salidas. */
+  salidasDelDetalle: ISalida[] | null = null;
   descargando = false;
   cambiandoEntrega = false;
 
@@ -85,7 +87,7 @@ export class AccionesVentaComponent {
 
   /** Anular siempre pide motivo: queda en el historial. */
   motivoAbierto = false;
-  pedido: { titulo: string; mensaje: string; boton: string; ejecutar: (motivo: string) => Promise<IVenta>; exito: string } | null = null;
+  pedido: { titulo: string; mensaje: string; boton: string; ejecutar: (motivo: string) => Promise<IVenta>; exito: string; accion?: 'detener' } | null = null;
   motivo = '';
 
   guardando = false;
@@ -103,6 +105,10 @@ export class AccionesVentaComponent {
     return this.session.esAdminEmpresaActiva();
   }
 
+  get usaSalidas(): boolean {
+    return this.session.usaSalidas();
+  }
+
   // ─── Menú ────────────────────────────────────────────────────────────────
 
   menuDe(venta: IVenta): MenuItem[] {
@@ -113,10 +119,18 @@ export class AccionesVentaComponent {
       items.push({ label: 'Registrar pago', icon: 'pi pi-wallet', command: () => this.abrirPago(venta) });
     }
     items.push({ separator: true });
-    for (const estado of ['PENDIENTE', 'PARCIAL', 'ENTREGADA'] as EstadoEntrega[]) {
-      if (estado !== venta.estado_entrega) {
-        items.push({ ...TEXTO_MARCAR[estado], command: () => this.marcarEntrega(venta, estado) });
+    // Con salidas, la entrega la calculan ellas.
+    if (!tieneEntregaCalculada(venta)) {
+      for (const estado of ['PENDIENTE', 'PARCIAL', 'ENTREGADA'] as EstadoEntrega[]) {
+        if (estado !== venta.estado_entrega) {
+          items.push({ ...TEXTO_MARCAR[estado], command: () => this.marcarEntrega(venta, estado) });
+        }
       }
+    }
+    if (this.usaSalidas) {
+      items.push(venta.salidas_detenidas_en
+        ? { label: 'Reanudar salidas', icon: 'pi pi-play', command: () => this.reanudarSalidas(venta) }
+        : { label: 'Detener salidas', icon: 'pi pi-ban', command: () => this.pedirDetenerSalidas(venta) });
     }
     items.push({
       label: 'Agregar factura o boleta',
@@ -140,7 +154,13 @@ export class AccionesVentaComponent {
   async verDetalle(venta: IVenta) {
     this.detalle = venta;
     this.detalleAbierto = true;
+    this.salidasDelDetalle = null;
     this.cdr.markForCheck();
+    await Promise.all([this.cargarHistorial(venta), this.cargarSalidas(venta)]);
+    this.cdr.markForCheck();
+  }
+
+  private async cargarHistorial(venta: IVenta) {
     if (venta.venta_cambios) return;
     try {
       const venta_cambios = await this.supabase.getCambiosVenta(venta.id);
@@ -149,7 +169,21 @@ export class AccionesVentaComponent {
       // Sin historial el detalle sigue sirviendo.
       console.error('Error al cargar el historial de la venta:', e);
     }
-    this.cdr.markForCheck();
+  }
+
+  private async cargarSalidas(venta: IVenta) {
+    if (!this.usaSalidas) return;
+    try {
+      const salidas = await this.supabase.getSalidasDeVenta(venta.id);
+      if (this.detalle?.id === venta.id) this.salidasDelDetalle = salidas;
+    } catch (e) {
+      console.error('Error al cargar las salidas de la venta:', e);
+    }
+  }
+
+  /** Solo lo que sale de la cantera: un flete no se entrega por salidas. */
+  esDespachable(linea: IVentaItem): boolean {
+    return !esUnidadDeServicio(linea.unidad);
   }
 
   cerrarDetalle() {
@@ -183,6 +217,11 @@ export class AccionesVentaComponent {
 
   fechaHora(fecha: string): string {
     return fechaDeCotizacion(fecha).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  /** Las salidas tienen la hora del celular, siempre con zona. */
+  horaSalida(fecha: string): string {
+    return new Date(fecha).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   }
 
   /** Cuándo se anotó, si no fue el mismo día de la venta: una deuda antigua se carga después. */
@@ -297,6 +336,35 @@ export class AccionesVentaComponent {
       this.msg.add({ severity: 'error', summary: 'No se cambió la entrega', detail: mensajeDe(e, 'Revisa tu conexión e inténtalo de nuevo.') });
     } finally {
       this.cambiandoEntrega = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  // ─── Detener salidas ─────────────────────────────────────────────────────
+
+  pedirDetenerSalidas(venta: IVenta) {
+    this.pedirMotivo({
+      titulo: 'Detener salidas',
+      mensaje: `El encargado verá ${venta.folio} como detenida cuando su celular tenga señal, sin el motivo. No le impide anotar: si sale igual, queda marcado para revisar.`,
+      boton: 'Detener salidas',
+      exito: 'Salidas detenidas',
+      accion: 'detener',
+      ejecutar: motivo => this.supabase.detenerSalidasVenta(venta.id, true, motivo)
+    });
+  }
+
+  async reanudarSalidas(venta: IVenta) {
+    if (this.guardando) return;
+    this.guardando = true;
+    this.cdr.markForCheck();
+    try {
+      this.aplicar(await this.supabase.detenerSalidasVenta(venta.id, false, null));
+      this.msg.add({ severity: 'success', summary: 'Salidas reanudadas', detail: 'El encargado lo verá cuando su celular tenga señal.' });
+    } catch (e: any) {
+      console.error('Error al reanudar las salidas:', e);
+      this.msg.add({ severity: 'error', summary: 'No se reanudó', life: 8000, detail: mensajeDe(e, 'Revisa tu conexión e inténtalo de nuevo.') });
+    } finally {
+      this.guardando = false;
       this.cdr.markForCheck();
     }
   }
@@ -509,6 +577,15 @@ export class AccionesVentaComponent {
       this.verDetalle(venta);
       return;
     }
+    // Lo mismo con el material que ya salió.
+    if (tieneEntregaCalculada(venta)) {
+      this.msg.add({
+        severity: 'warn', summary: 'Tiene salidas vigentes', life: 8000,
+        detail: `${venta.folio} tiene material entregado. Anula esas salidas o pásalas a otra venta desde Salidas.`
+      });
+      this.verDetalle(venta);
+      return;
+    }
     const avisos = [
       venta.folio_cotizacion ? `La cotización ${venta.folio_cotizacion} vuelve a Pendiente.` : '',
       venta.estado_entrega !== 'PENDIENTE' ? 'Figura con material entregado: revisa cómo queda eso.' : '',
@@ -546,7 +623,7 @@ export class AccionesVentaComponent {
       this.aplicar(venta);
     } catch (e: any) {
       console.error('Error al anular:', e);
-      this.msg.add({ severity: 'error', summary: 'No se anuló', life: 8000, detail: mensajeDe(e, 'Revisa tu conexión e inténtalo de nuevo.') });
+      this.msg.add({ severity: 'error', summary: this.pedido.accion === 'detener' ? 'No se detuvo' : 'No se anuló', life: 8000, detail: mensajeDe(e, 'Revisa tu conexión e inténtalo de nuevo.') });
     } finally {
       this.guardando = false;
       this.cdr.markForCheck();

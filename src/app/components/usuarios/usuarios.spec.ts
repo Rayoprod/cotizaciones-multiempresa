@@ -19,6 +19,11 @@ describe('etiquetasDeAcceso', () => {
     ]);
   });
 
+  it('el encargado se distingue de quien trabaja en oficina', () => {
+    expect(etiquetasDeAcceso({ rol: 'usuario' }, [{ empresa_id: 'VDC', rol: 'encargado' }], nombres))
+      .toEqual([{ texto: 'VDC · Encargado', severidad: 'secondary' }]);
+  });
+
   it('avisa cuando un usuario no tiene empresas', () => {
     expect(etiquetasDeAcceso({ rol: 'usuario' }, [], nombres))
       .toEqual([{ texto: 'Sin empresas', severidad: 'secondary' }]);
